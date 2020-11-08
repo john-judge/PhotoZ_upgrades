@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{9A449C55-A95F-4A53-8661-BDBC4D06118C}</ProjectGuid>
+    <RootNamespace>PhotoZ</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <ProjectName>PhotoZ_LilDave</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>./Include;%(AdditionalIncludeDirectories);./Include/EDT/pdv</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>./Lib;%(AdditionalLibraryDirectories);./Include/EDT/pdv</AdditionalLibraryDirectories>
+      <AdditionalDependencies>fltk.lib;NIDAQmx.lib;dapio32.lib;opengl32.lib;fltk.lib;fltkgl.lib;paintlibd.lib;libjpeg.lib;libpng.lib;libtiff.lib;libungif.lib;wsock32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);pdvlib.lib;pdvplus.lib</AdditionalDependencies>
+      <ShowProgress>NotSet</ShowProgress>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>./Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>./Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>fltk.lib;NIDAQmx.lib;DAPIO32.LIB;opengl32.lib;fltk.lib;fltkgl.lib;paintlib.lib;libtiff.lib;libjpeg.lib;libpng.lib;libungif.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <ShowProgress>NotSet</ShowProgress>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>./Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\ArrayWindow.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\Color.cpp" />
+    <ClCompile Include="Source\ColorWindow.cpp" />
+    <ClCompile Include="Source\ColorWindowMovie.cpp" />
+    <ClCompile Include="Source\DapChannel.cpp" />
+    <ClCompile Include="Source\DapController.cpp" />
+    <ClCompile Include="Source\DapWindow.cpp" />
+    <ClCompile Include="Source\Data.cpp" />
+    <ClCompile Include="Source\DataArray.cpp" />
+    <ClCompile Include="Source\Diode.cpp" />
+    <ClCompile Include="Source\FileController.cpp" />
+    <ClCompile Include="Source\Filter.cpp" />
+    <ClCompile Include="Source\Image.cpp" />
+    <ClCompile Include="Source\LiveFeed.cpp" />
+    <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\MainController.cpp" />
+    <ClCompile Include="Source\MainControllerAcqui.cpp" />
+    <ClCompile Include="Source\MainControllerArrayWindow.cpp" />
+    <ClCompile Include="Source\MainControllerDAP.cpp" />
+    <ClCompile Include="Source\MainControllerFileController.cpp" />
+    <ClCompile Include="Source\MainControllerLtp.cpp" />
+    <ClCompile Include="Source\MainControllerSignalProcessing.cpp" />
+    <ClCompile Include="Source\MainControllerTraceWindow.cpp" />
+    <ClCompile Include="Source\PolynomialFitting.cpp" />
+    <ClCompile Include="Source\RecControl.cpp" />
+    <ClCompile Include="Source\SignalProcessor.cpp" />
+    <ClCompile Include="Source\Text.cpp" />
+    <ClCompile Include="Source\TraceWindow.cpp" />
+    <ClCompile Include="Source\UserInterface.cpp" />
+    <ClCompile Include="Source\UserInterfaceMethods.cpp" />
+    <ClCompile Include="Source\WindowExporter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\NIDAQmx.h">
+      <DeploymentContent>true</DeploymentContent>
+    </ClInclude>
+    <ClInclude Include="Source\ArrayWindow.h" />
+    <ClInclude Include="Source\Camera.h" />
+    <ClInclude Include="Source\Color.h" />
+    <ClInclude Include="Source\ColorWindow.h" />
+    <ClInclude Include="Source\DapChannel.h" />
+    <ClInclude Include="Source\DapController.h" />
+    <ClInclude Include="Source\DAPIO32.H" />
+    <ClInclude Include="Source\DapWindow.h" />
+    <ClInclude Include="Source\Data.h" />
+    <ClInclude Include="Source\DataArray.h" />
+    <ClInclude Include="Source\Definitions.h" />
+    <ClInclude Include="Source\Diode.h" />
+    <ClInclude Include="Source\FileController.h" />
+    <ClInclude Include="Source\Filter.h" />
+    <ClInclude Include="Source\Image.h" />
+    <ClInclude Include="Source\LiveFeed.h" />
+    <ClInclude Include="Source\MainController.h" />
+    <ClInclude Include="Source\NIDAQmx.h" />
+    <ClInclude Include="Source\PolynomialFitting.h" />
+    <ClInclude Include="Source\RecControl.h" />
+    <ClInclude Include="Source\SignalProcessor.h" />
+    <ClInclude Include="Source\TraceWindow.h" />
+    <ClInclude Include="Source\UserInterface.h" />
+    <ClInclude Include="Source\WindowExporter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\UserInterface.fl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

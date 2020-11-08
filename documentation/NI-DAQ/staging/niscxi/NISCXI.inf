@@ -1,0 +1,213 @@
+;===================================================================
+;
+;  Windows Vista .inf file for National Instruments DAQ Devices
+;
+;===================================================================
+
+[Version]
+Signature=$WINDOWS NT$
+Class=DAQDevice
+ClassGUID={7c797140-F6D8-11cf-9FD6-00A024178A17}
+Provider=%NIString0%
+DriverPackageDisplayName=%DriverDisplayName%
+ClassName="DAQDevice"
+DriverVer=08/12/2015
+CatalogFile=NISCXI.cat
+
+[ClassInstall32]
+AddReg=AddClassToRegistry
+
+[ClassInstall]
+AddReg=AddClassToRegistry
+
+[ControlFlags]
+ExcludeFromSelect=PCI\VEN_1093&DEV_7050
+ExcludeFromSelect=PCI\VEN_1093&DEV_7050&SUBSYS_00000000&REV_00
+ExcludeFromSelect=PCI\VEN_1093&DEV_7050&SUBSYS_70501093
+ExcludeFromSelect=PCI\VEN_1093&DEV_24B0
+ExcludeFromSelect=PCI\VEN_1093&DEV_24B0&SUBSYS_00000000&REV_00
+ExcludeFromSelect=PCI\VEN_1093&DEV_24B0&SUBSYS_24B01093
+ExcludeFromSelect=PCI\VEN_1093&DEV_7142
+ExcludeFromSelect=PCI\VEN_1093&DEV_7142&SUBSYS_00000000&REV_00
+ExcludeFromSelect=PCI\VEN_1093&DEV_7142&SUBSYS_71421093
+ExcludeFromSelect=PCI\VEN_1093&DEV_704F
+ExcludeFromSelect=PCI\VEN_1093&DEV_704F&SUBSYS_00000000&REV_00
+ExcludeFromSelect=PCI\VEN_1093&DEV_704F&SUBSYS_704F1093
+ExcludeFromSelect=USB\VID_3923&PID_0329
+
+[Manufacturer]
+%NIString0%=DeviceList,ntx86,ntamd64
+
+[DeviceList.ntx86]
+%PXI-4204.dDesc0%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050
+%PXI-4204.dDesc1%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050&SUBSYS_00000000&REV_00
+%PXI-4204.dDesc2%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050&SUBSYS_70501093
+%PXI-4200.dDesc0%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0
+%PXI-4200.dDesc1%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0&SUBSYS_00000000&REV_00
+%PXI-4200.dDesc2%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0&SUBSYS_24B01093
+%PXI-4224.dDesc0%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142
+%PXI-4224.dDesc1%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142&SUBSYS_00000000&REV_00
+%PXI-4224.dDesc2%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142&SUBSYS_71421093
+%PXI-4220.dDesc0%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F
+%PXI-4220.dDesc1%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F&SUBSYS_00000000&REV_00
+%PXI-4220.dDesc2%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F&SUBSYS_704F1093
+%SCXI-1600.dDesc0%=SCXI-1600.Cfg,USB\VID_3923&PID_0329
+
+[DeviceList.ntamd64]
+%PXI-4204.dDesc0%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050
+%PXI-4204.dDesc1%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050&SUBSYS_00000000&REV_00
+%PXI-4204.dDesc2%=PXI-4204.Cfg,PCI\VEN_1093&DEV_7050&SUBSYS_70501093
+%PXI-4200.dDesc0%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0
+%PXI-4200.dDesc1%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0&SUBSYS_00000000&REV_00
+%PXI-4200.dDesc2%=PXI-4200.Cfg,PCI\VEN_1093&DEV_24B0&SUBSYS_24B01093
+%PXI-4224.dDesc0%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142
+%PXI-4224.dDesc1%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142&SUBSYS_00000000&REV_00
+%PXI-4224.dDesc2%=PXI-4224.Cfg,PCI\VEN_1093&DEV_7142&SUBSYS_71421093
+%PXI-4220.dDesc0%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F
+%PXI-4220.dDesc1%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F&SUBSYS_00000000&REV_00
+%PXI-4220.dDesc2%=PXI-4220.Cfg,PCI\VEN_1093&DEV_704F&SUBSYS_704F1093
+
+[PXI-4204.Cfg]
+AddReg=Reg_PXI-4204
+CopyFiles=nispdkw.sys
+[PXI-4204.Cfg.Services]
+AddService= nispdkw, 0x00000002, nispdkw_Service_Inst
+
+[PXI-4200.Cfg]
+AddReg=Reg_PXI-4200
+CopyFiles=nispdkw.sys
+[PXI-4200.Cfg.Services]
+AddService= nispdkw, 0x00000002, nispdkw_Service_Inst
+
+[PXI-4224.Cfg]
+AddReg=Reg_PXI-4224
+CopyFiles=nispdkw.sys
+[PXI-4224.Cfg.Services]
+AddService= nispdkw, 0x00000002, nispdkw_Service_Inst
+
+[PXI-4220.Cfg]
+AddReg=Reg_PXI-4220
+CopyFiles=nispdkw.sys
+[PXI-4220.Cfg.Services]
+AddService= nispdkw, 0x00000002, nispdkw_Service_Inst
+
+[SCXI-1600.Cfg]
+AddReg=Reg_SCXI-1600
+CopyFiles=niesrkw.sys
+[SCXI-1600.Cfg.Services]
+AddService= niesrkw, 0x00000002, niesrkw_Service_Inst
+
+[Reg_PXI-4204]
+HKR,,ProductNumber,1,50,70
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,01,00,00,00
+HKR,,ELCCaching,1,01,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PXI-4200]
+HKR,,ProductNumber,1,b0,24
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,01,00,00,00
+HKR,,ELCCaching,1,01,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PXI-4224]
+HKR,,ProductNumber,1,42,71
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,01,00,00,00
+HKR,,ELCCaching,1,01,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PXI-4220]
+HKR,,ProductNumber,1,4f,70
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,01,00,00,00
+HKR,,ELCCaching,1,01,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_SCXI-1600]
+HKR,,ProductNumber,1,29,03
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,MaxRegOffset,1,20
+HKR,,RegSize,1,10,08,10,08,10,08, \
+10,08,10,08,10,08,10,08,10,08,10,08,10,08,00,08,10,08,10,00, \
+10,00,10,00,10,00,08
+HKR,,NumFIFOs,1,01
+HKR,,HighWaterMark,1,00,08,00,00
+HKR,,Direction,1,00
+HKR,,DataRegOffset,1,1c
+HKR,,EmptyFlagDesc,1,04,00,00,00,00,10,00,00,01,00,00,00
+HKR,,HighWaterFlagDesc,1,04,00,00,00,00,20,00,00,01,00,00,00
+HKR,,FIFOFlagsSimulated,1,00
+HKR,,CachedRegOffset,1,04,00,0a,00,06,00,0c,00,08,00
+HKR,,SurpriseRemoveWithoutWarning,1,01
+
+[AddClassToRegistry]
+HKR,,,0,%NIDAQClassName%
+HKR,,Installer32,0,%DaqClassInstallerStr%
+HKR,,Icon,,103
+
+[niesrkw_Service_Inst]
+ServiceType    = 1; SERVICE_KERNEL_DRIVER
+StartType      = 3; SERVICE_DEMAND_START
+ErrorControl   = 1; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\niesrkw.sys
+
+[niesrkw.sys]
+niesrkw.sys,,,0x00000004
+
+
+
+[nispdkw_Service_Inst]
+ServiceType    = 1; SERVICE_KERNEL_DRIVER
+StartType      = 3; SERVICE_DEMAND_START
+ErrorControl   = 1; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\nispdkw.sys
+
+[nispdkw.sys]
+nispdkw.sys,,,0x00000004
+
+[SourceDisksNames]
+1="NextToINF"
+
+[SourceDisksFiles]
+niesrkw.sys=1
+nispdkw.sys=1
+
+[DestinationDirs]
+DefaultDestDir=12
+
+[Strings]
+DriverDisplayName="Data Acquisition Device"
+NIString0="National Instruments"
+NIDAQClassName="Data Acquisition Devices"
+nipalk.SvcDesc="NI-PAL Driver"
+nipalusb.SvcDesc="NI-PAL USB Driver"
+nipal1394.SvcDesc="NI-PAL 1394 Driver"
+DaqClassInstallerStr="nindciu.dll,DaqClassInstaller"
+PXI-4204.dDesc0="PXI-4204"
+PXI-4204.dDesc1="PXI-4204"
+PXI-4204.dDesc2="PXI-4204"
+PXI-4200.dDesc0="PXI-4200"
+PXI-4200.dDesc1="PXI-4200"
+PXI-4200.dDesc2="PXI-4200"
+PXI-4224.dDesc0="PXI-4224"
+PXI-4224.dDesc1="PXI-4224"
+PXI-4224.dDesc2="PXI-4224"
+PXI-4220.dDesc0="PXI-4220"
+PXI-4220.dDesc1="PXI-4220"
+PXI-4220.dDesc2="PXI-4220"
+SCXI-1600.dDesc0="SCXI-1600"

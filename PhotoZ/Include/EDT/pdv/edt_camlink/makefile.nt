@@ -1,0 +1,72 @@
+
+!include ../makefile.def
+
+
+CC = cl
+
+OPTIM = -O2
+
+LIBSRC = ..
+HEADER_DIR = ..
+BINDIR=..\bin\$(ARCH)
+LIBDIR=..\lib\$(ARCH)
+CLSEREDTLIB=$(LIBDIR)\clseredt.lib
+CLSEREDTDLL=$(BINDIR)\clseredt.dll
+CLSEREDTMANIFEST=$(CLSEREDTDLL).manifest
+
+INCLUDES = $(INCLUDES) edt_camlink.h
+
+CFLAGS = $(OPTIM) -MD -DWIN32 -nologo -I$(HEADER_DIR) 
+CCFLAGS = $(OPTIM) -MD -DWIN32 -nologo -D "EDT_CAMLINK_EXPORTS" -D "_USRDLL" -I$(HEADER_DIR) 
+
+LINK32 = link
+DLLFLAGS = /dll /nologo /link50compat /map $(LDFLAGS)
+
+LIB32 = link -lib
+
+LIBOBJS = \
+     $(CFGNAME)\libpdv.obj \
+     $(CFGNAME)\libedt.obj \
+     $(CFGNAME)\pdv_interlace.obj \
+     $(CFGNAME)\pdv_irig.obj \
+     $(CFGNAME)\pdv_dmy_image.obj \
+     $(CFGNAME)\pdv_bayer_filter.obj \
+     $(CFGNAME)\libedt_timing.obj \
+     $(CFGNAME)\libdvu.obj \
+     $(CFGNAME)\pciload_fn.obj \
+     $(CFGNAME)\edt_error.obj \
+     $(CFGNAME)\edt_os_nt.obj \
+     $(CFGNAME)\edt_flash.obj
+
+OBJS = \
+	$(CFGNAME)\edt_camlink.obj
+
+all: dir $(CLSEREDTLIB)
+
+$(CLSEREDTLIB): $(LIBOBJS) $(DLLOBJS) $(INCLUDES) $(OBJS)
+	$(LINK32) $(OBJS) $(LIBOBJS) $(DLLFLAGS) /out:$(CLSEREDTDLL) /implib:$(CLSEREDTLIB)
+	@if exist $(CLSEREDTMANIFEST) mt.exe /nologo -manifest $(CLSEREDTMANIFEST) -outputresource:$(CLSEREDTDLL);2
+	@if exist $(CLSEREDTMANIFEST) del $(CLSEREDTMANIFEST)
+
+clean:
+	-del /Q $(CLSEREDTDLL) $(CLSEREDTLIB) $(DLLOBJS) $(CFGNAME)\*.obj
+
+dir:
+	if not exist $(CFGNAME)/ mkdir $(CFGNAME)
+	if not exist $(LIBDIR)/ mkdir $(LIBDIR)
+	if not exist $(BINDIR)/ mkdir $(BINDIR)
+
+{$(LIBSRC)}.c{$(CFGNAME)}.obj:
+	$(CC) -c $(CFLAGS) -Fo$(CFGNAME)\ $<
+
+{}.cpp{$(CFGNAME)}.obj:
+	$(CC) -c $(CCFLAGS) -Fo$(CFGNAME)\ $<
+
+
+
+
+
+
+
+
+

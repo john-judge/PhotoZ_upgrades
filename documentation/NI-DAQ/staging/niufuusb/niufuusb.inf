@@ -1,0 +1,85 @@
+
+; Copyright 2015 National Instruments Corporation
+;
+; niufuusb.inf
+;
+
+[Version]
+Signature=$WINDOWS NT$
+Class=%niufuusb_className%
+ClassGUID={7C797140-F6D8-11CF-9FD6-00A024178A17}
+Provider=%NIString0%
+DriverVer=08/19/2015,15.1.0.49153
+CatalogFile=niufuusb.cat
+DriverPackageDisplayName=%niufuusb_SvcDesc%
+
+;===========================================================================
+
+[ClassInstall32]
+AddReg=AddClassToRegistry
+
+;===========================================================================
+
+[ControlFlags]
+
+;===========================================================================
+
+[Manufacturer]
+%NIString0%=usb_Model,NTamd64
+
+;===========================================================================
+
+[usb_Model]
+
+
+[usb_Model.NTamd64]
+
+;===========================================================================
+
+
+[CCGP_Cfg]
+Include=usb.inf
+Needs=Composite.Dev.NT
+
+[CCGP_Cfg.Services]
+Include=usb.inf
+Needs=Composite.Dev.NT.Services
+
+
+[niufuusb_CopyFiles]
+niufuusb.sys
+
+[SourceDisksFiles]
+niufuusb.sys=1
+
+[SourceDisksNames]
+1=%installationMedia%
+
+[DestinationDirs]
+DefaultDestDir=12
+
+;===========================================================================
+
+[AddClassToRegistry]
+HKR,,,0,%niufuusb_className%
+
+[niufuusb_Service_Inst]
+DisplayName    = %niufuusb_SvcDesc%
+ServiceType    = 1        ; SERVICE_KERNEL_DRIVER
+StartType      = 3        ; SERVICE_DEMAND_START
+ErrorControl   = 1        ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\niufuusb.sys
+LoadOrderGroup = Base
+
+;===========================================================================
+
+[Strings]
+NIString0            = "National Instruments"
+niufuusb_className = "DAQDevice"
+niufuusb_SvcDesc      = "NI MIO Firmware Update Driver"
+installationMedia    = "Installation Media"
+
+
+
+
+

@@ -1,0 +1,140 @@
+;===================================================================
+;
+;  Windows Vista .inf file for National Instruments DAQ Devices
+;
+;===================================================================
+
+[Version]
+Signature=$WINDOWS NT$
+Class=DAQDevice
+ClassGUID={7c797140-F6D8-11cf-9FD6-00A024178A17}
+Provider=%NIString0%
+DriverPackageDisplayName=%DriverDisplayName%
+ClassName="DAQDevice"
+DriverVer=08/13/2015
+CatalogFile=NIHORB.cat
+
+[ClassInstall32]
+AddReg=AddClassToRegistry
+
+[ClassInstall]
+AddReg=AddClassToRegistry
+
+[ControlFlags]
+ExcludeFromSelect=PCI\VEN_1093&DEV_C4C4&SUBSYS_76C91093
+ExcludeFromSelect=PCI\VEN_1093&DEV_C4C4&SUBSYS_77161093
+ExcludeFromSelect=PCI\VEN_1093&DEV_C4C4&SUBSYS_76C81093
+
+[Manufacturer]
+%NIString0%=DeviceList,ntx86,ntamd64
+
+[DeviceList.ntx86]
+%PXIe-6612.dDesc0%=PXIe-6612.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_76C91093
+%PCIe-6612.dDesc0%=PCIe-6612.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_77161093
+%PXIe-6614.dDesc0%=PXIe-6614.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_76C81093
+
+[DeviceList.ntamd64]
+%PXIe-6612.dDesc0%=PXIe-6612.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_76C91093
+%PCIe-6612.dDesc0%=PCIe-6612.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_77161093
+%PXIe-6614.dDesc0%=PXIe-6614.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_76C81093
+
+[PXIe-6612.Cfg]
+AddReg=Reg_PXIe-6612
+CopyFiles=nihorbrkw.sys
+[PXIe-6612.Cfg.Services]
+AddService= nihorbrkw, 0x00000002, nihorbrkw_Service_Inst
+[PXIe-6612.Cfg.HW]
+AddReg=Reg_PXIe-6612_HW
+
+[PCIe-6612.Cfg]
+AddReg=Reg_PCIe-6612
+CopyFiles=nihorbrkw.sys
+[PCIe-6612.Cfg.Services]
+AddService= nihorbrkw, 0x00000002, nihorbrkw_Service_Inst
+[PCIe-6612.Cfg.HW]
+AddReg=Reg_PCIe-6612_HW
+
+[PXIe-6614.Cfg]
+AddReg=Reg_PXIe-6614
+CopyFiles=nihorbrkw.sys
+[PXIe-6614.Cfg.Services]
+AddService= nihorbrkw, 0x00000002, nihorbrkw_Service_Inst
+[PXIe-6614.Cfg.HW]
+AddReg=Reg_PXIe-6614_HW
+
+[Reg_PXIe-6612]
+HKR,,ProductNumber,1,c4,c4
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,00,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PXIe-6612_HW]
+HKR, "Interrupt Management", 0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",MSISupported, 0x00010001, 1
+
+[Reg_PCIe-6612]
+HKR,,ProductNumber,1,c4,c4
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,00,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PCIe-6612_HW]
+HKR, "Interrupt Management", 0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",MSISupported, 0x00010001, 1
+
+[Reg_PXIe-6614]
+HKR,,ProductNumber,1,c4,c4
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,01,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,00,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PXIe-6614_HW]
+HKR, "Interrupt Management", 0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",MSISupported, 0x00010001, 1
+
+[AddClassToRegistry]
+HKR,,,0,%NIDAQClassName%
+HKR,,Installer32,0,%DaqClassInstallerStr%
+HKR,,Icon,,103
+
+[nihorbrkw_Service_Inst]
+ServiceType    = 1; SERVICE_KERNEL_DRIVER
+StartType      = 3; SERVICE_DEMAND_START
+ErrorControl   = 1; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\nihorbrkw.sys
+
+[nihorbrkw.sys]
+nihorbrkw.sys,,,0x00000004
+
+[SourceDisksNames]
+1="NextToINF"
+
+[SourceDisksFiles]
+nihorbrkw.sys=1
+
+[DestinationDirs]
+DefaultDestDir=12
+
+[Strings]
+DriverDisplayName="Data Acquisition Device"
+NIString0="National Instruments"
+NIDAQClassName="Data Acquisition Devices"
+nipalk.SvcDesc="NI-PAL Driver"
+nipalusb.SvcDesc="NI-PAL USB Driver"
+nipal1394.SvcDesc="NI-PAL 1394 Driver"
+DaqClassInstallerStr="nindciu.dll,DaqClassInstaller"
+PXIe-6612.dDesc0="PXIe-6612"
+PCIe-6612.dDesc0="PCIe-6612"
+PXIe-6614.dDesc0="PXIe-6614"

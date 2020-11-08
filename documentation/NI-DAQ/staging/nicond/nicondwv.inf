@@ -1,0 +1,88 @@
+;===================================================================
+;
+;  Windows Vista .inf file for National Instruments DAQ Devices
+;
+;===================================================================
+
+[Version]
+Signature=$WINDOWS NT$
+Class=DAQDevice
+ClassGUID={7c797140-F6D8-11cf-9FD6-00A024178A17}
+Provider=%NIString0%
+DriverPackageDisplayName=%DriverDisplayName%
+ClassName="DAQDevice"
+DriverVer=08/13/2015
+CatalogFile=NICOND.cat
+
+[ClassInstall32]
+AddReg=AddClassToRegistry
+
+[ClassInstall]
+AddReg=AddClassToRegistry
+
+[ControlFlags]
+ExcludeFromSelect=PCI\VEN_1093&DEV_C4C4&SUBSYS_73261093
+
+[Manufacturer]
+%NIString0%=DeviceList,ntx86,ntamd64
+
+[DeviceList.ntx86]
+%PCIe-6509.dDesc0%=PCIe-6509.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_73261093
+
+[DeviceList.ntamd64]
+%PCIe-6509.dDesc0%=PCIe-6509.Cfg,PCI\VEN_1093&DEV_C4C4&SUBSYS_73261093
+
+[PCIe-6509.Cfg]
+AddReg=Reg_PCIe-6509
+CopyFiles=nicondrkw.sys
+[PCIe-6509.Cfg.Services]
+AddService= nicondrkw, 0x00000002, nicondrkw_Service_Inst
+[PCIe-6509.Cfg.HW]
+AddReg=Reg_PCIe-6509_HW
+
+[Reg_PCIe-6509]
+HKR,,ProductNumber,1,c4,c4
+HKR,,BridgeType,1,10,00,00,00
+HKR,,DeviceClass,1,78,71,61,64
+HKR,,DMA,1,00,00,00,00
+HKR,,DAR,1,00,00,00,00
+HKR,,ELC,1,00,00,00,00
+HKR,,MITERetry,1,00,00,00,00
+
+[Reg_PCIe-6509_HW]
+HKR, "Interrupt Management", 0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",0x00000010
+HKR, "Interrupt Management\MessageSignaledInterruptProperties",MSISupported, 0x00010001, 1
+
+[AddClassToRegistry]
+HKR,,,0,%NIDAQClassName%
+HKR,,Installer32,0,%DaqClassInstallerStr%
+HKR,,Icon,,103
+
+[nicondrkw_Service_Inst]
+ServiceType    = 1; SERVICE_KERNEL_DRIVER
+StartType      = 3; SERVICE_DEMAND_START
+ErrorControl   = 1; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\nicondrkw.sys
+
+[nicondrkw.sys]
+nicondrkw.sys,,,0x00000004
+
+[SourceDisksNames]
+1="NextToINF"
+
+[SourceDisksFiles]
+nicondrkw.sys=1
+
+[DestinationDirs]
+DefaultDestDir=12
+
+[Strings]
+DriverDisplayName="Data Acquisition Device"
+NIString0="National Instruments"
+NIDAQClassName="Data Acquisition Devices"
+nipalk.SvcDesc="NI-PAL Driver"
+nipalusb.SvcDesc="NI-PAL USB Driver"
+nipal1394.SvcDesc="NI-PAL 1394 Driver"
+DaqClassInstallerStr="nindciu.dll,DaqClassInstaller"
+PCIe-6509.dDesc0="PCIe-6509"
