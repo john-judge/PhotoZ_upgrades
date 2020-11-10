@@ -5,9 +5,8 @@
 #include <sys/types.h>	// _stat
 #include <sys/stat.h>	// _stat
 #include <direct.h>		// _chdir(),_mkdir()
-#include <string>
+
 #include <FL/Fl_File_Chooser.H>
-#include <iostream>
 
 #include "MainController.h"
 #include "SignalProcessor.h"
@@ -17,72 +16,75 @@
 #include "DataArray.h"
 #include "Definitions.h"
 #include "Data.h"
-#include "Camera.h"
 
-using namespace std;
 char* i2txt(int);
+
+// IP - Channel Map
+int Ch_IP[472]=
+{
+	57,61,49,53,41,45,33,219,223,211,215,203,37,25,29,17,21,9,13,207,
+	195,199,250,254,242,246,1,5,56,60,48,52,40,234,238,226,230,218,222,210,
+	214,44,32,36,24,28,16,20,8,202,206,194,198,313,317,305,309,12,0,4,
+	59,63,51,55,43,47,297,301,289,293,281,285,273,277,35,39,27,31,19,23,
+	11,15,3,265,269,257,261,312,316,304,308,296,7,58,62,50,54,42,46,34,
+	30,300,288,292,280,284,272,276,264,268,256,26,38,18,22,10,14,2,6,121,
+	125,260,315,319,307,311,299,303,291,295,283,113,117,105,109,97,101,89,93,81,
+	85,73,287,275,279,267,271,259,263,314,318,306,77,65,69,120,124,112,116,104,
+	108,96,100,310,298,302,290,294,282,286,274,278,266,270,88,92,80,84,72,76,
+	64,68,123,127,115,258,262,377,381,369,373,361,365,353,357,345,349,119,107,111,
+	99,103,91,95,83,87,75,79,67,337,341,329,333,321,325,376,380,368,372,360,
+	364,71,122,126,114,118,106,110,98,102,90,94,82,352,356,344,348,336,340,328,
+	332,320,324,379,86,74,78,66,70,185,189,177,181,169,173,161,383,371,375,363,
+	367,355,359,347,351,339,343,331,165,153,157,145,149,137,141,129,133,184,188,335,
+	323,327,378,382,370,374,362,366,354,358,346,176,180,168,172,160,164,152,156,144,
+	148,136,350,338,342,330,334,322,326,441,445,433,437,140,128,132,187,191,179,183,
+	171,175,163,167,425,429,417,421,409,413,401,405,393,397,155,159,147,151,139,143,
+	131,135,186,190,385,389,440,444,432,436,424,428,416,420,178,182,170,174,162,166,
+	154,158,146,408,412,400,404,392,396,384,388,443,447,150,138,142,130,134,249,253,
+	241,245,435,439,427,431,419,423,411,415,403,233,237,225,229,217,221,209,213,201,
+	407,395,399,387,391,442,446,434,205,193,197,248,252,240,244,232,438,426,430,418,
+	422,410,414,402,236,224,228,216,220,208,212,406,394,398,386,390,505,497,489,200,
+	204,192,196,251,255,243,481,473,465,457,449,504,496,247,235,239,227,231,488,480,
+	472,464,456,448,
+	452,460,468,476,484,492,500,508
+};
 
 //=============================================================================
 void MainController::takeRli()
 {
-	int i,j;		// i is array index; j = time index
+	int i,j;
 
 	//-------------------------------------------
 	// Allocate Memory
 	//
-	Camera cam;
-//	int array_diodes = dataArray->num_raw_array_diodes();
-	int bufferSize = dataArray->num_raw_array_diodes();//cam.get_buffer_size();
-	cout << "MainControllerAcqui line 36 " << bufferSize << "\n";
-	short *memory=new short[bufferSize*475];
-	short **traceData=new short*[bufferSize];
-	
-	for (i=0; i< bufferSize; i++) {
-		traceData[i]=new short[475];
+	short *memory=new short[512*350];
+	short **traceData=new short*[Num_Diodes];
+
+	for(i=0;i<Num_Diodes;i++)
+	{
+		traceData[i]=new short[350];
 	}
+
 	//-------------------------------------------
 	// Get Signal
 	//
-	cout << "MainControllerAcqui line 46 \n";
-	if (cam.open_channel()) {
-		fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
-		delete [] memory;
-		for(i=0;i< bufferSize;i++)
-			delete [] traceData[i];
-		delete [] traceData;
-		return;
-	}
-//	int program = dc->getCameraProgram();
-//	int freq = Camera::FREQ[program];
-	
-//	cam.program(program);
 	dapControl->setDAPs();
-	cout << "MainCAcqui line 57 setDAPs  \n";
-	/*dapControl->resetDAPs();
-
-	int status = dapControl->sendFile2Dap(("RLI-820 v5_"+ std::to_string(freq)+".dap").c_str());
-	if (status == 0) {
-		fl_alert("Main Cont Acq line 61 Failed to send DAP files to DAPs!\n");
-		dapControl->releaseDAPs();
-		delete [] memory;
-		for(i=0;i<array_diodes;i++)
-			delete [] traceData[i];
-		delete [] traceData;
-		return;
-	}*/
-	if (dapControl->takeRli(memory, cam))
-		fl_alert(" Main Cont Acq line 70 Timeouts ocurred! Check camera and connections.");
+	dapControl->resetDAPs();
+	dapControl->takeRli(memory);
 	dapControl->releaseDAPs();
 
+	//-------------------------------------------
 	// Arrange Data from Memory to traceData
 	//
-	cout << "MainControllerAcqui line 79 \n";
-	for(i=0;i< bufferSize;i++) {
-		for(j=0;j<475;j++) {
-			traceData[i][j]=memory[i+j* bufferSize];
+	for(i=0;i<Num_Diodes;i++)
+	{
+		for(j=0;j<350;j++)
+		{
+			traceData[i][j]=memory[Ch_IP[i]+j*512];
 		}
 	}
-	cout << "MainCAcqui line 81 traceData[10][10]  "<<traceData[10][10] << "  \n";
+
+	//-------------------------------------------
 	// Release memory
 	//
 	delete [] memory;
@@ -93,36 +95,43 @@ void MainController::takeRli()
 	long low,high;
 	short max;
 
-	for(i=0;i< bufferSize;i++) {				//	high and low refer to early and late in the acquisition time - must be before the light is on!!
-		// Low : 100~150
-		for(low=0,j=100;j<150;j++) {
-			low += traceData[i][j];
+	for(i=0;i<Num_Diodes;i++)
+	{
+		for(low=0,j=100;j<150;j++)// Low : 100~150
+		{
+			low+=traceData[i][j];
 		}
 		low/=50;
 
-		// High : 325~375
-		for(high=0,j=325;j<375;j++) {
-			high += traceData[i][j];
+		for(high=0,j=250;j<300;j++)// High : 250~300
+		{
+			high+=traceData[i][j];
 		}
 		high/=50;
 
-		// Max : 325~375
-		for(max=0,j=325;j<375;j++) {
-			max = max(max, traceData[i][j]);
+		for(max=30000,j=175;j<225;j++)// Max : 175~225
+		{
+			if(traceData[i][j]<max)
+			{
+				max=traceData[i][j];
+			}
 		}
 
 		dataArray->setRliLow(i,(short)low);
 		dataArray->setRliHigh(i,(short)high);
-		dataArray->setRliMax(i,max);		//	if (i%1000==1) cout << " MainContrAcqui line 113 diode " << i << "low " << low <<" high " << high << endl; //test showed that low is a dark frame for subtraction
+		dataArray->setRliMax(i,max);
 	}
 
+	//-------------------------------------------
 	// Release Memory
 	//
-	for(i=0;i< bufferSize;i++) {
+	for(i=0;i<Num_Diodes;i++)
+	{
 		delete [] traceData[i];
 	}
 	delete [] traceData;
 
+	//-------------------------------------------
 	// Calculate RLI
 	//
 	dataArray->calRli();
@@ -132,7 +141,9 @@ void MainController::takeRli()
 	// If RliDiv is set, process the data
 	//
 	if(sp->getRliDivFlag())
+	{
 		dataArray->process();
+	}
 
 	//-------------------------------------------
 	// Redraw
@@ -146,41 +157,35 @@ void MainController::takeRli()
 void MainController::acquiOneRecord()
 {
 	//-------------------------------------------
+	int i,j;
 	clock_t start,now;
 
 	//-------------------------------------------
 	// Get Number of Trials and the Interval between two Trials
 	//
 	int numTrials=recControl->getNumTrials();				// Number of Trials
-	//  int numSkippedTrials=recControl->getNumSkippedTrials();	// Number of skipped trials
+	int numSkippedTrials=recControl->getNumSkippedTrials();	// Number of skipped trials
 	int interval=recControl->getIntTrials()*1000;			// sec -> msec
 	int numPts=dapControl->getNumPts();						// Number of Points per Trace
-	int num_diodes = dataArray->num_raw_diodes();
 
 	//-------------------------------------------
 	// Allocate Memory
 	//
-	short *memory=new(std::nothrow) short[num_diodes * numPts];
-	if (!memory) {
-		fl_alert("Ran out of memory!\n");
-		return;
-	}
-	memset(memory, 0, num_diodes * numPts * sizeof(short));
+	short *memory=new short[512*numPts];
 
 	//-------------------------------------------
 	// Set Stop Flag to 0
 	//
 	dapControl->setStopFlag(0);
 
-	int totalTrials=numTrials;
+
+	int totalTrials=(1+numSkippedTrials)*numTrials;
 	int trialCount=0;
 	int trialNo=0;
 
-	clock_t fr_st, fr_end;
-
 	for(;trialCount<totalTrials && !dapControl->getStopFlag();trialCount++)
 	{
-		printf("Trial %d\n", trialCount);
+		//-------------------------------------------
 		// Time Management
 		if(trialCount==0)// First Trial
 		{
@@ -219,33 +224,20 @@ void MainController::acquiOneRecord()
 		dapControl->resetDAPs();
 		dapControl->createAcquiDapFile();
 
-		Camera cam;
-		if (cam.open_channel()) {
-			fl_alert("MCA line 220 Failed to open the camera channel!\n");
-			goto error;
-		}
-		cam.program(dc->getCameraProgram());
-		cam.init_cam();
-
-		if(trialCount%1==0)
+		if(trialCount%(1+numSkippedTrials)==0)
 		{
 			// Send Dap File to the DAP board
-			int status=dapControl->sendFile2Dap("Record-820 v5.dap");
+			int status=dapControl->sendFile2Dap("Record-3200 v5.dap","Record-5400 v5.dap");
 
 			if(status==0)// Failed to Send Dap File
 			{
-				fl_alert("MCA Line 233 Failed to Send DAP files to DAPs!\n");
-				goto error;
-			}											
+				delete [] memory;
+				fl_alert("Failed to Send DAP files to DAPs!\n");
+				dapControl->releaseDAPs();
+				return;
+			}
 
-			fr_st = clock();
-			int timeouts = dapControl->acqui(memory, cam);
-			fr_end = clock();
-
-			double runtime = (double) (fr_end - fr_st) / CLOCKS_PER_SEC;
-			printf("runtime: %f\n", runtime);
-			if (timeouts)
-				fl_alert("Main Cont Acq line 244 Timeouts ocurred! Check camera and connections.");
+			dapControl->acqui(memory);
 
 			// Arrange Data
 			dataArray->arrangeData(trialNo,memory);
@@ -264,12 +256,14 @@ void MainController::acquiOneRecord()
 		else // Pseudo-Recording
 		{
 			// Send Dap File to the DAP board
-			int status=dapControl->sendFile2Dap("PseudoRecord-820 v5.dap");
+			int status=dapControl->sendFile2Dap("PseudoRecord-3200 v5.dap");
 
 			if(status==0)// Failed to Send Dap File
 			{
-				fl_alert("MCA line 267 Failed to Send DAP files to DAPs!\n");
-				goto error;
+				delete [] memory;
+				fl_alert("Failed to Send DAP files to DAPs!\n");
+				dapControl->releaseDAPs();
+				return;
 			}
 
 			dapControl->pseudoAcqui();
@@ -293,12 +287,6 @@ void MainController::acquiOneRecord()
 
 	// Redraw
 	redraw();
-	return;
-
-error:
-	delete [] memory;
-	dapControl->releaseDAPs();
-	return;
 }
 
 //=============================================================================
@@ -431,24 +419,6 @@ void MainController::setLatencyWindow(double input)
 	redraw();
 }
 
-void MainController::setRliScalar(const char* input)
-{
-	double value;
-	value=atof(input);
-
-	dataArray->setRliScalar(value);
-	ui->rliScalarRoller->value(value);
-	redraw();
-}
-void MainController::setRliScalar(double value)
-{
-	char txt[32];
-	dataArray->setRliScalar(value);
-	_gcvt_s(txt, 32, value, 6);
-	ui->rliScalarTxt->value(txt);
-	redraw();
-}
-
 //=============================================================================
 void MainController::setFittingVarAllDiodes()
 {
@@ -469,7 +439,7 @@ void MainController::setFittingVarAllDiodes()
 
 	Data* data;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
 		data=dataArray->getData(i);
 		data->setAllFittingVar(fittingVar,changeFlag);
@@ -482,7 +452,7 @@ void MainController::setAutoDetectSpike(bool flag)
 	int i;
 	Data* data;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
 		data=dataArray->getData(i);
 		data->setAutoDetectSpike(flag);
@@ -490,7 +460,7 @@ void MainController::setAutoDetectSpike(bool flag)
 
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo>=-NUM_FP_DIODES)
+	if(diodeNo>=0)
 	{
 		tw->setFittingGadgets(diodeNo);
 	}
@@ -501,7 +471,7 @@ void MainController::setAlphaSpikeStart(const char* txt)
 {
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo<-NUM_FP_DIODES)
+	if(diodeNo<0)
 	{
 		return;
 	}
@@ -515,7 +485,7 @@ void MainController::setAlphaSpikeEnd(const char* txt)
 {
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo<-NUM_FP_DIODES)
+	if(diodeNo<0)
 	{
 		return;
 	}
@@ -530,7 +500,7 @@ void MainController::initializeFittingAmp()
 	int i;
 	Data* data;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
 		data=dataArray->getData(i);
 		data->initializeFittingAmp();
@@ -538,7 +508,7 @@ void MainController::initializeFittingAmp()
 
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo>=-NUM_FP_DIODES)
+	if(diodeNo>=0)
 	{
 		tw->setFittingGadgets(diodeNo);
 	}

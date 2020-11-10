@@ -3,16 +3,14 @@
 //=============================================================================
 #include <stdlib.h>		// _gcvt()
 #include <fstream>
-#include <math.h> 
+
 #include <FL/fl_file_chooser.h>
-#include <iostream>
 
 #include "MainController.h"
 #include "ArrayWindow.h"
 #include "UserInterface.h"
 #include "DataArray.h"
 #include "ColorWindow.h"
-#include "Color.h"
 #include "Definitions.h"
 
 using namespace std;
@@ -23,14 +21,6 @@ char* d2txt(double);
 //=============================================================================
 void MainController::setAwShowTrace(char p)
 {
-	/*if (aw->getBackground() == BG_Live_Feed&&!(ui->lfRun->value()))
-	{
-		int choice = fl_choice("The file already exists! Please choose one of following:", "Cancel",
-			"Save as ", "Overwrite");
-		
-		fl_alert("Doing this w.");
-		return;
-	}*/
 	aw->setShowTrace(p);
 	aw->redraw();
 }
@@ -38,12 +28,6 @@ void MainController::setAwShowTrace(char p)
 //=============================================================================
 void MainController::setAwShowRliValue(char p)
 {
-
-		/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value()))
-		{
-			fl_alert("Please toggle or change this during or before live feed.");
-			return;
-		}*/
 	aw->setShowRliValue(p);
 	aw->redraw();
 }
@@ -51,30 +35,14 @@ void MainController::setAwShowRliValue(char p)
 //=============================================================================
 void MainController::setAwShowDiodeNum(char p)
 {
-	/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value))
-	{
-		fl_alert("Please toggle or change this during or before live feed.");
-		return;
-	}*/
 	aw->setShowDiodeNum(p);
 	aw->redraw();
 }
 
 //=============================================================================
 void MainController::setAwYScale(double p)
-{	
-	/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value))
-	{
-		fl_alert("Please toggle or change this during or before live feed.");
-		return;
-	}*/
-	if (p >=0) {
-		p = 0.1*pow(p,4); //changed 1 to 4 to increase range of scale in arraw window
-	}
-	else {
-		p = -1*0.1*pow(p,4);
-	}
-	aw->setYScale2(p);
+{
+	aw->setYScale(p);
 
 	if(aw->getShowTrace())
 	{
@@ -87,18 +55,7 @@ void MainController::setAwYScale(double p)
 //=============================================================================
 void MainController::setAwFpYScale(double p)
 {
-	/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value))
-	{
-		fl_alert("Please toggle or change or change this during or before live feed.");
-		return;
-	}*/
-	if (p >= 0) {
-		p = 0.1*pow(p, 1);
-	}
-	else {
-		p = -1 *0.1* pow(p, 1);
-	}
-	aw->setYScale(p);
+	aw->setYScale2(p);
 
 	if(aw->getShowTrace())
 	{
@@ -111,11 +68,6 @@ void MainController::setAwFpYScale(double p)
 //=============================================================================
 void MainController::setAwXScale(double p)
 {
-	/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value))
-	{
-		fl_alert("Please toggle or change or change this during or before live feed.");
-		return;
-	}*/
 	aw->setXScale(p);
 
 	if(aw->getShowTrace())
@@ -129,11 +81,6 @@ void MainController::setAwXScale(double p)
 //=============================================================================
 void MainController::setAwXShift(double p)
 {
-	/*if (aw->getBackground() == BG_Live_Feed && !(ui->lfRun->value))
-	{
-		fl_alert("Please toggle or change or change this during or before live feed.");
-		return;
-	}*/
 	aw->setXShift(p);
 
 	if(aw->getShowTrace())
@@ -195,80 +142,74 @@ void MainController::setAwImageYSize(int size)
 }
 
 //=============================================================================
-void MainController::saveSelected()		// repurpose to save ROIs. It previously saved diodes with no ROI selection.
+void MainController::saveSelected()
 {
-	int numROIs = aw->getNumRegions();
-	if(numROIs<=0)
+	int numSelectedDiodes=aw->getNumSelectedDiodes();
+	int* diodeList=aw->getSelectedDiodes();
+
+	if(numSelectedDiodes<=0)
 	{
-		printf_s(" \a");
-		fl_alert(" no ROIs selected ");
 		return;
 	}
-	
+
 	// Ask for the file name
-	char *fileName=fl_file_chooser("Enter the name of the Selected ROI file to save","*.dat","ROIs-.dat");
-		if(!fileName)
+	char *fileName=fl_file_chooser(
+		"Please enter the name of the SEL file","*.sel","Diodes.sel");
+
+	if(!fileName)
 	{
 		return;
 	}
+
 	// Open the file and save values
 	int i;
+
 	fstream file;
 	file.open(fileName,ios::out);
-	file << numROIs<< "\n";
-	for (int RegionIndex = 0; RegionIndex < numROIs; RegionIndex++)
+
+	file<<numSelectedDiodes<<"\n";
+
+	for(i=0;i<numSelectedDiodes;i++)
 	{
-		int* ROIList = aw->getSelectedDiodesAverage(RegionIndex);
-		file << RegionIndex << "\n";
-		int RegionSize = aw->getNumSelectedDiodesAverage(RegionIndex);
-		file << RegionSize << "\n";
-			for (i = 0; i < RegionSize; i++)
-			{
-				file << ROIList[i] << '\n';
-			}
+		file<<diodeList[i]+1<<'\n';
 	}
+
 	file.close();
 }
 
 //=============================================================================
-void MainController::loadSelected()		// repurposed to load saved ROIs
+void MainController::loadSelected()
 {
 	// Ask for the file name
-	char *fileName = fl_file_chooser("Please select one .dat file", "*.dat", "Diodes.dat");
-	if (!fileName)
+	char *fileName=fl_file_chooser("Please select one SEL file","*.sel","Diodes.sel");
+
+	if(!fileName)
 	{
 		return;
 	}
-	int i;
-	int j;
-	int numROIs;
-	int RegionSize;
-	int RegionIndex;
 
-	aw->clearSelected(0);
-	
+	// Load values
+	int i;
+	int numSelectedDiodes;
+	int diodeNo;
+
+	aw->clearSelected();
+
 	fstream file;
-	file.open(fileName, ios::in);
-	file >> numROIs;
-		
-	for (int i = 0; i < numROIs; i++)
+	file.open(fileName,ios::in);
+
+	file>>numSelectedDiodes;
+
+	for(i=0;i<numSelectedDiodes;i++)
 	{
-		int diodeIndex;
-		file >> RegionIndex;
-		file >> RegionSize;
-		aw->setContinuous(1);
-		for (j = 0; j < RegionSize; j++)
-		{
-			file >> diodeIndex;
-			if (j > 0)
-			{
-				cout << "mcaw line 267 regionindex " << RegionIndex << " diode " << diodeIndex << endl;
-				aw->addToSelectedList(diodeIndex, 1);
-			}
-		}
-		aw->setContinuous(0);
+		file>>diodeNo;
+		aw->selectDiode(diodeNo-1);
 	}
-file.close();
+
+	file.close();
+
+	// Redraw
+	redraw();
 }
 
 //=============================================================================
@@ -278,6 +219,7 @@ void MainController::ignoreSelectedDiodes()
 
 	int numDiodes=aw->getNumSelectedDiodes();
 	int* index=aw->getSelectedDiodes();
+
 	for(i=0;i<numDiodes;i++)
 	{
 		dataArray->setIgnoredFlag(index[i],1);
@@ -287,8 +229,4 @@ void MainController::ignoreSelectedDiodes()
 	redraw();
 }
 
-void MainController::setContinuous(int continuous)
-{
-	aw->setContinuous(continuous);
-}
 //=============================================================================

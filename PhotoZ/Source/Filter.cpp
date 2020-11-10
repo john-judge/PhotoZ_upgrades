@@ -30,17 +30,9 @@ void Filter::process(double *input,double *output)
 	{
 		gaussian(input,output);
 	}
-	else if(type=='B')
+	else if(type=='M')
 	{
-		binomial8(input,output);
-	}
-	else if (type == 'C')
-	{
-		binomial6(input, output);
-	}
-	else if (type == 'D')
-	{
-		binomial4(input, output);
+		movAve(input,output);
 	}
 }
 
@@ -82,87 +74,14 @@ void Filter::movAve(double *input,double *output)
 }
 
 //=============================================================================
-void Filter::binomial8(double *input,double *output)   //  new 9 point binomial for speed
-{
-	int i;
-	int numPts = dc->getNumPts();
-
-	double sum;										//filtering excludes first 5 points
-	output[0] = (input[4] + 8 * input[3] + 28 * input[2] + 56 * input[1]) / 93;
-	output[1] = (input[5] + 8 * input[4] + 28 * input[3] + 56 * input[2] + 70 * input[1]) / 163;
-	output[2] = (input[6] + 8 * input[5] + 28 * input[4] + 56 * (input[1] + input[3]) + 70 * input[2]) / 219;
-	output[3] = (input[7] + 8 * input[6] + 28 * (input[1] + input[5]) + 56 * (input[2] + input[4]) + 70 * input[3]) / 247;
-	
-	for (i = 4; i < numPts - 4; i++)
-	{
-			output[i] = (input[i-4]+input[i+4] + 8*(input[i-3]+input[i+3])+ 28*(input[i-2]+input[i+2])+56*(input[i-1]+input[i+1])+70*input[i])/256;
-	}
-	output[numPts-4] = (input[numPts - 8] + 8 * (input[numPts - 7] + input[numPts -1 ]) + 28 * (input[numPts - 6] + input[numPts - 2]) + 56 * (input[numPts - 5] + input[numPts -3]) + 70 * input[numPts-4]) / 255;
-	output[numPts-3] = (input[numPts - 7] + 8 * input[numPts - 6] + 28 * (input[numPts - 5] + input[numPts-1]) + 56 * (input[numPts - 4] + input[numPts -2]) + 70 * input[numPts-3]) / 247;
-	output[numPts-2] = (input[numPts - 6] + 8 * input[numPts - 5] + 28 * input[numPts-4] + 56 * (input[numPts - 3] + input[numPts - 1]) + 70 * input[numPts-2]) / 219;
-	output[numPts-1] = (input[numPts - 5] + 8 * input[numPts - 4] + 28 * input[numPts - 3] + 56 * input[numPts - 2] + 70 * input[numPts-1]) / 163;
-	output[0] = (output[6]+output[10])/2;					// replace first six points with later points
-	output[1] = (output[7] + output[9]) / 2;				// obsolute because first 7 frames are discarded
-	output[2] = (output[8] + output[10]) / 2;				// needed to analyse data collected with earlier version
-	output[3] = (output[9] + output[6]) / 2;				// at some point remove this code here and in binomial 4 and 6
-	output[4] = (output[10] + output[7]) / 2;
-	output[5] = (output[11] + output[13]) / 2;
-}
-
-void Filter::binomial6(double *input, double *output)   //   7 point binomial [from binomial8]
-{
-	int i;
-	int numPts = dc->getNumPts();
-
-	double sum;										//filtering excludes first 5 points
-	output[0] = (input[3] + 6 * input[2] + 15 * input[1] + 20 * input[0]) / 42;
-	output[1] = (input[4] + 6 * input[3] + 15 * (input[0] + input[2]) + 20 * input[1]) / 57;
-	output[2] = (input[5] + 6 * (input[0]+input[4]) + 15 * (input[1] + input[3]) + 20 * input[2]) /63;
-	for (i = 3; i < numPts - 3; i++)
-	{
-		output[i] = (input[i - 3] + input[i + 3] + 6 * (input[i - 2] + input[i + 2]) + 15 * (input[i - 1] + input[i + 1]) + 20 * input[i]) / 64;
-	}
-	output[numPts - 3] = (input[numPts - 6] + 6 * (input[numPts - 5]+input[numPts-1]) + 15 * (input[numPts - 4] + input[numPts - 2]) + 20 * input[numPts - 3]) / 63;
-	output[numPts - 2] = (input[numPts - 5] + 6 * input[numPts - 4] + 15 * (input[numPts - 3] + input[numPts - 1]) + 20 * input[numPts - 2]) / 57;
-	output[numPts - 1] = (input[numPts - 4] + 6 * input[numPts - 3] + 15 * input[numPts - 2] + 20 * input[numPts - 1]) / 42;
-	output[0] = (output[6] + output[10]) / 2;					//replace first five points with later points
-	output[1] = (output[7] + output[9]) / 2;
-	output[2] = (output[8] + output[10]) / 2;
-	output[3] = (output[9] + output[6]) / 2;
-	output[4] = (output[10] + output[7]) / 2;
-	output[5] = (output[11] + output[13]) / 2;
-}
-
-void Filter::binomial4(double *input, double *output)   //   7 point binomial [from binomial8]
-{
-	int i;
-	int numPts = dc->getNumPts();
-
-	double sum;										//filtering excludes first 5 points
-	output[0] = (input[2]+4*input[1]+6*input[0])/11;
-	output[1] = (input[3] + 4*(input[0]+input[2]) +6 * input[1]) / 15;
-	for (i = 2; i < numPts - 2; i++)
-	{
-		output[i] = (input[i - 2] + input[i + 2] + 4 * (input[i - 1] + input[i + 1]) + 6 * input[i]) / 16;
-	}
-	output[numPts - 2] = (input[numPts-4] + 4 * (input[numPts-3] + input[numPts-1]) + 6 * input[numPts-2]) / 15;;
-	output[numPts - 1] = (input[numPts - 3] + 4 * input[numPts - 2] + 6 * input[numPts - 1]) / 11;
-	output[0] = (output[6] + output[10]) / 2;					//replace first five points with later points
-	output[1] = (output[7] + output[9]) / 2;
-	output[2] = (output[8] + output[10]) / 2;
-	output[3] = (output[9] + output[6]) / 2;
-	output[4] = (output[10] + output[7]) / 2;
-	output[5] = (output[11] + output[13]) / 2;
-}
 void Filter::gaussian(double *input,double *output)
 {
-	int i, j;
-	int k=width;
+	int i,j;
 	int numPts=dc->getNumPts();
 
 	double sum;
-	if (width < 4) 		int k = 4;
-	for(i=k;i<numPts-width;i++)						// modified to remove first few corrupt points
+
+	for(i=width;i<numPts-width;i++)
 	{
 		sum=0;
 
@@ -172,9 +91,6 @@ void Filter::gaussian(double *input,double *output)
 		}
 
 		output[i]=sum;
-	}
-	for (i = 0; i < width; i++) {
-		output[i] = output[width+2*i];
 	}
 }
 

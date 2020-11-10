@@ -60,7 +60,7 @@ void MainController::fitVm()
 {
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo<-NUM_FP_DIODES)
+	if(diodeNo<0)
 	{
 		return;
 	}
@@ -77,7 +77,7 @@ void MainController::fitVmX10()
 {
 	int diodeNo=tw->getLastDiodeNo();
 
-	if(diodeNo<-NUM_FP_DIODES)
+	if(diodeNo<0)
 	{
 		return;
 	}
@@ -109,11 +109,13 @@ void MainController::fitVmX10()
 //=============================================================================
 void MainController::fitAllDiodes()
 {
+	int i;
 	int diodeNo;
 
 	double minValue,error;
+	char ignoredFlag;
 
-	for (diodeNo = 0; diodeNo < dataArray->num_binned_diodes(); diodeNo++)
+	for(diodeNo=0;diodeNo<464;diodeNo++)
 	{
 		// Find the minimum
 		minValue=1000;

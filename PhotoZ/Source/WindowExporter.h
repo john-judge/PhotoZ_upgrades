@@ -3,7 +3,6 @@
 //=============================================================================
 #ifndef _WindowExporter_h
 #define _WindowExporter_h
-
 //=============================================================================
 #include <windows.h>
 
@@ -25,6 +24,7 @@ private:
 public:
 	WindowExporter();
 	~WindowExporter();
+
 	void setImageType(char);
 	void export1(int x0, int y0, int w, int h);
 	void export2(int x0, int y0, int w, int h, const char* fileName);

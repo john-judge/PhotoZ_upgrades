@@ -11,16 +11,14 @@ class FileController
 {
 private:
 	// File Names for the two Data Array
-	char fileName[64] = "None";
+	char fileName[64];
 
 	// Private functions
 	int getDirFileName(char* dir,char* filename);
-	int getDirNPFileName(char* dir, char* filename);
 	void changeDir(char*);
 
 	int loadWholeFile();
 	int loadRecControl(std::fstream&);
-	int loadNPRecControl(std::fstream&);
 	int loadData(std::fstream&);
 
 	void saveRecControl(std::fstream*);
@@ -31,7 +29,6 @@ public:
 	~FileController();
 
 	int openFile();
-	int openNPFile();
 	int openFileByName(const char* fileName);
 	int saveDataFile();
 	void saveProcessedData();

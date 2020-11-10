@@ -26,7 +26,7 @@ public:
 	int getIndex();
 	void clearSelected();
 	void setColorAsDiode();
-	void select(int altDown = 0, int shiftDown = 0);
+	void select();
 
 	// Draw
 	void drawTrace(double *proData);
@@ -34,8 +34,7 @@ public:
 	void drawDiodeNum();
 
 	// Background
-	void drawBackground();
-	void setColorIndex(int i);
+	void drawHexagon();
 };
 
 //=============================================================================

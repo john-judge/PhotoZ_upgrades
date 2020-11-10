@@ -13,7 +13,6 @@
 #include "UserInterface.h"
 #include "PolynomialFitting.h"
 
-using namespace std;
 //=============================================================================
 SignalProcessor::SignalProcessor()
 {
@@ -33,8 +32,8 @@ SignalProcessor::SignalProcessor()
 
 	clampPt=155;
 
-	startWindow=90;
-	widthWindow=150;
+	startWindow=160;
+	widthWindow=200;
 }
 
 //=============================================================================
@@ -42,24 +41,6 @@ SignalProcessor::~SignalProcessor()
 {
 	delete polynormialFitter;
 	delete filter;
-}
-
-//=============================================================================
-double* SignalProcessor::get_proData(int i)
-{
-	if (i < 0)
-		return fp_proData[i + NUM_FP_DIODES];
-	return proData[i];
-}
-
-//=============================================================================
-void SignalProcessor::changeNumDiodes()
-{
-	proData.assign(dataArray->num_binned_diodes(), NULL);
-	ignoreFlag.assign(dataArray->num_binned_diodes(), 0);
-	
-	memset(fp_proData, 0, NUM_FP_DIODES * sizeof(double*));
-	memset(fp_ignoreFlag, 0, NUM_FP_DIODES * sizeof(char));
 }
 
 //=============================================================================
@@ -217,16 +198,11 @@ void SignalProcessor::process()
 {
 	int i;
 
-	for (i = -NUM_FP_DIODES; i < 0; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		fp_ignoreFlag[i + NUM_FP_DIODES] = dataArray->getIgnoredFlag(i);
-		fp_proData[i + NUM_FP_DIODES] = dataArray->getProDataMem(i);
-	}
-
-	for (i = 0; i < dataArray->num_binned_diodes(); i++)
-	{
-		ignoreFlag[i] = dataArray->getIgnoredFlag(i);
-		proData[i] = dataArray->getProDataMem(i);
+		diodeFlag[i]=!dataArray->getFpFlag(i);
+		ignoreFlag[i]=dataArray->getIgnoredFlag(i);
+		proData[i]=dataArray->getProDataMem(i);
 	}
 }
 
@@ -245,90 +221,159 @@ void SignalProcessor::spatialFilter()
 	// Copy Data
 	//---------------
 	int i,j;
-	int num_bdiodes = dataArray->num_binned_diodes();
+	double** tmpBuf=new double*[Num_Diodes];
 	int numPts=dc->getNumPts();
 
-	double** tmpBuf=new double*[num_bdiodes];
-
-	for (i = 0; i < num_bdiodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		tmpBuf[i]=new double[numPts];
 	}
 
-	for (i = 0; i < num_bdiodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		if(!ignoreFlag[i])
-			memcpy(tmpBuf[i], proData[i], sizeof(double) * numPts);
+		{
+			for(j=0;j<numPts;j++)
+			{
+				tmpBuf[i][j]=proData[i][j];
+			}
+		}
 	}
 
 	//---------------
 	// Filter
 	//---------------
+	int iCenter,iNeighbor,k;
 	double sum;
-	int x, y;
-	int diode, center_diode;
-	int array_height, array_width;
 
-	array_width = dataArray->binned_width();
-	array_height = dataArray->binned_height();
-
-	for (center_diode = 0; center_diode < num_bdiodes; center_diode++)
+	for(i=2;i<49;i++)
 	{
-		sum = 0;
-		x = center_diode % array_width;
-		y = center_diode / array_width;
-
-		// Center diode
-		if (!ignoreFlag[center_diode])
+		for(j=1;j<26;j++)
 		{
-			sum+=centerWeight;
-			for (i = 0; i < numPts; i++)
-				proData[center_diode][i] = tmpBuf[center_diode][i] * centerWeight;
-		}
+			iCenter=aw->diodeMap[i][j];
 
-		// Neighbouring 8 diodes
-		for (j = 0; j < 9; j++)
-		{
-			int xoffset = (j % 3) - 1;
-			int yoffset = (j / 3) - 1;
-			int diode_x = x + xoffset;
-			int diode_y = y + yoffset;
-
-			if (diode_x >= array_width || diode_x < 0)
-				continue;
-			if (diode_y >= array_height || diode_y < 0)
-				continue;
-			if (j == 4)				// center handled seperately
-				continue;
-
-			diode = diode_x + (diode_y * array_width);
-
-			if (!ignoreFlag[diode])
+			if(iCenter>=0)
 			{
-				sum += 1;
-				for (i = 0; i < numPts; i++)
-					proData[center_diode][i] += tmpBuf[diode][i];
-			}
-		}
+				if(diodeFlag[iCenter])
+				{
+					sum=0;
 
-		// Averaging
-		if(sum==0)
-		{
-			for(i=0;i<numPts;i++)
-			{
-				proData[center_diode][i] = 0;
-			}
-		}
-		else {
-			for (i = 0; i < numPts; i++)
-			{
-				proData[center_diode][i] /= sum;
+					// Center Diode
+					if(!ignoreFlag[iCenter])
+					{
+						sum+=centerWeight;
+						for(k=0;k<numPts;k++)
+						{
+							proData[iCenter][k]=tmpBuf[iCenter][k]*centerWeight;
+						}
+					}
+
+					// Neighbor 1
+					iNeighbor=aw->diodeMap[i-1][j-1];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Neighbor 2
+					iNeighbor=aw->diodeMap[i+1][j-1];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Neighbor 3
+					iNeighbor=aw->diodeMap[i-2][j];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Neighbor 4
+					iNeighbor=aw->diodeMap[i+2][j];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Neighbor 5
+					iNeighbor=aw->diodeMap[i-1][j+1];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Neighbor 6
+					iNeighbor=aw->diodeMap[i+1][j+1];
+					if(iNeighbor>=0)
+					{
+						if(!ignoreFlag[iNeighbor])
+						{
+							sum+=1;
+							for(k=0;k<numPts;k++)
+							{
+								proData[iCenter][k]+=tmpBuf[iNeighbor][k];
+							}
+						}
+					}
+
+					// Averaging
+					if(sum==0)
+					{
+						for(k=0;k<numPts;k++)
+						{
+							proData[iCenter][k]=0;
+						}
+					}
+					else
+					{
+						for(k=0;k<numPts;k++)
+						{
+							proData[iCenter][k]/=sum;
+						}
+					}
+				}
 			}
 		}
 	}
 
 	// Release Memory
-	for (i = 0; i < num_bdiodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		delete [] tmpBuf[i];
 	}
@@ -375,20 +420,20 @@ void SignalProcessor::clampStart()
 	int i,j;
 	double ave;
 
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		ave=0;
 
-		for (j = 0; j < avePts; j++)
+		for(j=0;j<avePts;j++)
 		{
-			ave += get_proData(i)[j];
+			ave+=proData[i][j];
 		}
 
 		ave/=avePts;
 
-		for (j = 0; j < numPts; j++)
+		for(j=0;j<numPts;j++)
 		{
-			get_proData(i)[j] -= ave;
+			proData[i][j]-=ave;
 		}
 	}
 }
@@ -401,14 +446,14 @@ void SignalProcessor::calSlope()
 
 	int i,j;
 
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		double* data=dataArray->getProDataMem(i);
 		double* slope=dataArray->getSlopeMem(i);
 
 		for(j=1;j<(numPts-1);j++)
 		{
-			slope[j] = (data[j+1] - data[j-1]) / (2.0 * intPts);
+			slope[j]=(data[j+1]-data[j-1])/(2.0*intPts);
 		}
 	}
 }
@@ -428,34 +473,34 @@ void SignalProcessor::clampStartEnd()
 	int i,j;
 	double aveStart,aveEnd,rate;
 
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		// Start
 		aveStart=0;
 
-		for (j = 0; j < avePts; j++)
+		for(j=0;j<avePts;j++)
 		{
-			aveStart += get_proData(i)[j];
+			aveStart+=proData[i][j];
 		}
 
-		aveStart /= avePts;
+		aveStart/=avePts;
 
 		// End
-		aveEnd = 0;
+		aveEnd=0;
 
-		for (j = numPts - avePts; j < numPts; j++)
+		for(j=numPts-avePts;j<numPts;j++)
 		{
-			aveEnd += get_proData(i)[j];
+			aveEnd+=proData[i][j];
 		}
 
-		aveEnd /= avePts;
+		aveEnd/=avePts;
 
 		// Correction
-		rate = (aveEnd - aveStart) / numPts;
+		rate=(aveEnd-aveStart)/numPts;
 
-		for (j = 0; j < numPts; j++)
+		for(j=0;j<numPts;j++)
 		{
-			get_proData(i)[j] = get_proData(i)[j] - aveStart - (rate*j);
+			proData[i][j]=proData[i][j]-aveStart-rate*j;
 		}
 	}
 }
@@ -465,9 +510,9 @@ void SignalProcessor::polynomialFit()
 {
 	int i;
 
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		polynormialFitter->process(get_proData(i));
+		polynormialFitter->process(proData[i]);
 	}
 }
 
@@ -478,13 +523,13 @@ void SignalProcessor::clampArbitrary()
 	int numPts=dc->getNumPts();
 	double ptValue;
 	
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		ptValue = get_proData(i)[clampPt];
+		ptValue=proData[i][clampPt];
 
-		for (j = 0; j < numPts; j++)
+		for(j=0;j<numPts;j++)
 		{
-			get_proData(i)[j] -= ptValue;
+			proData[i][j]-=ptValue;
 		}
 	}
 }
@@ -493,7 +538,6 @@ void SignalProcessor::clampArbitrary()
 void SignalProcessor::setTemporalFilterType(char input)
 {
 	filter->setType(input);
-
 }
 
 //=============================================================================

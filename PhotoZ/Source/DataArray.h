@@ -8,34 +8,21 @@
 
 #define Max_Trials 100
 
-class Data;
 //=============================================================================
 class DataArray  
 {
 private:
 	//-----------------------------------------------------
-	// indexed as raw_diode_data[diode_no][trial_no][trace_pt]
-	// the fp diodes are the last 8 for this and the rli
-	short ***raw_diode_data;
-	Data *array_data;
-	Data *fp_data;
-	Data *array_data_ROI[50];			// adding index enabled TraceWindow to retrieve each AveROI independently
+	// 10 maximal number of trials
+	//
+	short *trialData[Num_Diodes][Max_Trials];	// Memory for raw data
+	class Data *data[Num_Diodes];
 
 	int numTrials;
 	int numPts;
 	int numAveRec;
 
-	short *rli_low;
-	short *rli_high;
-	short *rli_max;
-
 	double maxRli;
-
-	// Raw data size
-	int m_raw_width, m_raw_height, m_raw_depth;
-
-	// binning
-	int digital_binning;
 
 	// Compare
 	char compareFlag;
@@ -48,26 +35,16 @@ private:
 	int record1No;
 	int record2No;
 
-	double* dataFeature;
+	double dataFeature[Num_Diodes - 8];
+	void resetDataFeature();
+
+	//-----------------------------------------------------
+	void allocMem();
+	void releaseMem();
 
 	// Latency
 	double latencyStart;
 	double latencyWindow;
-
-	//new
-	double rliScalar;
-	void resetDataFeature();
-	void get_binned_diode_trace(int, int, int, double, double*);
-	void get_binned_rli(int, short&, short&, short&);
-	
-
-	void release_mem();
-	void alloc_raw_mem(int, int);
-	void release_raw_mem();
-	void alloc_trial_mem(int, int);
-	void release_trial_mem();
-	void alloc_binned_mem();
-	void release_binned_mem();
 
 public:
 	//-----------------------------------------------------
@@ -75,34 +52,16 @@ public:
 	~DataArray();
 
 	// Memory Manipulation
-	void changeMemSize(int, int);
-	void changeNumTrials(int);
-	void changeNumPts(int);
-	void changeRawDataSize(int, int);				//new
-
-	void aveROIData(int region);		// new for averaging ROI
-	// array information							all new
-	int raw_width();
-	int binned_width();
-	int raw_height();
-	int binned_height();
-	int depth();
-	int binning();
-	void binning(int);
-	int num_raw_diodes();
-	int num_raw_array_diodes();
-	int num_binned_diodes();
-	int numRegions=0;
-	int num_diodes_fp();
+	void changeMemSize(int numTrials,int numPts);
+	void changeNumTrials(int numTrials);
+	void changeNumPts(int numPts);
 
 	// Data Manipulation
-	const short* getTrialMem(int trial, int diode);		//new
-	void assignTrialData(short *trial_data, int len, int trial, int diode);			//new
 	void loadTrialData(int trialNo);
 	void average();
 	void resetData();
 
-	void arrangeData(int,short*);
+ 	void arrangeData(int,short*);
 
 	// RLI
 	void calRli();
@@ -144,18 +103,13 @@ public:
 	// Trace 2
 	void saveTraces2();
 
-	class Data* getData(int, int region=-1);
-	class Data* getROIAve(int region);
-
+	class Data* getData(int);
+	short *getMem(int trialNo,int diodeNo);
+	double *getRawDataMem(int diodeNo);
 	double *getProDataMem(int diodeNo);
 	double *getSavDataMem(int diodeNo);
 	double *getSlopeMem(int diodeNo);
-	
-	double* getAveData();
-	
-	double* aveData;
-//	double* getRawDataMem();
-	
+
 	// RLI Processing
 	short getRliLow(int diodeNo);
 	short getRliHigh(int diodeNo);
@@ -166,16 +120,13 @@ public:
 	// Get Diode Properties
 	char getFpFlag(int dataNo);
 	double getAmp(int diodeNo,int ptNo);
-	double getDataSD(int diodeNo);
-	double getSignalToNoise(int value);
-	double getMaxSlope(int value);
-	double getMaxSlopeLatency(int value);
+	double getDataSD(int dataNo);
 	double getDataMaxAmpLatency(int dataNo);
 	double getDataHalfAmpLatency(int dataNo);
 	int getDataMaxAmpLatencyPt(int dataNo);
 
 	double getDataMaxAmp(int diodeNo,int recordNoChoice=0);
-//	double getDiodeMaxAmpSD(int diodeIndex,int recordNoChoice=0);
+	double getDiodeMaxAmpSD(int diodeIndex,int recordNoChoice=0);
 	double getDiodeMaxAmpCha(int diodeIndex,int choice=0);
 	double getDiodeMaxAmpChaSD(int diodeIndex);
 	double getDiodeMaxAmpPerCha(int diodeIndex);
@@ -199,7 +150,6 @@ public:
 	void setHalfAmpLatency2DataFeature();
 	void setHalfAmpLatencyRatio2DataFeature();
 	void setEPSPLatency2DataFeature();
-	void setSignalToNoise2DataFeature();
 
 	double getDataFeature(int);
 
@@ -207,8 +157,6 @@ public:
 	void setLatencyStart(double);
 	double getLatencyStart();
 	void setLatencyWindow(double);
-
-	void setRliScalar(double);					//new
 };
 
 //=============================================================================

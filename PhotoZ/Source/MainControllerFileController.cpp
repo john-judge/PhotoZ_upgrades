@@ -4,7 +4,6 @@
 #include <stdlib.h>		// atoi()
 #include <direct.h>		// _chdir(),_mkdir()
 #include <fstream>
-#include <iostream>
 
 #include <FL/Fl_File_Chooser.H>
 
@@ -106,8 +105,6 @@ void MainController::savePre()
 	file<<dc->getNumPts()<<endl;
 	file<<dc->getIntPts()<<endl;
 
-	file<<dataArray->binning()<<endl;
-
 	file<<dc->getNumPulses(1)<<endl;
 	file<<dc->getIntPulses(1)<<endl;
 
@@ -133,7 +130,7 @@ void MainController::savePre()
 	//====================================================
 	// Gain
 	file<<recControl->getAcquiGain()<<endl;
-	file<<recControl->getAcquiGain()<<endl<<endl; // have to store something or file gets screwed up
+	file<<recControl->getRliGain()<<endl<<endl;
 
 	//====================================================
 	// Examination window
@@ -153,9 +150,9 @@ void MainController::savePre()
 //=============================================================================
 void MainController::loadPre()
 {
-		//====================================================
-		// Get The Name of the Preference File
-	char *input=fl_file_chooser("Enter the name of the preference file to load","*.pre", "filename.pre");
+	//====================================================
+	// Get The Name of the Preference File
+	char *input=fl_file_chooser("Enter the name of the preference file","*.pre", "filename.pre");
 	if(!input)
 	{
 		return;// Canceled
@@ -221,26 +218,26 @@ void MainController::loadPre()
 	file>>nValue;
 	dc->reset->setDuration(nValue);
 
-	file>>fValue;	// Shutter
-	dc->shutter->setOnset(fValue);
+	file>>nValue;	// Shutter
+	dc->shutter->setOnset(nValue);
 
-	file>>fValue;
-	dc->shutter->setDuration(fValue);
+	file>>nValue;
+	dc->shutter->setDuration(nValue);
 
-	file>>fValue;	// Acquisition Onset
-	dc->setAcquiOnset(fValue);
+	file>>nValue;	// Acquisition Onset
+	dc->setAcquiOnset(nValue);
 
-	file>>fValue;	// Stimulator 1
-	dc->sti1->setOnset(fValue);
+	file>>nValue;	// Stimulator 1
+	dc->sti1->setOnset(nValue);
 
-	file>>fValue;
-	dc->sti1->setDuration(fValue);
+	file>>nValue;
+	dc->sti1->setDuration(nValue);
 
-	file>>fValue;	// Stimulator 2
-	dc->sti2->setOnset(fValue);
+	file>>nValue;	// Stimulator 2
+	dc->sti2->setOnset(nValue);
 
-	file>>fValue;
-	dc->sti2->setDuration(fValue);
+	file>>nValue;
+	dc->sti2->setDuration(nValue);
 
 	file>>nValue;	// Number of Points
 	dc->setNumPts(nValue);
@@ -248,9 +245,6 @@ void MainController::loadPre()
 
 	file>>fValue;	// Interval between Points
 	dc->setIntPts(fValue);
-
-	file>>nValue;	// Digital binning
-	int dbinning = nValue; //value will be set later using set_digital_binning
 
 	// Ch1
 	file>>nValue;	// Number of pulses
@@ -311,7 +305,7 @@ void MainController::loadPre()
 	recControl->setAcquiGain((short)nValue);
 
 	file>>nValue;
-	recControl->setAcquiGain((short)nValue);
+	recControl->setRliGain((short)nValue);
 
 	//====================================================
 	// Examination Window
@@ -339,13 +333,6 @@ void MainController::loadPre()
 
 	dataArray->process();
 	ui->setValue();	// Checked
-	
-	//setting digital binning, not using it as of now
-/*	char txt[2];
-	itoa(dbinning, txt, 10);
-	set_digital_binning(txt);*/
-
-	//redraw
 	redraw();
 }
 
@@ -375,28 +362,6 @@ void MainController::openDataFile()
 
 	redraw();
 }
-void MainController::openDataFileNP()				// new for opening neuroplex files
-{
-	int status = fileController->openNPFile();
-	if (status == 1)		// Existing
-	{
-		dataArray->process();
-	}
-	else if (status == 0)	// New file
-	{
-		dataArray->resetData();
-	}
-	else if (status == -1)	// Cancel
-	{
-		return;
-	}
-
-	ui->setValue();	// Checked
-
-	aw->openImageFile(recControl->createImageFileName());
-
-	redraw();
-}
 
 //=============================================================================
 void MainController::saveData2File()
@@ -408,7 +373,6 @@ void MainController::saveData2File()
 		Fl_Color cSaveButton=fl_rgb_color(0,150,0);
 		ui->saveData2File->labelcolor(cSaveButton);
 		ui->saveData2File->redraw();
-		//ui->setValue();
 	}
 }
 
@@ -459,8 +423,6 @@ void MainController::increaseNo(char p)
 		openDataFileFromRecControl();
 		openImageFileFromRecControl();
 
-		ui->sliceNo->value(i2txt(recControl->getSliceNo()));
-		ui->locationNo->value(i2txt(recControl->getLocationNo()));
 		redraw();
 	}
 	else if(p==RECORD)// RecordNo
@@ -468,6 +430,7 @@ void MainController::increaseNo(char p)
 		saveOrNot();
 
 		openDataFileFromRecControl();
+
 		redraw();
 	}
 	else if(p==TRIAL)// TrialNo

@@ -11,8 +11,8 @@
 PolynomialFitting::PolynomialFitting()
 {
 	degree=3;
-	startPt=90;
-	numPts=100;
+	startPt=155;
+	numPts=400;
 }
 
 //=============================================================================
@@ -80,7 +80,7 @@ void PolynomialFitting::setCoefficients()
 	int endPt=startPt+numPts;
 	int length=dc->getNumPts();
 
-	for(i=3;i<length;i++)
+	for(i=0;i<length;i++)
 	{
 		if(i>=startPt && i<endPt)
 		{
@@ -143,14 +143,11 @@ void PolynomialFitting::fit()
 	double value;
 	int length=dc->getNumPts();
 
-	for(i=3;i<length;i++)
+	for(i=0;i<length;i++)
 	{
 		value=((A[0]*i+A[1])*i+A[2])*i+A[3];
 		data[i]-=value;
 	}
-	data[0] = data[6];
-	data[1] = data[7];
-	data[2] = data[8];
 }
 
 //=============================================================================
@@ -164,7 +161,7 @@ void PolynomialFitting::switchRow(int index)
 	//
 	int i;
 	double maxV=0;
-	int maxI=0;
+	int maxI;
 	double tmp;
 
 	for(i=index;i<=degree;i++)

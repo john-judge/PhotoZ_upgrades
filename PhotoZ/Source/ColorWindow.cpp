@@ -19,7 +19,7 @@
 #include "Color.h"
 #include "Data.h"
 
-//char* i2txt(int);
+char* i2txt(int);
 extern char txtBuf[];
 
 //=============================================================================
@@ -67,19 +67,13 @@ void ColorWindow::setPointXYZ()
 	int i;
 	int xx,yy;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
-		xx=aw->diodeX(i)+aw->diodeW()/2;
-		yy=(h()-aw->diodeY(i))-aw->diodeH()/2;
+		xx=aw->diodeX[i]+13;
+		yy=(h()-aw->diodeY[i])-16;
 
 		point[i].setXYZ(float(xx),float(yy),0);
 	}
-}
-
-//=============================================================================
-void ColorWindow::changeNumDiodes()
-{
-	point.resize(dataArray->num_binned_diodes());
 }
 
 //=============================================================================
@@ -286,18 +280,18 @@ void ColorWindow::init()
 	// Color Scale Control
 	if(colorControlMode=='B')
 	{
-		GLfloat height=(GLfloat) (upperBound-lowerBound);
+		double height=upperBound-lowerBound;
 		if(height==0)
 		{
-			height= (GLfloat) 0.01;
+			height=0.01;
 		}
 		plane[2]=1/height;
-		plane[3]=(GLfloat)(-lowerBound)/height;
+		plane[3]=-lowerBound/height;
 	}
 	else if(colorControlMode=='C')
 	{
-		plane[2]=(GLfloat)(1/(2*colorAmp));
-		plane[3]=(GLfloat)(-colorCenter/(2*colorAmp)+0.5);
+		plane[2]=1/(2*colorAmp);
+		plane[3]=-colorCenter/(2*colorAmp)+0.5;
 	}
 	glTexGenfv(GL_S,GL_OBJECT_PLANE,plane);
 
@@ -332,8 +326,8 @@ void ColorWindow::drawScale()
 	// Color Bar
 	glBegin(GL_QUADS);
 	{
-		GLfloat gain=plane[2];
-		GLfloat offset=plane[3];
+		double gain=plane[2];
+		double offset=plane[3];
 		
 		glVertex3f(9,9,(z1-offset)/gain);
 		glVertex3f(31,9,(z1-offset)/gain);
@@ -376,23 +370,130 @@ void ColorWindow::drawScale()
 //=============================================================================
 void ColorWindow::build3DModel()
 {
-	int x, y, xmax, ymax;
-	int index, low_index;
-	xmax = dataArray->binned_width();
-	ymax = dataArray->binned_height();
-
-	for (y = 0; y < ymax-1; y++)
+	int i,j,k,i0,w;
+	//
+	glBegin(GL_TRIANGLE_STRIP);
+		k=12;
+		i0=0;
+		w=12;
+		for(i=0;i<w;i++)
+		{
+			glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+			glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+		}
+		glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+	glEnd();
+	//
+	k=13;
+	w++;
+	i0--;
+	for(j=0;j<10;j++)
 	{
 		glBegin(GL_TRIANGLE_STRIP);
-		for (x = 0; x < xmax; x++)
-		{
-			index = x + y*xmax;
-			low_index = index + xmax;
-			glVertex3f(point[index].x, point[index].y, point[index].z);
-			glVertex3f(point[low_index].x, point[low_index].y, point[low_index].z);
-		}
+			i0=i0+w;
+			k++;
+			w++;
+			for(i=0;i<w;i++)
+			{
+				glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+				glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+			}
+			glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
 		glEnd();
 	}
+	//
+	glBegin(GL_TRIANGLE_STRIP);
+		i0=197;
+		k=24;
+		w=23;
+		for(i=0;i<w;i++)
+		{
+			glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+			glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+		}
+		glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+	glEnd();
+	//
+	glBegin(GL_TRIANGLE_STRIP);
+		i0=221;
+		k=23;
+		w=23;
+		for(i=0;i<w;i++)
+		{
+			glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+			glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+		}
+		glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+	glEnd();
+	//
+	k=25;
+	w=24;
+	i0-=2;
+	for(j=0;j<10;j++)
+	{
+		glBegin(GL_TRIANGLE_STRIP);
+			i0=i0+w+1;
+			k--;
+			w--;
+			for(i=0;i<w;i++)
+			{
+				glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+				glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+			}
+			glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+		glEnd();
+	}
+	//
+	glBegin(GL_TRIANGLE_STRIP);
+		i0=440;
+		k=13;
+		w=11;
+		for(i=0;i<w;i++)
+		{
+			glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+			glVertex3f(point[i0+i+k].x,point[i0+i+k].y,point[i0+i+k].z);
+		}
+		glVertex3f(point[i0+i].x,point[i0+i].y,point[i0+i].z);
+	glEnd();
+	//
+	glBegin(GL_TRIANGLES);
+		int d;
+		d=11;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=24;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=25;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+
+		d=220;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=243;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=267;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+
+		d=452;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=451;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=463;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+
+		d=453;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=440;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=439;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+
+		d=244;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=221;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+		d=197;
+		glVertex3f(point[d].x,point[d].y,point[d].z);
+
+	glEnd();
 }
 
 //=============================================================================
@@ -436,9 +537,9 @@ void ColorWindow::setMapZ()
 	// Set Z Value
 	int i;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
-		point[i].setZ((float) (dataArray->getDataFeature(i)*0.999));
+		point[i].setZ(dataArray->getDataFeature(i)*0.999);
 	}
 }
 
@@ -463,7 +564,7 @@ void ColorWindow::setZ_AmpNor2ArrayMax()
 	// Check Max Amp in the Array
 	double maxAmp=0;
 
-	for(i=0;i< dataArray->num_binned_diodes();i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		if(!dataArray->getIgnoredFlag(i))
 		{
@@ -477,7 +578,7 @@ void ColorWindow::setZ_AmpNor2ArrayMax()
 	// Set Z Value
 	maxAmp*=1.01;
 
-	for(i=0;i<dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
 		point[i].setZ(float(dataArray->getAmp(i,currentPt)/maxAmp));
 	}
@@ -488,10 +589,10 @@ void ColorWindow::setZ_AmpNor2DiodeMax()
 {
 	int i;
 
-	for(i=0;i< dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
-		point[i].setZ((float) (dataArray->getAmp(i,currentPt)
-				/dataArray->getDataMaxAmp(i)*0.999));
+		point[i].setZ(float(dataArray->getAmp(i,currentPt)
+				/dataArray->getDataMaxAmp(i))*0.999);
 	}
 }
 

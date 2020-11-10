@@ -29,11 +29,11 @@ private:
 	short trialNoMax;
 
 	int numTrials;
-//	int numSkippedTrials;
+	int numSkippedTrials;
 	int intTrials;
 
 	short acquiGain;
-//	short rliGain;
+	short rliGain;
 
 	time_t time;
 
@@ -80,9 +80,9 @@ public:
 
 	// Trials
 	void setNumTrials(int);
-//	void setNumSkippedTrials(int);
+	void setNumSkippedTrials(int);
 	int getNumTrials();
-//	int getNumSkippedTrials();
+	int getNumSkippedTrials();
 
 	void setIntTrials(int);
 	int getIntTrials();
@@ -93,10 +93,10 @@ public:
 	void decreaseAcquiGain();
 	void increaseAcquiGain();
 
-//	void setRliGain(short);
-//	short getRliGain();
-//	void decreaseRliGain();
-//	void increaseRliGain();
+	void setRliGain(short);
+	short getRliGain();
+	void decreaseRliGain();
+	void increaseRliGain();
 
 	// Time
 	void setTime(time_t);

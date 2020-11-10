@@ -43,20 +43,19 @@ void DapWindow::draw()
 
 	//-------------------------------------------------------
 	// Reset
-	/*fl_color(FL_YELLOW);
+	fl_color(FL_YELLOW);
 
 	x0=int(ratio*dapController->reset->getOnset()+2);
 	width=int(ratio*dapController->reset->getDuration()+1);
 
-	fl_rectf(x0,y0,width,hight);*/
+	fl_rectf(x0,y0,width,hight);
 
 	//-------------------------------------------------------
 	// Shutter
 	fl_color(FL_GRAY);
 
 	x0=int(ratio*dapController->shutter->getOnset()+2);
-	//y0+=dh;
-
+	y0+=dh;
 	width=int(ratio*dapController->shutter->getDuration()+1);
 
 	fl_rectf(x0,y0,width,hight);
@@ -94,7 +93,7 @@ void DapWindow::draw()
 			fl_rectf(x0+interval,y0,width,hight);
 		}
 
-		x0+=(int) (intBursts*ratio);
+		x0+=intBursts*ratio;
 	}
 
 	//-------------------------------------------------------
@@ -118,7 +117,7 @@ void DapWindow::draw()
 			fl_rectf(x0+interval,y0,width,hight);
 		}
 
-		x0+=(int) (intBursts*ratio);
+		x0+=intBursts*ratio;
 	}
 
 	//-------------------------------------------------------

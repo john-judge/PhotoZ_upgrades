@@ -5,12 +5,10 @@
 #include <stdio.h>		// fprintf()
 
 #include "UserInterface.h"
-#include "Camera.h"
 #include "ArrayWindow.h"
 #include "TraceWindow.h"
 #include "DapController.h"
 #include "DapChannel.h"
-#include "DataArray.h"
 #include "RecControl.h"
 #include "FileController.h"
 #include "SignalProcessor.h"
@@ -21,30 +19,19 @@
 void UserInterface::init()
 {
 	mainWindow->fullscreen();
-	mainWindow->fullscreen_off();
 	BLCType->value(3);
 	record1No->value("1");
 	record2No->value("1");
 	mapFeatureType->value(1);
 	timeCourseType->value(2);
-	digital_binning->value("1");
 
 	//=====================================
 	// Array
 	//=====================================
-	awYScaleTxt->value(".41");	// Y Scale
-	awFpYScaleTxt->value(".41");	// FP Y Scale
+	awYScaleTxt->value("100");	// Y Scale
+	awFpYScaleTxt->value("100");	// FP Y Scale
 	awXScaleTxt->value("1");	// X Scale
 	awXShiftTxt->value("0");	// X Shift
-
-	//=====================================
-	// Camera program
-	//=====================================
-	for (int i = 0; i < NUM_CAM_PRGS; i++)
-	{
-		CameraProgram->add(Camera::LABEL[i], 0, 0);
-	}
-	CameraProgram->value(7);
 
 	//=====================================
 	// Trace
@@ -73,19 +60,17 @@ void UserInterface::init()
 	//=====================================
 	// Signal Processing
 	//=====================================
-	startWindow->value("90");
-	widthWindow->value("150");
+	startWindow->value("160");
+	widthWindow->value("200");
 
 	latencyStartTxt->value("100");
 	thresholdTxt->value("1.0");
 
-	rliScalarTxt->value("3200.0");
-
 	//=====================================
 	// Baseline
 	//=====================================
-	polynomialStartPtTxt->value("200");
-	polynomialNumPts->value("100");
+	polynomialStartPtTxt->value("155");
+	polynomialNumPts->value("400");
 	clampPtTxt->value("155");
 
 	//=====================================
@@ -114,7 +99,7 @@ void UserInterface::init()
 	cwEndPt->value("200");
 
 	// Trial Control
-//	numSkippedTrials->value("0");
+	numSkippedTrials->value("0");
 }
 
 //=============================================================================
@@ -144,7 +129,7 @@ void UserInterface::setValue()
 	//=====================================
 	// DAP
 	//=====================================
-	CameraProgram->value(dc->getCameraProgram());
+	samplingRate->value(dc->getSamplingRateTxt());
 
 	resetOnset->value(dc->reset->getOnsetTxt());
 	resetDuration->value(dc->reset->getDurationTxt());
@@ -167,7 +152,8 @@ void UserInterface::setValue()
 	//===================
 	numPts->value(i2txt(dc->getNumPts()));
 
-	digital_binning->value(i2txt(dataArray->binning()));
+	sprintf_s(buff, 32,"%4.2f",dc->getIntPts());
+	intPts->value(buff);
 
 	//===================
 	intBursts1->value(i2txt(dc->getIntBursts(1)));
@@ -189,17 +175,7 @@ void UserInterface::setValue()
 	intTrials->value(i2txt(recControl->getIntTrials()));
 
 	acquiGain->value(i2txt(recControl->getAcquiGain()));
-//	rliGain->value(i2txt(recControl->getRliGain()));
-}
-
-void UserInterface::killUI() {
-	aw->~ArrayWindow();
-	delete aw;
-	delete trialNoMax;
-	delete sliceNoMax;
-	delete  locationNoMax;
-	delete recordNoMax;
-	delete trialNoGroup;
+	rliGain->value(i2txt(recControl->getRliGain()));
 }
 
 //=============================================================================

@@ -18,7 +18,7 @@
 #include "Color.h"
 
 char* i2txt(int);
-//char* f2txt(float);
+
 //=============================================================================
 void playAmpMovieCB(void *)
 {

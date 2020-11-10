@@ -4,23 +4,22 @@
 #include "DapChannel.h"
 
 char* i2txt(int);
-char* d2txt(double);
-char* f2txt(float);
+
 //=============================================================================
-DapChannel::DapChannel(float onset,float duration)
+DapChannel::DapChannel(int onset,int duration)
 {
 	this->onset=onset;
 	this->duration=duration;
 }
 
 //=============================================================================
-void DapChannel::setOnset(float p)
+void DapChannel::setOnset(int p)
 {
 	onset=p;
 }
 
 //=============================================================================
-float DapChannel::getOnset()
+int DapChannel::getOnset()
 {
 	return onset;
 }
@@ -28,25 +27,25 @@ float DapChannel::getOnset()
 //=============================================================================
 char *DapChannel::getOnsetTxt()
 {
-	return f2txt(onset);
+	return i2txt(onset);
 }
 
 //=============================================================================
-void DapChannel::setDuration(float p)
+void DapChannel::setDuration(int p)
 {
 	duration=p;
 }
 
 //=============================================================================
-float DapChannel::getDuration()
+int DapChannel::getDuration()
 {
 	return duration;
 }
 
 //=============================================================================
-char* DapChannel::getDurationTxt()
+char *DapChannel::getDurationTxt()
 {
-	return f2txt(duration);
+	return i2txt(duration);
 }
 
 //=============================================================================

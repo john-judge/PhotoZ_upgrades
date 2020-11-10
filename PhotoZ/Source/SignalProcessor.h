@@ -6,8 +6,6 @@
 //=============================================================================
 #include "ArrayWindow.h"
 
-#include <vector>
-
 //=============================================================================
 class SignalProcessor  
 {
@@ -26,13 +24,10 @@ private:
 
 	// For Spatial Filter
 	double centerWeight;
-	std::vector<double*> proData;
-	double *fp_proData[NUM_FP_DIODES];
+	double* proData[Num_Diodes];
 
-	std::vector<char> ignoreFlag;
-	char fp_ignoreFlag[NUM_FP_DIODES];
-
-	double* get_proData(int);
+	char diodeFlag[Num_Diodes];
+	char ignoreFlag[Num_Diodes];
 
 	// Baseline Correction
 	char BLCType;				// BaseLine Correction Type
@@ -52,9 +47,6 @@ public:
 	// Constructor and Destructor
 	SignalProcessor();
 	~SignalProcessor();
-
-	// Resizing
-	void changeNumDiodes();
 
 	// Processing
 	void process();

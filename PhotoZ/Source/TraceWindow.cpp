@@ -6,7 +6,6 @@
 #include <fstream>
 #include <math.h>
 #include <io.h>
-#include <iostream>
 
 #include <FL/Fl.h>
 #include <FL/Fl_Double_Window.H>
@@ -20,7 +19,6 @@
 #include "Data.h"
 #include "DapController.h"
 #include "SignalProcessor.h"
-#include <memory.h>
 
 using namespace std;
 
@@ -36,8 +34,8 @@ TraceWindow::TraceWindow(int xx,int yy,int ww,int hh)
 	timeCourseType='M';
 
 	// Scale Control
-	yScale=3;
-	fpYScale=3;
+	yScale=200;
+	fpYScale=200;
 	xScale=1;
 	xShift=0;
 	ltpXScale=1;
@@ -83,9 +81,8 @@ TraceWindow::TraceWindow(int xx,int yy,int ww,int hh)
 	spikeSlopeThreshold=0;
 	spikeAmpThreshold=0;
 
-	onsetBounds[0]=float(160);
-	onsetBounds[1]=float(180);
-	aveData = NULL;
+	onsetBounds[0]=160;
+	onsetBounds[1]=180;
 }
 
 //=============================================================================
@@ -209,7 +206,7 @@ void TraceWindow::saveTraces()
 	//==================================================
 	// Get Number of Selected Diodes
 	int numSelectedDiodes=aw->getNumSelectedDiodes();
-	int numRegions = aw->getNumRegions();
+
 	if(numSelectedDiodes<1)
 	{
 		return;
@@ -233,7 +230,7 @@ void TraceWindow::saveTraces()
 	//==================================================
 	// Get Selected Diode Array
 	int *selectedDiodes=aw->getSelectedDiodes();
-	int i,j;
+	int i,j,k;
 	int numPts=dc->getNumPts();
 
 	if(saveTracesStartPt>=numPts)
@@ -252,42 +249,54 @@ void TraceWindow::saveTraces()
 	{
 		file<<"Pt";
 
-		for(i=0;i<numSelectedDiodes+numRegions;i++)
+		for(i=0;i<numSelectedDiodes;i++)
 		{
 			file<<"\tD"<<selectedDiodes[i]+1;
-			if (i >= numSelectedDiodes && i < numSelectedDiodes + numRegions)	file << "\tROI" << i - numSelectedDiodes + 1;
 		}
+
 		file<<"\n";
+
 		for(i=saveTracesStartPt;i<=saveTracesEndPt;i++)
 		{
 			file<<i;
 
-			for (j = 0; j < numSelectedDiodes + numRegions; j++)
+			for(j=0;j<numSelectedDiodes;j++)
 			{
-				if (j < numSelectedDiodes)						// do the diodes
-				{
-					file << "\t" << (dataArray->getProDataMem(selectedDiodes[j]))[i];
-				}
-				if (j >= numSelectedDiodes && j < numSelectedDiodes + numRegions)   // do the ROIs
-				{
-					int numSelectedDiodesAverage = aw->getNumSelectedDiodesAverage(j - numSelectedDiodes) - 1;
-					int *selectedDiodesAverage = aw->getSelectedDiodesAverage(j - numSelectedDiodes);
-					double **proData = (double**)malloc(sizeof(double*)*numSelectedDiodesAverage);
-					if (proData == NULL) 		return;
-					double sum = 0;
-					for (int ii = 0; ii < numSelectedDiodesAverage; ii++)
-					{
-						proData[ii] = dataArray->getProDataMem(selectedDiodesAverage[ii + 1]);
-						sum += proData[ii][i];
-					}
-					sum = sum / numSelectedDiodesAverage;
-					file << "\t" << sum;
-				}
+				file<<"\t"<<(dataArray->getProDataMem(selectedDiodes[j]))[i];
 			}
-		file<<"\n";			//new line after adding data to all columns 
+
+			file<<"\n";
 		}
 	}
-file.close();
+	//==================================================
+	// ms
+	else if(save2FileType=='m')
+	{
+		file<<"Time";
+
+		for(i=0;i<numSelectedDiodes;i++)
+		{
+			file<<"\tD"<<selectedDiodes[i]+1;
+		}
+
+		file<<"\n";
+		double interval=dc->getIntPts();
+
+		for(i=saveTracesStartPt;i<=saveTracesEndPt;i++)
+		{
+			file<<i*interval;
+
+			for(j=0;j<numSelectedDiodes;j++)
+			{
+				file<<"\t"<<(dataArray->getProDataMem(selectedDiodes[j]))[i];
+			}
+
+			file<<"\n";
+		}
+	}
+
+	// Close file
+	file.close();
 }
 
 //=============================================================================
@@ -300,16 +309,18 @@ void TraceWindow::saveTimeCourse()
 	}
 
 	//===========================================
-	 
-	int numSelectedDiodes=aw->getNumSelectedDiodes();				// Get Number of Selected Diodes and number of ROIs.
-	int numRegions = aw->getNumRegions();
-	if(numSelectedDiodes<1&&numRegions<1)							// If no diodes AND no ROIs selected, return.
+	// Get Number of Selected Diodes. If no diode is selected, return.
+	int numSelectedDiodes=aw->getNumSelectedDiodes();
+
+	if(numSelectedDiodes<1)
 	{
 		return;
 	}
+
 	//===========================================
-	// Get file name.
-	char *fileName=fl_file_chooser("Enter the name of a Dat file","*.dat","TimeCourses.dat");
+	// Get file name. If no file name is entered, return.
+	char *fileName=fl_file_chooser("Please enter the name of the Dat file","*.dat","TimeCourses.dat");
+
 	if(!fileName)
 	{
 		return;
@@ -330,10 +341,10 @@ void TraceWindow::saveTimeCourse()
 
 	//===========================================
 	// Write titles to the file
-	for(i=0;i<numSelectedDiodes+numRegions;i++)
+	file<<"RecordNo";
+	for(i=0;i<numSelectedDiodes;i++)
 	{
-	if (i<numSelectedDiodes)	file<<"\tdio"<<selectedDiodes[i]+1;												// first write column heading for diodes
-	if (i >=numSelectedDiodes && i< numSelectedDiodes+numRegions)	file << "\tROI" << i-numSelectedDiodes + 1;	// then regions
+		file<<"\tD"<<selectedDiodes[i]+1;
 	}
 	file<<"\n";
 
@@ -349,21 +360,17 @@ void TraceWindow::saveTimeCourse()
 	int endIndex=numRecord-1;
 
 	//===========================================
-	for(i=startIndex;i<=endIndex;i++)												// Go through every record.
+	// Go through every record.
+	for(i=startIndex;i<=endIndex;i++)
 	{
 		file<<i+1;
 
-		for(j=0;j<numSelectedDiodes+numRegions;j++)
+		for(j=0;j<numSelectedDiodes;j++)
 		{
-			if (j < numSelectedDiodes) {											// get data address for selected diodes
-				dataIndex = selectedDiodes[j];
-				data = dataArray->getData(dataIndex);
-			}
-			else  {
-				dataArray->aveROIData(j-numSelectedDiodes);							// get data address for ROIs
-				aveData = dataArray->getAveData();
-				data = dataArray->getROIAve(j-numSelectedDiodes);
-			}
+			//===================
+			// Get time course data address
+			dataIndex=selectedDiodes[j];
+			data=dataArray->getData(dataIndex);
 
 			if(timeCourseType=='R')
 			{
@@ -403,10 +410,15 @@ void TraceWindow::saveTimeCourse()
 			{
 				scale=1.0;
 			}
+
 			file<<"\t"<<timeCourse[i]*scale;
 		}
+
 		file<<"\n";
 	}
+
+	//===========================================
+	// Close file
 	file.close();
 }
 
@@ -418,42 +430,41 @@ void TraceWindow::setFgBgColor(Fl_Color foreGround,Fl_Color backGround)
 }
 
 //=============================================================================
-void TraceWindow::draw(/*int average*/)
+void TraceWindow::draw()
 {
-	int numRegions = aw->getNumRegions();
 	clear();
 
 	int numSelectedDiodes=aw->getNumSelectedDiodes();
 
-	if (numSelectedDiodes + numRegions > 0)
+	if(numSelectedDiodes>0)
 	{
-		double height = h() / (numSelectedDiodes + numRegions + 1);
-		int *selectedDiodes = aw->getSelectedDiodes();
-		int i;
-		for (i = 0; i < numSelectedDiodes; i++)
+		int height=h()/(numSelectedDiodes+1);
+		int *selectedDiodes=aw->getSelectedDiodes();
+
+		for(int i=0;i<numSelectedDiodes;i++)
 		{
 			fl_push_matrix();
 			{
 				// Translation
-				if (superimpose)
-					fl_translate(0, h() / 2);
+				if(superimpose)
+					fl_translate(0,h()/2);
 				else
-					fl_translate(0, height*double(i + 1));
+					fl_translate(0,height*(i+1));
 
 				//=================
 				// Draw Base Line
 				//=================
-				fl_color(100, 100, 100);
+				fl_color(100,100,100);
 
 				fl_begin_line();
-				fl_vertex(0, 0);
-				fl_vertex(w(), 0);
+					fl_vertex(0,0);
+					fl_vertex(w(),0);
 				fl_end_line();
 
 				//=================
 				// Draw Trace
 				//=================
-				if (showTrace)
+				if(showTrace)
 				{
 					drawTrace(selectedDiodes[i]);
 				}
@@ -461,7 +472,7 @@ void TraceWindow::draw(/*int average*/)
 				//=================
 				// Draw Slope
 				//=================
-				if (showSlope)
+				if(showSlope)
 				{
 					drawSlope(selectedDiodes[i]);
 				}
@@ -469,7 +480,7 @@ void TraceWindow::draw(/*int average*/)
 				//=================
 				// Draw Vm
 				//=================
-				if (i == (numSelectedDiodes - 1))
+				if(i==(numSelectedDiodes-1))
 				{
 					drawVm(selectedDiodes[i]);
 				}
@@ -477,15 +488,15 @@ void TraceWindow::draw(/*int average*/)
 				//=================
 				// Draw Time Course
 				//=================
-				if (timeCourseFlag)
+				if(timeCourseFlag)
 				{
-					drawTimeCourse(selectedDiodes[i],0);
+					drawTimeCourse(selectedDiodes[i]);
 				}
 
 				//=====================
 				// Draw Reference
 				//=====================
-				if (showRef)
+				if(showRef)
 				{
 					drawRef(selectedDiodes[i]);
 				}
@@ -493,68 +504,7 @@ void TraceWindow::draw(/*int average*/)
 			fl_pop_matrix();
 		}
 
-		for (i = 0; i < numRegions; i++){
-			fl_push_matrix();
-			{
-				// Translation
-				if (superimpose)
-					fl_translate(0, h() / 2);
-				else
-					fl_translate(0, height*(i+numSelectedDiodes+1));
-
-				//=================
-				// Draw Base Line
-				//=================
-				fl_color(100, 100, 100);
-
-				fl_begin_line();
-				fl_vertex(0, 0);
-				fl_vertex(w(), 0);
-				fl_end_line();
-
-				//=================
-				// Draw Trace
-				//=================
-				if (showTrace)
-				{
-					drawTrace(1, i);
-				}
-
-				//=================
-				// Draw Slope
-				//=================
-				if (showSlope)
-				{
-					drawSlope(1/*selectedDiodes[i]*/,i); //1(dataNo) doesn't matter for ROIs 
-				}
-
-				//=================
-				// Draw Vm
-				//=================
-				if (i == (numRegions-1))
-				{
-					//drawVm(0/*selectedDiodes[i]*/);
-				}
-
-				//=================
-				// Draw Time Course
-				//=================
-				if (timeCourseFlag)
-				{
-					drawTimeCourse(0,i);							//activated for ROIs
-				}
-
-				//=====================
-				// Draw Reference
-				//=====================
-				if (showRef)
-				{
-					drawRef(0/*selectedDiodes[i]*/);
-				}
-			}
-			fl_pop_matrix();
-		}
-		drawValue(numRegions);
+		drawValue();
 	}
 
 	if(sp->getBLCType()=='A')
@@ -576,12 +526,8 @@ void TraceWindow::draw(/*int average*/)
 }
 
 //=============================================================================
-void TraceWindow::drawTrace(int dataNo, int currentRegion)
+void TraceWindow::drawTrace(int dataNo)
 {
-	if (currentRegion != -1) {
-		int* selectedDiodesAverage = aw->getSelectedDiodesAverage(currentRegion);
-		dataNo = selectedDiodesAverage[currentRegion];
-	}
 	int numPts=dc->getNumPts();
 	double pixPts=double(w())/double(numPts);	// Pixels between two points
 
@@ -589,7 +535,7 @@ void TraceWindow::drawTrace(int dataNo, int currentRegion)
 	fl_push_matrix();
 	{
 		// Translation & Scaling
-		if(dataArray->getFpFlag(dataNo) && currentRegion==-1)	// Field Potential? fix ROI display bug originally found in lilJoe
+		if(dataArray->getFpFlag(dataNo))	// Field Potential?
 		{
 			fl_scale(xScale,-fpYScale);
 		}
@@ -616,65 +562,22 @@ void TraceWindow::drawTrace(int dataNo, int currentRegion)
 		}
 
 		// Draw Processed Traces
-		if (currentRegion != -1)
-		{
-/*			double value;
-			dataArray->aveROIData(currentRegion, aveData);
-			for (int i = 0; i < numPts; i++)
-			{
-				value = aveData[i];
-				fl_vertex(i*pixPts, value);
-			}
-			fl_end_line();*/
+		aw->setColorAsDiode(dataNo);
+		double *proData=dataArray->getProDataMem(dataNo);
 
-			int numSelectedDiodesAverage = aw->getNumSelectedDiodesAverage(currentRegion)-1;
-			int *selectedDiodesAverage = aw->getSelectedDiodesAverage(currentRegion);
-			//dataNo = selectedDiodesAverage[0];
-			aw->setColorAsDiode(selectedDiodesAverage[1]);
-			double **proData = (double**)malloc(sizeof(double*)*numSelectedDiodesAverage);
-			if (proData == NULL) {
-				return;
-			}
-			for (int i = 0; i < numSelectedDiodesAverage; i++) {					//get average diodes
-				proData[i] = dataArray->getProDataMem(selectedDiodesAverage[i+1]);
-			}
-			aveData = new double[numPts];
-			fl_begin_line();
-			for (int i = 0; i < numPts; i++)
+		fl_begin_line();
+			for(int i=0;i<numPts;i++)
 			{
-				double sum = 0;
-				for (int j = 0; j < numSelectedDiodesAverage; j++) {
-					sum += proData[j][i];
-				}
-				sum = sum / numSelectedDiodesAverage;				// sum is the trace averaged over the selected diodes
-				aveData[i] = sum;									//aveData set
-				fl_vertex(i*pixPts, sum);
+				fl_vertex(i*pixPts,proData[i]);
 			}
-			fl_end_line();
-			free(proData);	//don't forget to free aveData
-		}
-		else {
-			aw->setColorAsDiode(dataNo);
-			double *proData = dataArray->getProDataMem(dataNo);
-			//get average diodes
-			fl_begin_line();
-			for (int i = 0; i < numPts; i++)
-			{
-				fl_vertex(i*pixPts, proData[i]);
-			}
-			fl_end_line();
-		}
+		fl_end_line();
 	}
 	fl_pop_matrix();
 }
 
 //=============================================================================
-void TraceWindow::drawSlope(int dataNo,int region)
+void TraceWindow::drawSlope(int dataNo)
 {
-	if (region != -1) {
-		int* selectedDiodesAverage = aw->getSelectedDiodesAverage(region);
-		dataNo = selectedDiodesAverage[1];
-	}
 	int numPts=dc->getNumPts();
 	double pixPts=double(w())/double(numPts);	// Pixels between two points
 
@@ -695,69 +598,35 @@ void TraceWindow::drawSlope(int dataNo,int region)
 
 		// Draw Slope
 		fl_color(200,200,200);
-		if (region != -1) {
-			int numSelectedDiodesAverage = aw->getNumSelectedDiodesAverage(region) - 1;
-			int* selectedDiodesAverage = aw->getSelectedDiodesAverage(region);
-			double* slope = (double*)malloc(sizeof(double)*numPts);
-			for (int j = 0; j < numPts; j++) {
-				double slopeSum = 0;
-				for (int i = 1; i <= numSelectedDiodesAverage; i++) {
-					double* slopeSingle = dataArray->getSlopeMem(selectedDiodesAverage[i]);
-					slopeSum += slopeSingle[j];
-				}
-				slope[j] = slopeSum;
-			}
-			fl_begin_line();
-			for (int i = 0; i < numPts; i++)
+		double *slope=dataArray->getSlopeMem(dataNo);
+
+		fl_begin_line();
+			for(int i=0;i<numPts;i++)
 			{
-				fl_vertex(i * pixPts, slope[i]);
+				fl_vertex(i*pixPts,slope[i]);
 			}
-			fl_end_line();
-			free(slope);
-		}
-		else {
-			double* slope = dataArray->getSlopeMem(dataNo);
-			fl_begin_line();
-			for (int i = 0; i < numPts; i++)
-			{
-				fl_vertex(i * pixPts, slope[i]);
-			}
-			fl_end_line();
-		}
+		fl_end_line();
 	}
 	fl_pop_matrix();
 }
 
 //=============================================================================
-void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
+void TraceWindow::drawTimeCourse(int dataIndex)
 {
-	int i;			// i indexes records
-	int numDiodes = aw->getNumSelectedDiodes();
-	int numRegions = aw->getNumRegions();
-	int numTraces = numDiodes + numRegions;
-	if (numTraces < 1)		// If no diode is selected, end and return.
-	{
-		return;
-	}
+	int i;
+
 	// Number of Records
-	Data* data;
-	data = NULL;
-	int numRecord = recControl->getRecordNoMax();
+	int numRecord=recControl->getRecordNoMax();
 
 	// Pixels between two points
-	double pixPts = double(w()) / double(numRecord - 1);
+	double pixPts=double(w())/double(numRecord-1);
+
+	// Get Data
+	Data *data=dataArray->getData(dataIndex);
 	double *timeCourse = nullptr;
 	double fpYScaleTmp=fpYScale;
 	double yScaleTmp=yScale;
 
-	// Get Data
-	if (dataIndex > 0) data = dataArray->getData(dataIndex);
-	if (regionIndex>=0&&numRegions>0&&dataIndex==0) {
-		dataArray->aveROIData(regionIndex);
-		aveData = dataArray->getAveData();
-		data = dataArray->getROIAve(regionIndex);
-		data->measureProperties();
-		}
 	// Get Data Array
 	if(timeCourseType=='R')
 	{
@@ -770,7 +639,6 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 	else if(timeCourseType=='M')
 	{
 		timeCourse=data->getMaxAmpArray();
-//		cout << " line 791 dataindex " << regionIndex << " value " << d2txt(*timeCourse) << endl;
 	}
 	else if(timeCourseType=='L')	// 30 msec -> 1 mV
 	{
@@ -784,7 +652,7 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 	}
 	else if(timeCourseType=='H')	// 30 msec -> 1 mV
 	{
-	timeCourse=data->getHalfAmpLatencyArray();
+		timeCourse=data->getHalfAmpLatencyArray();
 
 		if(!timeCourseNormalizationFlag)
 		{
@@ -794,61 +662,60 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 	}
 
 	double latencyStart=dataArray->getLatencyStart();
+
 	// Set Color
-	if(dataIndex>0) aw->setColorAsDiode(dataIndex);
-	if (regionIndex>0) {
-		int *selectedDiodesAverage = aw->getSelectedDiodesAverage(regionIndex);
-		aw->setColorAsDiode(selectedDiodesAverage[1]);
-	}
+	aw->setColorAsDiode(dataIndex);
 
 	// Push The Current Matrix
 	fl_push_matrix();
 	{
 		// Translation & Scaling
 		double barLength;
-		if (dataIndex < 0)		// fp diode
+		if(data->getFpFlag())
 		{
-			fl_scale(ltpXScale, -fpYScaleTmp);
-			barLength = 4 / fpYScaleTmp;
+			fl_scale(ltpXScale,-fpYScaleTmp);
+			barLength=4/fpYScaleTmp;
 		}
 		else
 		{
-			fl_scale(ltpXScale, -yScaleTmp);
-			barLength = 4 / yScaleTmp;
+			fl_scale(ltpXScale,-yScaleTmp);
+			barLength=4/yScaleTmp;
 		}
-		fl_translate(ltpXShift, 0);
+		fl_translate(ltpXShift,0);
+
 		//==========================================================
 		// Normalization
-		double scale = 1.0;
-
-		if (timeCourseNormalizationFlag)
+		double scale=1.0;
+		
+		if(timeCourseNormalizationFlag)
 		{
-			if (timeCourseType == 'M')
+			if(timeCourseType=='M')
 			{
-				scale = 1.0 / dataArray->getDataMaxAmp(dataIndex, 1);
+				scale=1.0/dataArray->getDataMaxAmp(dataIndex,1);
 			}
 			else
 			{
-				scale = 1.0 / timeCourse[dataArray->getRecordXNo(1)];
+				scale=1.0/timeCourse[dataArray->getRecordXNo(1)];
 			}
 		}
+
 		//==========================================================
 		// Draw the trace
 		fl_begin_line();
-		for (i = 0; i < numRecord; i++)
-		{
-			fl_vertex(i*pixPts, timeCourse[i] * scale);
-		}
+			for(i=0;i<numRecord;i++)
+			{
+				fl_vertex(i*pixPts,timeCourse[i]*scale);
+			}
 		fl_end_line();
 
 		// Draw the bar
-		for (i = 0; i < numRecord; i++)
+		for(i=0;i<numRecord;i++)
 		{
-			for (i = 0; i < numRecord; i++)
+			for(i=0;i<numRecord;i++)
 			{
 				fl_begin_line();
-				fl_vertex(i*pixPts, timeCourse[i] * scale + barLength);
-				fl_vertex(i*pixPts, timeCourse[i] * scale - barLength);
+					fl_vertex(i*pixPts,timeCourse[i]*scale+barLength);
+					fl_vertex(i*pixPts,timeCourse[i]*scale-barLength);
 				fl_end_line();
 			}
 		}
@@ -936,7 +803,7 @@ void TraceWindow::drawRef(int dataIndex)
 	fl_push_matrix();
 	{
 		// Translation & Scaling
-		if(dataIndex < 0)		// fp diode
+		if(data->getFpFlag())
 		{
 			fl_scale(1,-fpYScaleTmp);
 		}
@@ -1073,62 +940,42 @@ void TraceWindow::drawScale()
 }
 
 //=============================================================================
-void TraceWindow::drawValue(int numRegions)
+void TraceWindow::drawValue()
 {
-	int numDiodes = aw->getNumSelectedDiodes();
-	int numTraces=numDiodes+numRegions;		// Get the number of selected diodes from the array window.
-	if(numTraces<1)		// If no diode is selected, end and return.
+	// Get the number of selected diodes from the array window.
+	int numSelectedDiodes=aw->getNumSelectedDiodes();
+
+	// If no diode is selected, end and return.
+	if(numSelectedDiodes<1)
 	{
 		return;
 	}
 
 	// Set position parameters.
 	char* txtBuf = nullptr;
-	int height=h()/(numTraces+1);
+	int height=h()/(numSelectedDiodes+1);
 	int x0,y0;
 	int *selectedDiodes=aw->getSelectedDiodes();
 	Data* data;
-	data = NULL;
 
 	// Go through selected diodes.
-	for (int i = 0; i < numTraces; i++)
+	for(int i=0;i<numSelectedDiodes;i++)
 	{
-		if (i<numDiodes) {
-			x0 = 10;
-			y0 = height * (i + 1);								// sets height of each trace in window
-			fl_color(bg);										// draw boxes around region with index
-			fl_rectf(x0 - 3, y0 - 22, 35, 15);
-			fl_color(fg);
-			fl_rect(x0 - 3, y0 - 22, 35, 15);
+		x0=10;
+		y0=height*(i+1);
 
-			aw->setColorAsDiode(selectedDiodes[i]);
-//			data = new Data();
-			data = dataArray->getData(selectedDiodes[i]);
+		fl_color(bg);
+		fl_rectf(x0-3,y0-22,27,15);
+		fl_color(fg);
+		fl_rect(x0-3,y0-22,27,15);
 
-			fl_font(FL_HELVETICA, 12);
-			fl_draw(i2txt(selectedDiodes[i] + 1), x0, y0 - 10);
-		}
-		if (i>=numDiodes&&i<numTraces) {
-			int j = i - numDiodes;								// j is the region number
-			int *selectedDiodesAverage = aw->getSelectedDiodesAverage(j);
-			x0 = 10;
-			y0 = height * (i + 1);
-			fl_color(bg);
-			fl_rectf(x0 - 3, y0 - 22, 35, 15);
-			fl_color(fg);
-			fl_rect(x0 - 3, y0 - 22, 35, 15);
+		aw->setColorAsDiode(selectedDiodes[i]);
+		data=dataArray->getData(selectedDiodes[i]);
 
-			aw->setColorAsDiode(selectedDiodesAverage[1]);
-			
-			dataArray->aveROIData(j);
-			aveData = dataArray->getAveData();
-			data = new Data;		//			memcpy(data->getProDataMem(), aveData, sizeof(double) * dc->getNumPts());
-			data = dataArray->getROIAve(j);
-			data->measureProperties();
+		// Draw diode No.
+		fl_font(FL_HELVETICA,12);
+		fl_draw(i2txt(selectedDiodes[i]+1),x0,y0-10);
 
-			fl_font(FL_HELVETICA, 12);
-			fl_draw(i2txt(j + 1), x0, y0 - 10);
-		}
 		// RLI
 		if(valueType=='R') 
 		{
@@ -1138,6 +985,11 @@ void TraceWindow::drawValue(int numRegions)
 		else if(valueType=='M')	
 		{
 			txtBuf=d2txt(data->getMaxAmp());
+		}
+		// Max Amp SD
+		else if(valueType=='4')	
+		{
+			txtBuf=d2txt(dataArray->getDiodeMaxAmpSD(selectedDiodes[i]));
 		}
 		// Max Amp Change
 		else if(valueType=='5')	
@@ -1154,25 +1006,20 @@ void TraceWindow::drawValue(int numRegions)
 		{
 			txtBuf=d2txt(dataArray->getDiodeMaxAmpPerCha(selectedDiodes[i]));
 		}
-		// Max Slope latency
+		// Max Amp Percentage Change Standard Deviation
 		else if(valueType=='8')	
 		{
-			txtBuf=d2txt(data->getMaxSlopeLatency());
+			txtBuf=d2txt(dataArray->getDiodeMaxAmpPerChaSD(selectedDiodes[i]));
 		}
 		// Max Slope
 		else if(valueType=='9')	
 		{
 			txtBuf=d2txt(data->getMaxSlope());
 		}
-		//Max Slope Latency
-		else if (valueType == 'p')
+		// Spike amp
+		else if(valueType=='p')	
 		{
-			txtBuf = d2txt(data->getHalfAmpLatency());
-		}
-		// Signal-to-noise
-		else if(valueType=='Q')	
-		{
-			txtBuf = d2txt(data->getMaxAmp()/data->getSD());
+			txtBuf=d2txt(data->getSpikeAmp());
 		}
 		// Max Amp Latency
 		else if(valueType=='L')	
@@ -1195,9 +1042,10 @@ void TraceWindow::drawValue(int numRegions)
 			txtBuf=d2txt(data->getHalfAmpLatency());
 		}
 
-		if (valueType != 'N')
+		// None
+		if(valueType!='N')
 		{
-			drawTxt(txtBuf, fg, bg, x0 + 40, y0 - 10);
+			drawTxt(txtBuf,fg,bg,x0+28,y0-10);
 		}
 	}
 }
@@ -1206,6 +1054,7 @@ void TraceWindow::drawValue(int numRegions)
 void TraceWindow::drawTxt(char *txtBuf,Fl_Color fg,Fl_Color bg,int x,int y)
 {
 	fl_font(FL_HELVETICA,12);
+
 	fl_color(bg);
 	fl_draw(txtBuf,x+1,y);
 	fl_draw(txtBuf,x-1,y);
@@ -1421,9 +1270,9 @@ void TraceWindow::calVm(int dataNo)
 
 	if(!calWholeVm)
 	{
-		if((int)(alphaStartPoint+window+1) < numPts)
+		if(alphaStartPoint+window+1 < numPts)
 		{
-			end=(int) (alphaStartPoint+window+1);
+			end=alphaStartPoint+window+1;
 		}
 	}
 
@@ -1438,7 +1287,7 @@ void TraceWindow::calVm(int dataNo)
 	}
 
 	// Calculate Alpha
-	for(i=(int)alphaStartPoint;i<end;i++)
+	for(i=alphaStartPoint;i<end;i++)
 	{
 		alpha[i]=(i-alphaStartPoint)/alphaTau*exp(-(i-alphaStartPoint)/alphaTau);
 
@@ -1449,7 +1298,7 @@ void TraceWindow::calVm(int dataNo)
 	}
 
 	// Normalize Alpha
-	for(i=(int)alphaStartPoint;i<end;i++)
+	for(i=alphaStartPoint;i<end;i++)
 	{
 		alpha[i]=alphaAmp*alpha[i]/maxAlpha;
 	}
@@ -1470,7 +1319,7 @@ void TraceWindow::calVm(int dataNo)
 	}
 
 	// Calculate Vm
-	for(i=(int)alphaStartPoint+1;i<end;i++)
+	for(i=alphaStartPoint+1;i<end;i++)
 	{
 		Alpha2=(alpha[i]+alpha[i-1])/2.0;
 		
@@ -1506,7 +1355,7 @@ void TraceWindow::calVm(int dataNo)
 //=============================================================================
 void TraceWindow::setFittingGadgets(int dataNo)
 {
-	if(dataNo < -NUM_FP_DIODES || dataNo >= dataArray->num_raw_array_diodes())
+	if(dataNo<0 || dataNo>472)
 	{
 		return;
 	}
@@ -1590,7 +1439,7 @@ double TraceWindow::calFitError(int dataNo)
 	double error=0;
 
 	// Start point
-	int alphaStartPt=(int) fittingVar[0];
+	int alphaStartPt=fittingVar[0];
 
 	// Ignore axon signal
 	int axonStart=atoi(ui->alphaAxonStart->value());
@@ -1678,6 +1527,7 @@ int TraceWindow::handle(int event)
 	static double xScale0,ltpXScale0,yScale0,fpYScale0;
 	int x1,y1;
 	int yH;
+	int dx,dy;
 	
 	if(superimpose)
 	{
@@ -1706,14 +1556,14 @@ int TraceWindow::handle(int event)
 			yScale0=yScale;
 			fpYScale0=fpYScale;
 
-			xShift0= (int) xShift;
-			ltpXShift0= (int) ltpXShift;
+			xShift0=xShift;
+			ltpXShift0=ltpXShift;
 
 			if(Fl::event_button()==2)
 			{
 				int numPts=dc->getNumPts();
 
-				pointLinePt=(int) ((x0/xScale-xShift)*numPts/w()+0.5);
+				pointLinePt=(x0/xScale-xShift)*numPts/w()+0.5;
 
 				if(pointLinePt<0)
 				{
@@ -1783,7 +1633,7 @@ int TraceWindow::handle(int event)
 			{
 				int numPts=dc->getNumPts();
 
-				pointLinePt=(int) ((x1/xScale-xShift)*numPts/w()+0.5);
+				pointLinePt=(x1/xScale-xShift)*numPts/w()+0.5;
 
 				if(pointLinePt<0)
 				{
@@ -1900,8 +1750,8 @@ double TraceWindow::fitVm(int dataNo)
 	double minError=1000;
 	double error;
 
-	int fittingRange=(int) ui->fittingRange->value();
-	int fittingStepSize=(int) ui->fittingStepSize->value();
+	int fittingRange=ui->fittingRange->value();
+	int fittingStepSize=ui->fittingStepSize->value();
 
 	int low[5];
 	int high[5];
@@ -1992,7 +1842,7 @@ double TraceWindow::fitVm(int dataNo)
 
 							for(i=0;i<5;i++)
 							{
-								min[i]=(int) (fittingVar[i]+step[i]);
+								min[i]=fittingVar[i]+step[i];
 							}
 						}
 					}
@@ -2023,7 +1873,7 @@ int TraceWindow::getLastDiodeNo()
 	}
 	else
 	{
-		return -NUM_FP_DIODES - 1;
+		return -1;
 	}
 }
 
@@ -2080,10 +1930,7 @@ void TraceWindow::saveFittingVar()
 	Data* data;
 	double* fittingVar;
 
-	file << dataArray->binned_width() << '\n';
-	file << dataArray->binned_height() << '\n';
-
-	for(i=0;i< dataArray->num_binned_diodes();i++)
+	for(i=0;i<464;i++)
 	{
 		data=dataArray->getData(i);
 		fittingVar=data->getFittingVar();
@@ -2126,24 +1973,8 @@ void TraceWindow::loadFittingVar()
 	Data* data;
 	double* fittingVar;
 	int diodeNo;
-	int bwidth, bheight, curr_bwidth, curr_bheight;
 
-	curr_bwidth = dataArray->binned_width();
-	curr_bheight = dataArray->binned_height();
-	file >> bwidth;
-	file >> bheight;
-
-	if (bwidth != curr_bwidth || bheight != curr_bheight)
-	{
-		char msg[128];
-		sprintf(msg, "Fitting file is for array size %dx%d, not %dx%d!\n",
-			bwidth, bheight, curr_bwidth, curr_bheight);
-		fl_alert(msg);
-		file.close();
-		return;
-	}
-
-	for (i = 0; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<464;i++)
 	{
 		data=dataArray->getData(i);
 		fittingVar=data->getFittingVar();
@@ -2169,7 +2000,7 @@ void TraceWindow::loadFittingVar()
 //=============================================================================
 void TraceWindow::setOnsetBounds(int index,const char* txt)
 {
-	float bound=atof(txt);
+	int bound=atoi(txt);
 	int numPts=dc->getNumPts();
 
 	if(bound<0)

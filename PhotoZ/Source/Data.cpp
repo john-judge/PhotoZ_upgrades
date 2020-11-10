@@ -10,10 +10,7 @@
 #include "SignalProcessor.h"
 #include "ArrayWindow.h"
 #include "TraceWindow.h"
-#include "DataArray.h"
-#include <iostream>
 
-using namespace std;
 //=============================================================================
 double Data::perAmp=0.5;
 
@@ -23,8 +20,9 @@ void Data::setPerAmp(double input)
 }
 
 //=============================================================================
-Data::Data()
+Data::Data(char flag)
 {
+	fpFlag=flag;
 	ignoredFlag=0;
 	correctionValue=1;
 	maxAmpLatency=0;
@@ -72,14 +70,13 @@ void Data::resetTimeCourse()
 //
 void Data::allocMem()
 {
-	int numPts = dc->getNumPts();
+	int numPts=dc->getNumPts();
 
 	rawData=new double[numPts];
 	proData=new double[numPts];
 	savData=new double[numPts];
 	slope=new double[numPts];
 
-	reset();
 	resetSavData();
 }
 
@@ -90,15 +87,6 @@ void Data::releaseMem()
 	delete [] proData;
 	delete [] savData;
 	delete [] slope;
-
-	rawData = proData = savData = slope = NULL;
-}
-
-//=============================================================================
-void Data::changeNumPts()
-{
-	releaseMem();
-	allocMem();
 }
 
 //=============================================================================
@@ -116,10 +104,10 @@ void Data::reset()
 	}
 
 	// Reset RLI and Properties
-	rliLow = 0;
-	rliHigh = 0;
-	rliMax = 0;
-	rli = 1.0e-10;
+	rliLow=0;
+	rliHigh=0;
+	rliMax=0;
+	rli=1.0e-10;
 
 	maxAmp=0;
 	maxAmpLatency=0;
@@ -147,7 +135,7 @@ double *Data::getRawDataMem()
 //=============================================================================
 double *Data::getProDataMem()
 {
-	return proData; 
+	return proData;
 }
 
 //=============================================================================
@@ -163,17 +151,9 @@ double *Data::getSlopeMem()
 }
 
 //=============================================================================
-void Data::setRli(double p)
-{
-	rli = p;
-}
-
-//=============================================================================
-
-// added to do subtraction as in photoz 5.3
 void Data::setRliLow(short p)
 {
-	rliLow = p;
+	rliLow=p;
 }
 
 //=============================================================================
@@ -185,7 +165,7 @@ short Data::getRliLow()
 //=============================================================================
 void Data::setRliHigh(short p)
 {
-	rliHigh = p;
+	rliHigh=p;
 }
 
 //=============================================================================
@@ -193,9 +173,11 @@ short Data::getRliHigh()
 {
 	return rliHigh;
 }
+
+//=============================================================================
 void Data::setRliMax(short p)
 {
-	rliMax = p;
+	rliMax=p;
 }
 
 //=============================================================================
@@ -204,22 +186,22 @@ short Data::getRliMax()
 	return rliMax;
 }
 
+//=============================================================================
 void Data::calRli()
 {
-	int num_bdiodes = dataArray->num_binned_diodes();
 	int i;
-	for (i = 0; i < num_bdiodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-//		rli = double(rliLow - rliHigh) / 3278;
-		rli = double(rliHigh) / 3278;
+		rli=double(rliLow-rliHigh)/3276.8;
 	}
 
-	/*if (rli <= 0 || (rliMax - rliHigh) < -200)	// No RLI or Saturated
+	if(rli<=0 || (rliMax-rliHigh)<-200)	// No RLI or Saturated
 	{
-		rli = -1;
-	}*/															//		commented out to test rli acquisition
-
+		rli=-1;
+	}
 }
+
+//=============================================================================
 double Data::getRli()
 {
 	return rli;
@@ -294,7 +276,7 @@ void Data::measureProperties()
 	}
 
 	//-------------------------------------------------------
-	maxAmpLatencyPt=(int) maxAmpLatency;
+	maxAmpLatencyPt=maxAmpLatency;
 	maxAmpLatency=maxAmpLatency*intPts;
 	maxAmpLatencyArray[recordNo]=maxAmpLatency;
 	halfAmpLatency=halfAmpLatency*intPts;
@@ -311,7 +293,6 @@ void Data::measureProperties()
 		{
 			maxSlopePt=i;
 			maxSlope=slope[i];
-			maxSlopeLatency = maxSlopePt * intPts;
 		}
 	}
 
@@ -373,11 +354,6 @@ double Data::getMaxAmp(int recordIndex)
 }
 
 //=============================================================================
-double Data::getMaxSlopeLatency()
-{
-	return maxSlopeLatency;
-}
-
 double Data::getMaxAmpLatency()
 {
 	return maxAmpLatency;
@@ -418,7 +394,7 @@ double Data::getSD()
 {
 	int i;
 	int num=50;
-	int startPt=10;
+	int startPt=5;
 	double sum2=0,sum1=0;
 	double data;
 
@@ -512,6 +488,12 @@ void Data::saveTraces2()
 }
 
 //=============================================================================
+char Data::getFpFlag()
+{
+	return fpFlag;
+}
+
+//=============================================================================
 void Data::setCorrectionValue(double value)
 {
 	correctionValue=value;
@@ -570,9 +552,10 @@ void Data::rliDividing()
 
 	int i;
 	int numPts=dc->getNumPts();
+
 	for(i=0;i<numPts;i++)
 	{
-		proData[i]/=(rli*2165);			//factor determined empirically to give value of 1.0 with shutter opening data
+		proData[i]/=rli;
 	}
 }
 
@@ -601,15 +584,17 @@ void Data::raw2pro()
 //=============================================================================
 void Data::temporalFiltering(double* buf)
 {
-	if (ignoredFlag)
+	if(ignoredFlag)
+	{
 		return;
+	}
 
 	int i;
-	int numPts = dc->getNumPts();
+	int numPts=dc->getNumPts();
 
-	for (i = 0; i < numPts; i++)
+	for(i=0;i<numPts;i++)
 	{
-		buf[i] = proData[i];
+		buf[i]=proData[i];
 	}
 
 	sp->temporalFiltering(buf,proData);
@@ -619,14 +604,16 @@ void Data::temporalFiltering(double* buf)
 void Data::ampCorrecting()
 {
 	if(ignoredFlag)
+	{
 		return;
+	}
 
 	int i;
 	int numPts=dc->getNumPts();
 
-	for (i = 0; i < numPts; i++)
+	for(i=0;i<numPts;i++)
 	{
-		proData[i] /= correctionValue;
+		proData[i]/=correctionValue;
 	}
 }
 
@@ -635,11 +622,11 @@ void Data::setAllFittingVar(double* input,bool* changeFlag)
 {
 	int i;
 
-	for(i = 0; i < 5; i++)
+	for(i=0;i<5;i++)
 	{
 		if(changeFlag[i])
 		{
-			fittingVar[i] = input[i];
+			fittingVar[i]=input[i];
 		}
 	}
 }

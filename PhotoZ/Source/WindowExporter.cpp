@@ -4,9 +4,7 @@
 #include <windows.h>
 #include <stdlib.h>
 #include <string>
-#include <iostream>
 
-#include <FL/Fl.H>
 #include <FL/Fl_File_Chooser.H>
 
 #include <paintlib/plstdpch.h>		// Must have one for paintlib
@@ -18,9 +16,6 @@
 #include <paintlib/pltiffenc.h>
 
 #include "WindowExporter.h"
-#include "MainController.h"
-
-using namespace std;
 
 //=============================================================================
 WindowExporter::WindowExporter()
@@ -76,7 +71,6 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	HBITMAP hbm=CreateCompatibleBitmap(hdcMonitor,w,h);
 	setBitmapInfo(hbm,&bitMapInfo);
 	SelectObject(hdcWindow,hbm);
-//	cout << " line 78 x0  " << x0 << " y0 " << y0 << " w " << w << " h " << h << endl;
 	BitBlt(hdcWindow,0,0,w,h,hdcMonitor,x0,y0,SRCCOPY);
 
 	unsigned char *buf=new unsigned char[bitMapInfo.bmiHeader.biSizeImage];
@@ -90,7 +84,8 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	  &bitMapInfo,						// address of structure with bitmap data
 	  DIB_RGB_COLORS			// RGB
 	);
-		
+
+	//
 	PLWinBmp *winBmp=new PLWinBmp;
 	winBmp->CreateFromHBitmap(hbm);
 
@@ -100,6 +95,7 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	PLPixel32  * pLine;
 	int width=winBmp->GetWidth();
 	int height=winBmp->GetHeight();
+
 	for (y=0;y<height;y++)
 	{
 		pLine=pLineArray[height-y-1];
@@ -111,9 +107,10 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 			pLine[x].SetA(buf[4*(width*y+x)+3]);
 		}
 	}
+
 	//
 	delete [] buf;
-		
+
 	char *fileName;
 	if(imageType=='B')
 	{
@@ -129,7 +126,7 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	}
 	else if(imageType=='P')
 	{
-		fileName=fl_file_chooser("Enter PNG file name","*.png","Image.png");
+		fileName=fl_file_chooser("PNG file name","*.png","Image.png");
 		if(fileName)
 			pngEncoder->MakeFileFromBmp(fileName,winBmp);
 	}

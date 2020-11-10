@@ -7,7 +7,6 @@
 #include <FL/fl.h>
 #include <FL/fl_ask.h>
 #include <FL/fl_file_chooser.h>
-#include <iostream>
 
 #include "MainController.h"
 #include "UserInterface.h"
@@ -16,12 +15,11 @@
 #include "SignalProcessor.h"
 #include "Color.h"
 #include "ColorWindow.h"
-#include "Definitions.h"
 #include "Data.h"
 #include "DapWindow.h"
 #include "DapController.h"
 #include "WindowExporter.h"
-
+#include "Definitions.h"
 
 using namespace std;
 
@@ -132,6 +130,7 @@ void MainController::setBLCType(char p)
 void MainController::setClampPt(int pt)
 {
 	int max=dc->getNumPts();
+
 	if(pt>=max)
 	{
 		pt=max-1;
@@ -263,15 +262,11 @@ void MainController::setWidthWindow(const char *p)
 void MainController::saveValues()
 {
 	int numSelectedDiodes=aw->getNumSelectedDiodes();
-	int numRegions = aw->getNumRegions();
 	char valueType=tw->getValueType();
-	int *selectedDiodes = aw->getSelectedDiodes();
-	if(numSelectedDiodes+numRegions<1 || valueType=='N')
+	if(numSelectedDiodes<1 || valueType=='N')
 	{
 		return;
 	}
-	Data* data;
-	data = NULL;
 
 	// Get file name
 	char *fileName=fl_file_chooser(
@@ -288,66 +283,46 @@ void MainController::saveValues()
 
 	//
 	int i;
+	int *selectedDiodes=aw->getSelectedDiodes();
 	double value;
-	int index=0;
+	int diodeNo;
 
-	for(i=0;i<numSelectedDiodes+numRegions;i++)
+	for(i=0;i<numSelectedDiodes;i++)
 	{
-		if (i < numSelectedDiodes) 
-		{
-			data = dataArray->getData(selectedDiodes[i]);
-			index=selectedDiodes[i];
-		}
-		else
-		{
-			int j = i - numSelectedDiodes;
-			dataArray->aveROIData(j);
-			aveData = dataArray->getAveData();
-			data = new Data;
-			data = dataArray->getROIAve(j);
-			data->measureProperties();
-			index = j;
-		}
-	
+		diodeNo=selectedDiodes[i];
+
 		if(valueType=='M')
 		{
-			value=data->getMaxAmp();
+			value=dataArray->getDataMaxAmp(diodeNo);
 		}
 		else if(valueType=='L')
 		{
-			value=data->getMaxAmpLatency();
+			value=dataArray->getDataMaxAmpLatency(diodeNo);
 		}
 		else if(valueType=='A')
 		{
-			value=data->getAmp(tw->getPointLinePt());
+			value=dataArray->getAmp(diodeNo,tw->getPointLinePt());
 		}
 		else if(valueType=='R')
 		{
-			value=data->getRli();
+			value=dataArray->getRli(diodeNo);
 		}
 		else if(valueType=='S')
 		{
-			value=data->getSD();
+			value=dataArray->getDataSD(diodeNo);
 		}
-		else if(valueType=='p')
+		else if(valueType=='H')
 		{
-			value = data->getHalfAmpLatency();
+			value=dataArray->getDataHalfAmpLatency(diodeNo);
 		}
-		
-		else if (valueType == 'Q')
+		else if(valueType=='5')
 		{
-			value = data->getMaxAmp() / data->getSD();
+			value=dataArray->getDiodeMaxAmpCha(diodeNo);
 		}
-		else if (valueType == '9')
-		{
-			value = data->getMaxSlope();
-		} 
-		else if (valueType == '8')
-		{
-			value = data->getMaxSlopeLatency();
-		}
-		file<<index+1<<'\t'<<value<<'\n';
+
+		file<<diodeNo+1<<'\t'<<value<<'\n';
 	}
+
 	// Close file
 	file.close();
 }
@@ -392,17 +367,20 @@ void MainController::saveProfileValues()
 		// Amp1
 		file<<dataArray->getDataMaxAmp(diodeIndex,1)<<'\t';
 
-		// Amp1SD		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,1)<<'\t';
+		// Amp1SD
+		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,1)<<'\t';
 
 		// Amp2
 		file<<dataArray->getDataMaxAmp(diodeIndex,2)<<'\t';
 
-		// Amp2SD		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,2)<<'\t';
+		// Amp2SD
+		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,2)<<'\t';
 
 		// AmpCha
 		file<<dataArray->getDiodeMaxAmpCha(diodeIndex)<<'\t';
 
-		// AmpChaSD		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,2)<<'\t';
+		// AmpChaSD
+		file<<dataArray->getDiodeMaxAmpSD(diodeIndex,2)<<'\t';
 
 		// AmpPerCha
 		file<<dataArray->getDiodeMaxAmpPerCha(diodeIndex)<<'\t';
@@ -440,7 +418,8 @@ void MainController::saveMapValues()
 	int i;
 
 	// Ask for the file name
-	char *fileName=fl_file_chooser("Please enter the name of the map file mcsp line 424","*.map","Map.map");
+	char *fileName=fl_file_chooser(
+		"Please enter the name of the map file","*.map","Map.map");
 
 	if(!fileName)
 	{
@@ -452,10 +431,7 @@ void MainController::saveMapValues()
 	file.open(fileName,ios::out);
 	char ignoreFlag;
 
-	file << dataArray->binned_width() << '\n';
-	file << dataArray->binned_height() << '\n';
-
-	for (i = 0; i < dataArray->num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		file<<i+1;
 		file<<'\t'<<dataArray->getCorrectionValue(i);
@@ -479,8 +455,8 @@ void MainController::saveMapValues()
 void MainController::loadMapValues()
 {
 	int i;
-	std::vector <double> value;
-	std::vector <char> ignored;
+	double value[Num_Diodes-8];
+	char ignored[Num_Diodes-8];
 
 	// Ask for the file name
 	char *fileName=fl_file_chooser("Please select one map file","*.map","Map.map");
@@ -495,28 +471,8 @@ void MainController::loadMapValues()
 	file.open(fileName,ios::in);
 	int diodeNum;
 	char ignoreFlag;
-	int bwidth, bheight, curr_bwidth, curr_bheight;
 
-	curr_bwidth = dataArray->binned_width();
-	curr_bheight = dataArray->binned_height();
-	file >> bwidth;
-	file >> bheight;
-
-	if (bwidth != curr_bwidth || bheight != curr_bheight)
-	{
-		char msg[128];
-		sprintf(msg, "Map file is for array size %dx%d, not %dx%d!\n",
-			bwidth, bheight, curr_bwidth, curr_bheight);
-		fl_alert(msg);
-		file.close();
-		return;
-	}
-
-	int bdiodes = dataArray->num_binned_diodes();
-	value.assign(bdiodes, 0.0);
-	ignored.assign(bdiodes, 0);
-
-	for (i = 0; i < bdiodes; i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		file>>diodeNum;
 		file>>value[i];
@@ -526,12 +482,16 @@ void MainController::loadMapValues()
 		{
 			ignored[i]=1;
 		}
+		else
+		{
+			ignored[i]=0;
+		}
 	}
 
 	file.close();
 
 	// Set Correction Value
-	for (i = 0; i < bdiodes; i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		// Set correction value
 		dataArray->setCorrectionValue(i,value[i]);
@@ -551,19 +511,16 @@ void MainController::loadMapValues()
 void MainController::rli2Map()
 {
 	int i;
-	std::vector<double> rli;
-	int bdiodes = dataArray->num_binned_diodes();
-
-	rli.assign(bdiodes, 0.0);
+	double rli[Num_Diodes-8];
 
 	// Get RLI values
-	for (i = 0; i < bdiodes; i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		rli[i]=dataArray->getRli(i);
 	}
 
 	// Set Correction Value
-	for (i = 0; i < bdiodes; i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
 		dataArray->setCorrectionValue(i,rli[i]);
 	}

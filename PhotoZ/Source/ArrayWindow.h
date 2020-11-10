@@ -6,13 +6,11 @@
 //=============================================================================
 #include <FL/Fl.H>
 #include <FL/Fl_Double_Window.H>
-#include <vector>						// new
 
 // Diode definitions
-#define NUM_FP_DIODES 8
-#define DEFAULT_ARRAY_WIDTH 256
-#define DEFAULT_ARRAY_HEIGHT 40
-#define NUM_BINNED_DIODES 10240
+#define Num_Diodes 472
+#define Diode_Width 26
+#define Diode_Height 28
 
 // Background for Array Window
 #define BG_None 0
@@ -26,12 +24,6 @@
 
 #define BG_Spike_Amp 6
 #define BG_EPSP_Latency 7
-#define BG_SIGNAL_TO_NOISE 9
-
-#define BG_Live_Feed 8
-
-class Diode;
-class LiveFeed;
 
 //=============================================================================
 class ArrayWindow:public Fl_Double_Window
@@ -40,13 +32,12 @@ private:
 	//
 	class Image *image;
 
-	std::vector<Diode*> diodes;
-	Diode *fp_diodes[NUM_FP_DIODES];
-	void resizeDiodes();
+	class Diode *diodes[Num_Diodes];
+	void setDiodes();
 
 	// Diode Selection
-	std::vector<int> selectedDiodes;							//modified to use std::vector
-	std::vector<std::vector<int>> selectedDiodesAverage;		//
+	int numSelectedDiodes;
+	int selectedDiodes[Num_Diodes];
 
 	// Flags
 	char showTrace;
@@ -77,37 +68,23 @@ private:
 	void drawRli();
 	void drawMaxAmp();
 	void drawSpikeAmp();
-	void drawSignalToNoise();
 	void drawMaxAmpLatency();
 	void drawHalfAmpLatency();
 	void drawEPSPLatency();
 
 	void drawTxt(char *txtBuf,Fl_Color fg,Fl_Color bg,int x,int y);
 
-	// Helper methods
-	Diode *get_diode(int);
-
-	int numRegions = 0;
-	int continuous;
-	int currentRegionIndex = -1;
 public:
 	//-------------------------------------
 	ArrayWindow(int X,int Y,int W,int H);
 	~ArrayWindow();
 	//-------------------------------------
-	int diodeX(int);
-	int diodeY(int);
-	int diodeW();
-	int diodeH();
+	int diodeMap[51][27];
+	int diodeX[Num_Diodes];
+	int diodeY[Num_Diodes];
 
 	//-------------------------------------
-	// Array resizing
-	void changeNumDiodes();
-
-	//-------------------------------------
-	// Inherited from Fl_Double_Window
-	int handle(int) override;
-	void resize(int, int, int, int) override;
+	int handle(int);
 
 	//-------------------------------------
 	// Flag related methods
@@ -142,11 +119,10 @@ public:
 	// Background
 
 	void setBackground(int);
-	int getBackground();
 	void saveBGData();
 
 	//-------------------------------------
-	// Image
+	// Imaqge
 
 	void loadImage();
 	void openImageFile(const char*);
@@ -164,22 +140,12 @@ public:
 	//-------------------------------------
 	// Diode Selection
 
-	void addToSelectedList(int, int average = 0);
-//	std::vector<int> averageSelectedDiodesROI();		//new  obsolete? see ArrayWindow.cpp 713
-	int getNumRegions();								//new
-	int getCurrentRegionIndex();						//new
-	void setContinuous(int continuous);					//new
-
-	int getContinuous();								//new
-
-	int deleteFromSelectedList(int index, int average=0);
-	void clearSelected(int selection);
+	void addToSelectedList(int);
+	void deleteFromSelectedList(int);
+	void clearSelected();
 	int getNumSelectedDiodes();
 	int* getSelectedDiodes();
-	int getNumSelectedDiodesAverage(int idx);			//new
-	int* getSelectedDiodesAverage(int idx);				//new
 	void selectDiode(int);
-	void setSelectedDiodesAverageIndex(int regNo, int idx); //new for loadSelected in MainControllerArrayWindow
 
 	//-------------------------------------
 	void setColorAsDiode(int);

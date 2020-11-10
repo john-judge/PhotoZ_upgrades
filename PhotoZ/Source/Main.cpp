@@ -2,21 +2,14 @@
 // Main.cpp
 //=============================================================================
 #include "MainController.h"
-#include <cstdlib>
+
 //=============================================================================
-MainController *mc;
-void quit();
+MainController *mc=new MainController();
+
 //=============================================================================
-int main()
+void main()
 {
-	mc = new MainController();
 	mc->start();
-	std::atexit(quit);
-	return 0;
 }
 
-void quit() {
-	mc->~MainController();
-	//delete mc;
-}
 //=============================================================================

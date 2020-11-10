@@ -7,8 +7,6 @@
 #include <FL/fl.h>
 #include <FL/gl.h>
 #include <FL/Fl_Gl_Window.h>
-#include "ArrayWindow.h"
-#include <vector>
 
 #define	stripeLength 1024
 
@@ -66,7 +64,7 @@ private:
 
 	// 3D Model Creation
 	GLfloat plane[4];
-	std::vector<GridPoint> point;
+	GridPoint point[464];
 	void build3DModel();
 	void setZ_AmpNor2ArrayMax();
 	void setZ_AmpNor2DiodeMax();
@@ -94,8 +92,6 @@ public:
 	ColorWindow(int x,int y,int w,int h,const char* label);
 
 	void setPointXYZ();
-
-	void changeNumDiodes();
 
 	void setMapFlag(char);
 	void setMapMode(int);

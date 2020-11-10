@@ -3,7 +3,6 @@
 //=============================================================================
 #include <stdlib.h>
 #include <stdio.h>
-#include <iostream>
 
 #include <FL/fl_ask.h>
 
@@ -17,90 +16,51 @@
 #include "DapWindow.h"
 #include "DapController.h"
 #include "WindowExporter.h"
-#include "LiveFeed.h"
 
-using namespace std;
 //=============================================================================
-Color *colorControl;
-UserInterface *ui;
-ArrayWindow *aw;
-TraceWindow *tw;
-ColorWindow *cw;
-DapWindow *dw;
-RecControl *recControl;
+Color *colorControl=new Color();
+UserInterface *ui=new UserInterface();
+ArrayWindow *aw=ui->aw;
+TraceWindow *tw=ui->tw;
+ColorWindow *cw=ui->cw;
+DapWindow *dw=ui->dapWindow;
+RecControl *recControl=new RecControl();
 
-DapController *dc;
-DapController *dapControl;
+DapController *dc=new DapController();
+DapController *dapControl=dc;
 
-LiveFeed *lf;
-DataArray *dataArray;
-SignalProcessor *sp;
-FileController *fileController;
-WindowExporter *we;
+DataArray *dataArray=new DataArray(dc->getNumPts());
+SignalProcessor *sp=new SignalProcessor();
+FileController *fileController=new FileController();
+WindowExporter *we=new WindowExporter();
 
 char txtBuf[32];
 
 //=============================================================================
-MainController::MainController():version(5.32f)
+MainController::MainController():version(5.16)
 {
-	// these need to be changed after dataArray has been initialized
-	colorControl = new Color();
-	ui = new UserInterface();
-	aw = ui->aw;
-	tw = ui->tw;
-	cw = ui->cw;
-	dw = ui->dapWindow;
-	recControl = new RecControl();
-
-	dc = new DapController();
-	dapControl = dc;
-
-	lf = new LiveFeed();
-	dataArray = new DataArray(dc->getNumPts());
-	sp = new SignalProcessor();
-	fileController = new FileController();
-	we = new WindowExporter();
-	aw->changeNumDiodes();
-	cw->changeNumDiodes();
-	sp->changeNumDiodes();
-}
-
-MainController::~MainController() {
-	delete colorControl;
-	ui->killUI();
-	delete ui;
-	delete recControl;
-	delete dc;
-	delete lf;
-	delete dataArray;
-	delete sp;
-	delete fileController;
-	delete we;
-	
 }
 
 //=============================================================================
 //	Start the program
 //=============================================================================
-void MainController::start()					//this module runs at startup and the initcam calls give console messages indicating commands were executed correcly
+void MainController::start()
 {
-	char command[80];
 	ui->init();
 	cw->setPointXYZ();
-	ui->setValue();	
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	dc->resetCamera();			// replaced for LittleDave works but disable while developing program
+
+	// Open 01_01_01.zda
+	if(fileController->openFileByName("01_01_01.zda"))
+	{
+		dataArray->process();
+	}
+
+	ui->setValue();	// Checked
+
 	dw->init(dc);
+
 	aw->openImageFile("01-01.bmp");
-	setCameraProgram(7);
-cout << "mc line 103  initialized camera " << endl;
+
 	//
 	ui->show();
 	Fl::run();
@@ -122,10 +82,10 @@ void MainController::redraw()
 //=============================================================================
 void MainController::quit()
 {
-	char choice=fl_ask("Do you really want to quit Photoz-LilJoe?");
+	char choice=fl_ask("Do you really want to quit Photoz3?");
+
 	if(choice)
 	{
-		this->~MainController();
 		exit(0);
 	}
 }
@@ -158,47 +118,13 @@ void MainController::setImageType(char p)
 //=============================================================================
 void MainController::exportAw()
 {
-	if (aw->h() < 631) 	fl_alert("Make sure you are in full screen!\n");
-	we->setImageType('P');
-	we->export1(aw->x(),aw->y()+18,aw->w(),aw->h());		// 18 added to correct for centering by code in 
+	we->export1(aw->x(),aw->y(),aw->w(),aw->h());
 }
-
-void MainController::exportAw_Jpeg()						//export array window as jpeg
-{
-	if (aw->h() < 631) fl_alert("Make sure you are in full screen!\n");
-	we->setImageType('J');
-	we->export1(201, 124, 500, 500);
-	}
 
 //=============================================================================
 void MainController::exportTw()
 {
-	if (aw->h() < 631) 	fl_alert("Make sure you are in full screen!\n");
-	we->setImageType('P');
-	we->export1(tw->x(), tw->y() + 18, tw->w(), tw->h());
-}
-
-//=============================================================================
-void MainController::setLiveFeed(char input)
-{
-	try {
-		if (input)
-		{
-			dapControl->releaseDAPs();
-			if (!lf->begin_livefeed())
-				ui->lfRun->value(0);
-		}
-		else
-		{
-			lf->stop_livefeed();
-			lf->~LiveFeed();
-		}
-	}
-	catch (...) {
-		std::cout << "Some exception \n";
-		std::exception_ptr p = std::current_exception();
-		std::cout << (p._Current_exception) << std::endl;
-	}
+	we->export1(tw->x(),tw->y(),tw->w(),tw->h());
 }
 
 //=============================================================================
@@ -295,12 +221,6 @@ void MainController::doAll()
 	dataArray->setCompareFlag(oldCompareFlag);
 	dataArray->setIncreaseFlag(oldIncreaseFlag);
 	cw->redraw();
-}
-
-void MainController::saveLatestBackgroundImage()
-{
-	std::string filename = "Check.bmp";
-	lf->getImage(filename);
 }
 
 //=============================================================================

@@ -17,16 +17,10 @@
 
 #include "FileController.h"
 #include "RecControl.h"
-#include "ColorWindow.h"
-#include "SignalProcessor.h"
 #include "DapController.h"
-#include "MainController.h"
-extern MainController *mc;
 #include "DapChannel.h"
 #include "DataArray.h"
 #include "Definitions.h"
-
-bool NPFLAG = FALSE;				// Flag for opening neuroplex file instead of photoz file
 
 using namespace std;
 
@@ -42,30 +36,10 @@ FileController::~FileController()
 //=============================================================================
 int FileController::openFile()
 {
-	NPFLAG = FALSE;
 	char dir[128];
 	char filename[64];
 
 	if(!getDirFileName(dir,filename))
-	{
-		return -1;	// Canceled
-	}
-
-	// Change directory
-	changeDir(dir);
-
-	//
-	return openFileByName(filename);
-}
-
-int FileController::openNPFile()
-{
-	NPFLAG = TRUE;
-	char dir[128];
-	char filename[64];
-	
-
-	if (!getDirFileName(dir, filename))
 	{
 		return -1;	// Canceled
 	}
@@ -108,12 +82,7 @@ int FileController::loadWholeFile()
 	}
 
 	// Load RecControl
-	if(NPFLAG!=1&&!loadRecControl(file))
-	{
-		file.close();
-		return 0;
-	}
-	if (NPFLAG==1&&!loadNPRecControl(file))
+	if(!loadRecControl(file))
 	{
 		file.close();
 		return 0;
@@ -121,8 +90,9 @@ int FileController::loadWholeFile()
 
 	//--------------------
 	// Load Data
-	if(NPFLAG!=1)	loadData(file);
+	loadData(file);
 	file.close();
+
 	//
 	return 1;
 }
@@ -140,34 +110,31 @@ int FileController::loadRecControl(fstream &file)
 	int nSize=sizeof(int);
 	int tSize=sizeof(time_t);
 	int fSize=sizeof(float);
-	
+
 	// Version
 	file.read((char*)&chBuf, chSize);
-	if(chBuf>=1 && chBuf<=3) {
-		fl_alert("File Format is not correct! - Hexagonal data (use older version)\n");
-		return 0;
-	} else if(chBuf != 5) {
-		fl_alert("File Format is not correct!\n");
+	if(chBuf<1 || chBuf>3)
+	{
+		fl_alert("File Format is not correct! - FileController::loadRecControl()\n");
 		return 0;
 	}
 
 	// Slice Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setSliceNo(shBuf);
+
 	// Location Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setLocationNo(shBuf);
+
 	// Record Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setRecordNo(shBuf);
-	// Camera Program
-	file.read((char*)&nBuf, nSize);
-	int cam_program = nBuf;
-	dc->setCameraProgram(cam_program);
 
 	// Number of Trials
 	file.read((char*)&chBuf, chSize);
 	recControl->setNumTrials(chBuf);
+
 	// Interval between Trials
 	file.read((char*)&chBuf, chSize);
 	recControl->setIntTrials(chBuf);
@@ -175,6 +142,10 @@ int FileController::loadRecControl(fstream &file)
 	// Acquisition Gain
 	file.read((char*)&shBuf, shSize);
 	recControl->setAcquiGain(shBuf);
+
+	// RLI Gain
+	file.read((char*)&shBuf, shSize);
+	recControl->setRliGain(shBuf);
 
 	// Number of Points per Trace
 	file.read((char*)&nBuf,nSize);
@@ -185,129 +156,47 @@ int FileController::loadRecControl(fstream &file)
 	recControl->setTime(tBuf);
 
 	// Reset Onset
-	file.read((char*)&fBuf,fSize);
-	dc->reset->setOnset(fBuf);
+	file.read((char*)&nBuf,nSize);
+	dc->reset->setOnset(nBuf);
 
 	// Reset Duration
-	file.read((char*)&fBuf,fSize);
-	dc->reset->setDuration(fBuf);
+	file.read((char*)&nBuf,nSize);
+	dc->reset->setDuration(nBuf);
 
 	// Shutter Onset
-	file.read((char*)&fBuf,fSize);
-	dc->shutter->setOnset(fBuf);
+	file.read((char*)&nBuf,nSize);
+	dc->shutter->setOnset(nBuf);
 
 	// Shutter Duration
-	file.read((char*)&fBuf,fSize);
-	dc->shutter->setDuration(fBuf);
+	file.read((char*)&nBuf,nSize);
+	dc->shutter->setDuration(nBuf);
 
-	// Stimulation 1 Onset
-	file.read((char*)&fBuf,fSize);
-	dc->sti1->setOnset(fBuf);
+	// Stimulation Onset
+	file.read((char*)&nBuf,nSize);
+	dc->sti1->setOnset(nBuf);
 
-	// Stimulation 1 Duration
-	file.read((char*)&fBuf,fSize);
-	dc->sti1->setDuration(fBuf);
-
-	// Stimulation 2 Onset
-	file.read((char*)&fBuf, fSize);
-	dc->sti2->setOnset(fBuf);
-
-	// Stimulation 2 Duration
-	file.read((char*)&fBuf, fSize);
-	dc->sti2->setDuration(fBuf);
+	// Stimulation Duration
+	file.read((char*)&nBuf,nSize);
+	dc->sti1->setDuration(nBuf);
 
 	// Acquisition Onset
-	file.read((char*)&fBuf,fSize);
-	dc->setAcquiOnset(fBuf);
+	file.read((char*)&nBuf,nSize);
+	dc->setAcquiOnset(nBuf);
 
 	// Interval between Samples
 	file.read((char*)&fBuf,fSize);
-	if(fBuf<0.001f) {
-		fBuf=0.614f;
+	if(fBuf<0.001)
+	{
+		fBuf=0.614;
 	}
 	dc->setIntPts(fBuf);
 
 	dapControl->setDuration();	// Set duration
 
-	// Array Dimensions
-	file.read((char*)&nBuf, nSize);
-	int raw_width = nBuf;
-	file.read((char*)&nBuf, nSize);
-	int raw_height = nBuf;
-
 	// Change Memory Size
-	if (raw_width != dataArray->raw_width() || raw_height != dataArray->raw_height())
-	{
-		aw->clearSelected(0);
-	}
-		dataArray->changeMemSize(recControl->getNumTrials(), dc->getNumPts());
-		dataArray->changeRawDataSize(raw_width, raw_height);
-		dataArray->changeRawDataSize(raw_width, raw_height);
-		aw->changeNumDiodes();
-		cw->changeNumDiodes();
-		cw->setPointXYZ();
-		sp->changeNumDiodes();
+	dataArray->changeMemSize(recControl->getNumTrials(),dc->getNumPts());
 
-	// depth set at a constant 2 bytes (hopefully) otherwise there is trouble
-	file.read((char*)&nBuf, nSize);
-	// divide and round up
-	if ((nBuf + (8-1)) / 8 != 2)
-		return 0;
-//	else
-//		int test = dataArray->depth();
-	return 1;
-}
-
-int FileController::loadNPRecControl(fstream &file)						// reads header and data (also rli) in one module
-{
-	short NPHeader[2560];												// Read header as short array
-	for (int i = 0; i < 2560; i++) {
-		file.read((char*)&NPHeader[i], sizeof(NPHeader[i]));
-	}
-	recControl->setNumTrials(1);
-	dc->setNumPts(NPHeader[4]);
-	int numPts = NPHeader[4];
-	double interval = 1000.0 / NPHeader[387];
-	dc->setIntPts(interval);
-	int raw_width = NPHeader[384];
-	int raw_height = NPHeader[385];
-	int numChannels = NPHeader[96];
-	
-	dataArray->changeMemSize(recControl->getNumTrials(), dc->getNumPts());
-	dataArray->changeRawDataSize(raw_width, raw_height);
-	dataArray->changeRawDataSize(raw_width, raw_height);
-	aw->changeNumDiodes();
-	cw->changeNumDiodes();
-	cw->setPointXYZ();
-	sp->changeNumDiodes();
-
-	if (raw_width != dataArray->raw_width() || raw_height != dataArray->raw_height())
-	{
-		aw->clearSelected(0);
-	}
-	// read data as dataBuf and copy to raw_diode_data
-	int dataSize = sizeof(short) * numPts; 
-	int rliSize = sizeof(short) * numChannels;//  numChannels-8;
-	signed short *rliBufLow = new short[rliSize];
-	signed short *rliBufHigh = new short[rliSize];
-	signed short *dataBuf = new short[numPts];
-		for (int j = 0; j < numChannels; j++) {
-			file.read((char*)dataBuf, dataSize);
-			dataArray->assignTrialData(dataBuf, numPts, 0, j);
-			rliBufHigh[j] = (dataBuf[0] + dataBuf[1] + dataBuf[2] + dataBuf[3] + dataBuf[4]) / 5;		//average first five points to get rliHigh
-		}
-	delete[] dataBuf;
-
-	//  read dark from for rliLow
-	file.read((char*)rliBufLow, rliSize);
-	dataArray->setRliLow(rliBufLow);
-	dataArray->setRliHigh(rliBufHigh);
-
-	delete[] rliBufLow;
-	delete[] rliBufHigh;
-	dataArray->calRli();
-	char* dbinning = i2txt(1);
-	mc->set_digital_binning(dbinning);				// necessary to display background selection ??  
+	//
 	return 1;
 }
 
@@ -317,10 +206,9 @@ int FileController::loadData(fstream &file)
 	file.seekp(1024);
 	int i,j;
 	int shSize=sizeof(short);
-	int numDiodes = dataArray->num_raw_diodes();
 
 	// RLI
-	int rliSize=shSize*numDiodes;
+	int rliSize=shSize*Num_Diodes;
 	short *rliBuf=new short[rliSize];
 
 	file.read((char*)rliBuf,rliSize);// RLI Low
@@ -342,15 +230,15 @@ int FileController::loadData(fstream &file)
 	int dataSize=shSize*numPts;
 	int numTrials=recControl->getNumTrials();
 
-	short *dataBuf = new short[numPts];
-	for (i = 0; i < numTrials; i++)
+	for(i=0;i<numTrials;i++)
 	{
-		for (j = 0; j < dataArray->num_raw_diodes(); j++) {
-			file.read((char*) dataBuf, dataSize);
-			dataArray->assignTrialData(dataBuf, numPts, i, j);
+		for(j=0;j<Num_Diodes;j++)
+		{
+			file.read((char*)dataArray->getMem(i,j),dataSize);
 		}
 	}
-	delete [] dataBuf;
+
+	//
 	return 1;
 }
 
@@ -359,15 +247,10 @@ int FileController::loadData(fstream &file)
 //
 int FileController::getDirFileName(char *dir,char *filename)
 {
-	char *input=NULL;
-
-//	char *input = fl_file_chooser("Pick a data file", "*.zda", NULL);				previous format 
-	if (NPFLAG==0) input = fl_file_chooser("Pick a data file", "*.zda", NULL);
-	if (NPFLAG) input = fl_file_chooser("Pick a data file", "*.da", NULL);
+	char *input=fl_file_chooser( "Pick a data file", "*.zda", NULL);
 	
 	if(!input)
 	{
-		cout << " line 330 no input file " << endl;
 		return 0;// Canceled
 	}
 
@@ -384,27 +267,6 @@ int FileController::getDirFileName(char *dir,char *filename)
 	return 1;
 }
 
-int FileController::getDirNPFileName(char *dir, char *filename)
-{
-	char *input = fl_file_chooser("Pick a data file", "*.da", NULL);
-
-	if (!input)
-	{
-		return 0;// Canceled
-	}
-
-	//---------------------------------------
-	// One file have been picked or entered.
-	char driveBuf[128];
-	char dirBuf[128];
-	char extBuf[128];
-
-	_splitpath_s(input, driveBuf, 128, dirBuf, 128, filename, 64, extBuf, 128);
-
-	strcat_s(filename, 64, extBuf);
-	strcpy_s(dir, 128, dirBuf);
-	return 1;
-}
 //=============================================================================
 void FileController::changeDir(char *dir)
 {
@@ -427,28 +289,20 @@ void FileController::setFileNameFromRecControl()
 //=============================================================================
 int FileController::saveDataFile()
 {
-	const char *name=NULL;
 	int existence = _access(fileName,0);	// O Existent; -1 Not existing
-	while(existence==0|| strcmp(fileName, "None")==0)
+	while(existence==0)
 	{
-		int choice;
-		if (strcmp(fileName, "None") == 0 && name==NULL) {
-			choice = 1;
-		}
 		// 0:Cancel, 1:Save as, 2:Overwrite
-		else {
-			choice = fl_choice("The file already exists! Please choose one of following:", "Cancel",
-				"Save as ", "Overwrite");
-		}
+		int choice=fl_choice("The file already exists! Please choose one of following:","Cancel",
+			"Save as ","Overwrite");
+
 		if(choice==0)// Cancel
 		{
 			return -1;
 		}
 		else if(choice==1)// Save as
 		{
-			name=fl_input("Please enter the file name.","filename.zda");
-			if (!name)
-				return -1;
+			const char *name=fl_input("Please enter the file name.","filename.zda");
 			existence = _access(name,0);
 			if(existence==-1 && name!=0)
 			{
@@ -457,8 +311,6 @@ int FileController::saveDataFile()
 		}
 		else if(choice==2)// Overwrite
 		{
-			if(name!=NULL)
-				strcpy_s(fileName, 64, name);
 			existence=-1;
 		}
 	}
@@ -491,8 +343,8 @@ void FileController::saveProcessedData()
 	// Save Processed Data
 	int numPts=dc->getNumPts();
 	int dataSize=doubleSize*numPts;
-	//for (i = -NUM_FP_DIODES; i < dataArray->num_raw_array_diodes(); i++)
-	for (i = -NUM_FP_DIODES; i < dataArray->binned_height()*dataArray->binned_width(); i++)
+
+	for(i=0;i<Num_Diodes;i++)
 	{
 		file.write((char*)dataArray->getProDataMem(i),dataSize);
 	}
@@ -517,7 +369,7 @@ void FileController::saveRecControl(fstream *file)
 	int tSize=sizeof(time_t);
 
 	// Version
-	chBuf=5;
+	chBuf=3;
 	file->write((char*)&chBuf,chSize);
 
 	// Slice Number
@@ -532,10 +384,6 @@ void FileController::saveRecControl(fstream *file)
 	shBuf=recControl->getRecordNo();
 	file->write((char*)&shBuf,shSize);
 
-	// Camera Program
-	nBuf = dc->getCameraProgram();
-	file->write((char*)&nBuf, nSize);
-
 	// Number of Trials
 	chBuf=char(recControl->getNumTrials());
 	file->write((char*)&chBuf,chSize);
@@ -548,6 +396,10 @@ void FileController::saveRecControl(fstream *file)
 	shBuf=recControl->getAcquiGain();
 	file->write((char*)&shBuf,shSize);
 
+	// RLI Gain
+	shBuf=recControl->getRliGain();
+	file->write((char*)&shBuf,shSize);
+
 	// Number of Points per Trace
 	nBuf=dc->getNumPts();
 	file->write((char*)&nBuf,nSize);
@@ -557,54 +409,36 @@ void FileController::saveRecControl(fstream *file)
 	file->write((char*)&tBuf,tSize);
 
 	// Reset Onset
-	fBuf=dc->reset->getOnset();
-	file->write((char*)&fBuf,fSize);
+	nBuf=dc->reset->getOnset();
+	file->write((char*)&nBuf,nSize);
 
 	// Reset Duration
-	fBuf=dc->reset->getDuration();
-	file->write((char*)&fBuf,fSize);
+	nBuf=dc->reset->getDuration();
+	file->write((char*)&nBuf,nSize);
 
 	// Shutter Onset
-	fBuf=dc->shutter->getOnset();
-	file->write((char*)&fBuf,fSize);
+	nBuf=dc->shutter->getOnset();
+	file->write((char*)&nBuf,nSize);
 
 	// Shutter Duration
-	fBuf=dc->shutter->getDuration();
-	file->write((char*)&fBuf,fSize);
+	nBuf=dc->shutter->getDuration();
+	file->write((char*)&nBuf,nSize);
 
-	// Stimulation 1 Onset
-	fBuf=dc->sti1->getOnset();
-	file->write((char*)&fBuf,fSize);
+	// Stimulation Onset
+	nBuf=dc->sti1->getOnset();
+	file->write((char*)&nBuf,nSize);
 
-	// Stimulation 1 Duration
-	fBuf=dc->sti1->getDuration();
-	file->write((char*)&fBuf,fSize);
-
-	// Stimulation 2 Onset
-	fBuf=dc->sti2->getOnset();
-	file->write((char*)&fBuf,fSize);
-
-	// Stimulation 2 Duration
-	fBuf=dc->sti2->getDuration();
-	file->write((char*)&fBuf,fSize);
+	// Stimulation Duration
+	nBuf=dc->sti1->getDuration();
+	file->write((char*)&nBuf,nSize);
 
 	// Acquisition Onset
-	fBuf=dc->getAcquiOnset();
-	file->write((char*)&fBuf,fSize);
+	nBuf=dc->getAcquiOnset();
+	file->write((char*)&nBuf,nSize);
 
 	// Interval between Samples
 	fBuf=float(dc->getIntPts());
 	file->write((char*)&fBuf,fSize);
-
-	// Array Dimensions
-	nBuf = dataArray->raw_width();
-	file->write((char*)&nBuf, nSize);
-	nBuf = dataArray->raw_height();
-	file->write((char*)&nBuf, nSize);
-	
-	// depth set at a constant 2 bytes (hopefully) otherwise there is trouble
-	nBuf = dataArray->depth();
-	file->write((char*)&nBuf, nSize);
 }
 
 //=============================================================================
@@ -613,24 +447,23 @@ void FileController::saveData(fstream *file)
 	int i,j;
 	short shBuf;
 	int shSize=sizeof(short);
-	int arr_diodes = dataArray->num_raw_diodes();
 
 	file->seekg(1024);
 
 	// RLI
-	for (i = 0; i < arr_diodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		shBuf=dataArray->getRliLow(i);
 		file->write((char*)&shBuf,shSize);
 	}
 
-	for (i = 0; i < arr_diodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		shBuf=dataArray->getRliHigh(i);
 		file->write((char*)&shBuf,shSize);
 	}
 
-	for (i = 0; i < arr_diodes; i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
 		shBuf=dataArray->getRliMax(i);
 		file->write((char*)&shBuf,shSize);
@@ -641,11 +474,11 @@ void FileController::saveData(fstream *file)
 	int dataSize=shSize*numPts;
 	int numTrials=recControl->getNumTrials();
 
-	for (i = 0; i < numTrials; i++)
+	for(i=0;i<numTrials;i++)
 	{
-		for (j = 0; j < arr_diodes; j++)
+		for(j=0;j<Num_Diodes;j++)
 		{
-			file->write((const char*) dataArray->getTrialMem(i,j), dataSize);
+			file->write((char*)dataArray->getMem(i,j),dataSize);
 		}
 	}
 }

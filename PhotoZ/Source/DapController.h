@@ -5,30 +5,21 @@
 #define _DapController_h
 //=============================================================================
 #include "dapio32.h"
-#include "edtinc.h"
 #include <fstream>
-#include "NIDAQmx.h"
 
 class DapChannel;
-class Camera;
 
 //=============================================================================
 class DapController  
 {
 private:
-	TaskHandle taskHandleGet = 0;
-	TaskHandle taskHandlePut = 0;
-	HDAP dap820Put;
-	HDAP dap820Get;
+	HDAP dap3200Sys;				// DAP 3200e/214	;hdapSysPut,hdapBinGet
+	HDAP dap5400Sys,dap5400Input;	// DAP 5400a/627
 
-	int32_t error =0;
-	char errBuff[2048];
-	
-	float acquiOnset;
+	int acquiOnset;
 	int numPts;
 	double intPts;
-	float duration;
-	int program;
+	int duration;
 
 	// Ch1
 	int numPulses1;
@@ -54,15 +45,14 @@ public:
 	// Constructors
 	DapController();
 	~DapController();
+
 	DapChannel *reset;
 	DapChannel *shutter;
 	DapChannel *sti1;
 	DapChannel *sti2;
 
-	void NiErrorDump();
-	
 	// Set DAP and release DAP
-	int setDAPs(float64 SamplingRate=2000);//setting default for testing purposes.
+	void setDAPs();
 	void releaseDAPs();
 	
 
@@ -76,36 +66,36 @@ public:
 	char getScheduleRliFlag();
 
 	// RLI
-	int takeRli(short*, Camera&);
+	void takeRli(short*);
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
 	void fillPDOut(std::fstream &, char realFlag);
 
 	// Acquisition Control
-	int sendFile2Dap(const char *);
-	int acqui(short *, Camera &);
+	int sendFile2Dap(const char *fileName3200, const char *fileName5400);
+	int sendFile2Dap(const char *fileName3200);
+	void acqui(short *memory);
 	void pseudoAcqui();
-	int stop();
+	void stop();
 	void resetDAPs();
-	void resetCamera();
 
 	// Acquisition Duration
-	void setAcquiOnset(float);
-	float getAcquiOnset();
-	float getAcquiDuration();
+	void setAcquiOnset(int);
+	int getAcquiOnset();
+	double getAcquiDuration();
 
 	void setNumPts(int);
 	int getNumPts();
 
-	void setCameraProgram(int);
-	int getCameraProgram();
 	void setIntPts(double);
 	double getIntPts();
 
+	char *getSamplingRateTxt();
+
 	// Duration of the whole Process
 	void setDuration();
-	float getDuration();
+	int getDuration();
 
 	// Stimulator
 	void setNumPulses(int ch,int num);

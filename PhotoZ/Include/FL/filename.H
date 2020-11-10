@@ -97,8 +97,8 @@ struct dirent {char d_name[1];};
  * It would be best to create a <dirent.h> file that does this...
  */
 #    include <sys/types.h>
-#    define fl_direct_h_cyclic_include
-#    include <direct.h>
+#    define fl_dirent_h_cyclic_include
+#    include <dirent.h>
 #    undef fl_dirent_h_cyclic_include
 #  endif
 

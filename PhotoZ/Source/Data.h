@@ -4,7 +4,7 @@
 #ifndef Data_H
 #define Data_H
 
-#define Max_Num_Files 50		// has big impact on memory demand and increase with changes to camera cfgs with more traces
+#define Max_Num_Files 500
 
 //=============================================================================
 class Data
@@ -15,6 +15,7 @@ private:
 	//=====================================================
 	// Flag
 	//
+	char fpFlag;		// Extracellular Recording or Not
 	char ignoredFlag;
 
 	//=====================================================
@@ -23,21 +24,22 @@ private:
 	double *rawData;		// Raw Data
 	double *proData;		// Processed Data
 	double *savData;		// Saved Traces
-	double *aveData;
 	double *slope;
 
 	//=====================================================
-	short rliLow;
-	short rliHigh;
-	short rliMax;
+	// RLI
+	//
+	short rliLow;			// RLI Low
+	short rliHigh;			// RLI High
+	short rliMax;			// RLI Maximum
 
+	//=====================================================
 	// Properties
 	//
 	double rli;				// RLI Value
 	double maxAmp;			// Maximal Amplitude
 	double maxAmpLatency;	// The Latency of the Maximal Amplitude Point
 	double halfAmpLatency;
-	double maxSlopeLatency;
 	int maxAmpLatencyPt;
 
 	double correctionValue;
@@ -62,15 +64,11 @@ private:
 	double maxSlope;
 	double spikeAmp;
 
-private:
-	void allocMem();
-	void releaseMem();
-
 public:
 	//=====================================================
 	// Constructor and Destructor
 	//
-	Data();
+	Data(char ecFlag);
 	~Data();
 
 	void static setPerAmp(double);
@@ -78,7 +76,8 @@ public:
 	//=====================================================
 	// Memory Manipulation
 	//
-	void changeNumPts();
+	void allocMem();
+	void releaseMem();
 	void reset();
 	void resetSavData();
 
@@ -92,17 +91,15 @@ public:
 	//=====================================================
 	// RLI
 	//
-	//  void setRli(double);
 	void setRliLow(short rliLow);
 	void setRliHigh(short rliHigh);
 	void setRliMax(short rliMax);
-	void setRli(double);
 
 	short getRliLow();
 	short getRliHigh();
 	short getRliMax();
 	double getRli();
-	
+
 	//=====================================================
 	// Measure Properties
 	//
@@ -115,7 +112,6 @@ public:
 
 	double getMaxAmpLatency();
 	double getHalfAmpLatency();
-	double getMaxSlopeLatency();
 
 	int getMaxAmpLatencyPt();
 
@@ -152,6 +148,11 @@ public:
 	double* getHalfAmpLatencyArray();
 
 	void resetTimeCourse();
+
+	//=====================================================
+	// Field Potential Flag
+	//
+	char getFpFlag();
 
 	//=====================================================
 	// Fitting

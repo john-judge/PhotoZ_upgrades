@@ -8,18 +8,18 @@
 class DapChannel  
 {
 private:
-	float onset;
-	float duration;
+	int onset;
+	int duration;
 
 public:
-	DapChannel(float,float);
+	DapChannel(int,int);
 
-	void setOnset(float);
-	float getOnset();
+	void setOnset(int);
+	int getOnset();
 	char *getOnsetTxt();
 
-	void setDuration(float);
-	float getDuration();
+	void setDuration(int);
+	int getDuration();
 	char *getDurationTxt();
 };
 

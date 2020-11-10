@@ -11,12 +11,11 @@
 #include "RecControl.h"
 #include "UserInterface.h"
 
-using namespace std;
 //=============================================================================
 RecControl::RecControl()
 {
-	acquiGain=3;
-//	rliGain=1;
+	acquiGain=1000;
+	rliGain=1;
 
 	sliceNo=1;
 	sliceNoMax=1;
@@ -33,7 +32,7 @@ RecControl::RecControl()
 	time_t time=0;
 
 	numTrials=1;
-//	numSkippedTrials=0;
+	numSkippedTrials=0;
 	intTrials=10;
 
 	intRecords=120;
@@ -349,53 +348,59 @@ short RecControl::getAcquiGain()
 //=============================================================================
 void RecControl::decreaseAcquiGain()
 {
-	if(acquiGain==3)
-		acquiGain=2;
-	else if(acquiGain==2)
-		acquiGain=1;
+	if(acquiGain==1000)
+		acquiGain=200;
+	else if(acquiGain==200)
+		acquiGain=50;
 	else
-		acquiGain=0;
+		acquiGain=1;
 }
 
 //=============================================================================
 void RecControl::increaseAcquiGain()
 {
-	if(acquiGain==0)
-		acquiGain=1;
-	else if(acquiGain==1)
-		acquiGain=2;
+	if(acquiGain==1)
+		acquiGain=50;
+	else if(acquiGain==50)
+		acquiGain=200;
 	else
-		acquiGain=3;
+		acquiGain=1000;
 }
 
 //=============================================================================
 // RLI Gain
-//void RecControl::setRliGain(short p){rliGain=p;}
+void RecControl::setRliGain(short p)
+{
+	rliGain=p;
+}
 
 //=============================================================================
-//short RecControl::getRliGain(){return rliGain;}
+short RecControl::getRliGain()
+{
+	return rliGain;
+}
 
 //=============================================================================
-//void RecControl::decreaseRliGain()
-/*{
+void RecControl::decreaseRliGain()
+{
 	if(rliGain==1000)
 		rliGain=200;
 	else if(rliGain==200)
 		rliGain=50;
 	else
 		rliGain=1;
-}*/
+}
 
 //=============================================================================
-//void RecControl::increaseRliGain()
-/*{
+void RecControl::increaseRliGain()
+{
 	if(rliGain==1)
 		rliGain=50;
 	else if(rliGain==50)
 		rliGain=200;
 	else
 		rliGain=1000;
-}*/
+}
 
 //=============================================================================
 // Time
@@ -417,10 +422,10 @@ void RecControl::setNumTrials(int p)
 }
 
 //=============================================================================
-/*void RecControl::setNumSkippedTrials(int p)
+void RecControl::setNumSkippedTrials(int p)
 {
 	numSkippedTrials=p;
-}*/
+}
 
 //=============================================================================
 int RecControl::getNumTrials()
@@ -429,10 +434,10 @@ int RecControl::getNumTrials()
 }
 
 //=============================================================================
-/*int RecControl::getNumSkippedTrials()
+int RecControl::getNumSkippedTrials()
 {
 	return numSkippedTrials;
-}*/
+}
 
 //=============================================================================
 void RecControl::setIntTrials(int p)

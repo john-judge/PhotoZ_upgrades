@@ -51,7 +51,7 @@ private:
 	double spikeSlopeThreshold;
 	double spikeAmpThreshold;
 
-	float onsetBounds[2];
+	int onsetBounds[2];
 
 	//=================
 	// Display control
@@ -73,13 +73,12 @@ private:
 	//===================
 	void clear();
 	void draw();
-	/*void draw(int average=0);*/
-	void drawTrace(int index, int currentRegion=-1);
-	void drawSlope(int index,int region=-1);
+	void drawTrace(int index);
+	void drawSlope(int index);
 	void drawVm(int index);
-	void drawTimeCourse(int index, int region);
+	void drawTimeCourse(int index);
 	void drawRef(int index);
-	void drawValue(int numRegions=0);
+	void drawValue();
 	void drawScale();
 	void drawClampLine();
 	void drawPointLine();
@@ -167,7 +166,6 @@ public:
 	void loadFittingVar();
 
 	void setOnsetBounds(int index,const char* txt);
-	double *aveData;
 };
 
 //=============================================================================

@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <fstream>
-#include <iostream>
 
 #include <FL/Fl_File_Chooser.H>
 
@@ -20,16 +19,15 @@
 #include "Diode.h"
 #include "UserInterface.h"
 
-#include "windows.h" 
-#include "psapi.h"   //add these to the beginning of file
+extern int Ch_IP[];
 
-
-using namespace std;
 //=============================================================================
 // Constructor and Destructor
 //=============================================================================
 DataArray::DataArray(int input)
 {
+	int i;
+
 	compareFlag=0;
 	nor2ArrayMaxFlag=1;
 	increaseFlag=1;
@@ -37,9 +35,6 @@ DataArray::DataArray(int input)
 	normalizationFlag=0;
 	averageFlag=0;
 	numAveRec=5;
-
-	m_raw_depth = 14;
-	digital_binning = 1;
 
 	record1No=0;
 	record2No=0;
@@ -52,432 +47,194 @@ DataArray::DataArray(int input)
 	latencyStart=100;
 	latencyWindow=5;
 
-	rliScalar = 3200.0;					//new
+	for(i=0;i<Num_Diodes;i++)
+	{
+		trialData[i][0]=new short[numPts];
+	}
 
-	raw_diode_data = NULL;				//new 
-	array_data = NULL;
-	/*for (int i = 0; i < 50; i++) {
-		array_data_ROI[i] = new Data;
-	}*/
-	fp_data = NULL;
-	dataFeature = NULL;
+	for(i=0;i<Num_Diodes-8;i++)
+	{
+		data[i]=new Data(0);
+	}
 
-	alloc_raw_mem(DEFAULT_ARRAY_WIDTH, DEFAULT_ARRAY_HEIGHT);
-	alloc_trial_mem(numTrials, numPts);
-	alloc_binned_mem();
-
-
+	for(i=Num_Diodes-8;i<Num_Diodes;i++)
+	{
+		data[i]=new Data(1);
+	}
 }
 
 //=============================================================================
 DataArray::~DataArray()
 {
-	/*for (int i = 0; i < 50; i++) {
-		delete array_data_ROI[i];
-	}*/
-	release_mem();
-}
+	int i;
 
-//=============================================================================
-void DataArray::release_mem()
-{
-	release_binned_mem();
-	release_trial_mem();
-	release_raw_mem();
-}
-
-//=============================================================================
-void DataArray::alloc_raw_mem(int w, int h)
-{
-	int num_raw = w*h + num_diodes_fp();
-
-	raw_diode_data = new short**[num_raw];
-	rli_low = new short[num_raw];
-	rli_high = new short[num_raw];
-	rli_max = new short[num_raw];
-
-	memset(raw_diode_data, 0, sizeof(short**) * num_raw);
-	memset(rli_low, 0, sizeof(short) * num_raw);
-	memset(rli_high, 0, sizeof(short) * num_raw);
-	memset(rli_max, 0, sizeof(short) * num_raw);
-
-	m_raw_width = w;
-	m_raw_height = h;
-	cout << " da line 106 - num_raw " << num_raw <<"  "  << m_raw_width<<"  "  <<m_raw_height<<endl;
-//	cout << "line 102 " << sizeof(short**)*num_raw << endl;
-}
-
-//=============================================================================
-void DataArray::release_raw_mem()
-{
-	delete[] raw_diode_data;
-	delete[] rli_low;
-	delete[] rli_high;
-	delete[] rli_max;
-
-	raw_diode_data = NULL;
-	rli_low = rli_high = rli_max = NULL;
-	m_raw_width = m_raw_height = 0;
-}
-
-//=============================================================================
-void DataArray::alloc_trial_mem(int trials, int pts)
-{
-	int i, j;
-
-	for (i = 0; i < num_raw_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		raw_diode_data[i] = new short*[trials];
+		delete data[i];
+	}
 
-		for (j = 0; j < trials; j++)
+	releaseMem();
+}
+
+//=============================================================================
+// rawData Management
+//=============================================================================
+void DataArray::allocMem()
+{
+	int i,j,k;
+
+	for(j=0;j<Num_Diodes;j++)
+	{
+		for(i=0;i<numTrials;i++)
 		{
-			raw_diode_data[i][j] = new short[pts];
-			memset(raw_diode_data[i][j], 0, sizeof(short) * pts);
-		}
-	}
-	numTrials = trials;
-	numPts = pts;
-	maxRli = 0.0;
-}
+			trialData[j][i]=new short[numPts];
 
-//=============================================================================
-void DataArray::release_trial_mem()
-{
-	int i, j;
-	int num_raw = m_raw_width * m_raw_height + NUM_FP_DIODES;
-
-	for (i = 0; i < num_raw; i++)
-	{
-		for (j = 0; j < numTrials; j++)
-			delete[] raw_diode_data[i][j];
-		
-		delete[] raw_diode_data[i];
-		raw_diode_data[i] = NULL;
-	}
-	numTrials = numPts = 0;
-	maxRli = 0.0;
-}
-
-//=============================================================================
-void DataArray::alloc_binned_mem()
-{
-	MEMORYSTATUSEX memInfo;
-	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-	GlobalMemoryStatusEx(&memInfo);
-	DWORDLONG totalVirtualMem = memInfo.ullTotalPageFile;
-	DWORDLONG virtualMemUsed = memInfo.ullTotalPageFile - memInfo.ullAvailPageFile;
-
-	PROCESS_MEMORY_COUNTERS_EX pmc;
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	SIZE_T virtualMemUsedByMe = pmc.PrivateUsage;
-
-/*	cout << "Total Virtual Mem\t\t"<<totalVirtualMem << " bytes\n memUsed\t\t\t" << virtualMemUsed << " bytes \n";
-	cout << "memory Used by program\t\t" << virtualMemUsedByMe << " bytes \n";
-	cout << "size of allocation\t\t" << num_binned_diodes() * sizeof(Data) << "\n";
-	cout << "size of data\t\t\t" << sizeof(Data) << "\nNum Diodes\t\t\t" << num_binned_diodes()<<"\n";*/
-		
-	array_data = new Data[num_binned_diodes()];
-	fp_data = new Data[num_diodes_fp()];
-	dataFeature = new double[num_binned_diodes()];
-	for (int i = 0; i < num_binned_diodes(); i++)
-	{
-		dataFeature[i] = 0.0;
-	}
-	for (int i = 0; i < 50; i++) {
-		array_data_ROI[i] = new Data;
-	}
-}
-
-//=============================================================================
-void DataArray::release_binned_mem()
-{
-	delete[] array_data;
-	delete[] fp_data;
-	delete[] dataFeature;
-
-	array_data = fp_data = NULL;
-	dataFeature = NULL;
-	for (int i = 0; i < 50; i++) {
-		array_data_ROI[i]->~Data();
-		delete array_data_ROI[i];
-	}
-}
-
-//=============================================================================
-void DataArray::get_binned_diode_trace(int bin_diode, int trial_start,	int trial_end, double scale, double *out)
-{
-	int i, j, k, m;
-	j = k = m = 0;
-		for (i = 0; i < numPts; i++)		out[i] = 0.0;
-	int count = 0;
-	double rwh = m_raw_height;				//these 3 lines round row_length so that binning works for n = 3 and 6 
-	double binning = digital_binning;
-	int row_length = 0.7 + (rwh / binning);		//	int row_length = m_raw_height / digital_binning;  //	previous version before fix
-	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;		//	int raw_diode = bin_diode * digital_binning; this version is incorrect (MJ) 
-	int x = raw_diode % m_raw_width;
-	int y = raw_diode / m_raw_height;
-	
-	for (i = trial_start; i < trial_end; i++)							//index for trials
-	{
-		for (j = 0; j < digital_binning; j++)							//index for diodes in the bin
-		{
-			if (y + j >= m_raw_height)
-			continue;
-			for (k = 0; k < digital_binning; k++)
+			for(k=0;k<numPts;k++)
 			{
-			if (x + k >= m_raw_width)
-			break;
-			count++;
-				for (m = 0; m < numPts; m++)								//index for time points
-				{
-					//					int diodeNo = raw_diode + k + (m_raw_width*j);
-					int diodeNo = raw_diode + k + (m_raw_height*j);
-					out[m] += raw_diode_data[diodeNo][i][m];				//key output of binned trace
-				}
+				trialData[j][i][k]=0;
 			}
 		}
 	}
-	if (count != 0)
+}
+
+//=============================================================================
+void DataArray::releaseMem()
+{
+	int i,j;
+	for(j=0;j<Num_Diodes;j++)
 	{
-		scale /= count;														//key division by number of diodes
-		for (i = 0; i < numPts; i++)
+		for(i=0;i<numTrials;i++)
 		{
-			out[i] *= scale;
+			delete [] trialData[j][i];
 		}
 	}
-	else return;
 }
+
 //=============================================================================
-void DataArray::get_binned_rli(int bin_diode, short &low, short &high, short &max)
-{
-	int i, j, l, h, m;
-	int count = 0;
-	l = h = m = 0;
-	double rwh = m_raw_height;				//these 3 lines round  row_length so that binning works for n = 3 and 6 
-	double binning = digital_binning;
-	int row_length = 0.7 + (rwh / binning);
-	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;// key fix of bug from undergrad version
-	int x = raw_diode % m_raw_width;
-	int y = raw_diode / m_raw_height;
-	for (i = 0; i < digital_binning; i++)
+void DataArray::changeMemSize(int numTrials,int numPts)
+{	
+	if(this->numTrials==numTrials && this->numPts==numPts)
 	{
-		if (y + i >= m_raw_height)
-			continue;
-		for (j = 0; j < digital_binning; j++)
+		return;
+	}
+
+	//----------------------------
+	// Change rawData size of data
+	if(this->numPts!=numPts)
+	{
+		for(int i=0;i<Num_Diodes;i++)
 		{
-			if (x + j >= m_raw_width)
-				break;
-			int index = raw_diode + j + (m_raw_height * i);
-			l += rli_low[index];
-			h += rli_high[index];
-			m = max(rli_max[index], m);
-			count++;
+			data[i]->releaseMem();
+			data[i]->allocMem();
 		}
 	}
-		if (count == 0)
-			count = 1;
-		l = l / count;
-		h = h / count;
-		low = l;
-		high = h;
-		max = m;
+
+	//----------------------------
+	releaseMem();
+
+	this->numTrials=numTrials;
+	this->numPts=numPts;
+
+	allocMem();
+	resetData();
 }
 
 //=============================================================================
-void DataArray::changeMemSize(int trials, int pts)
+void DataArray::changeNumTrials(int numTrials)
 {	
-	int i;
-
-	if (numTrials == trials && numPts == pts)
-		return;
-
-	release_trial_mem();
-	alloc_trial_mem(trials, pts);
-
-	for (i = 0; i < num_binned_diodes(); i++)
+	if(this->numTrials==numTrials)
 	{
-		dataFeature[i] = 0.0;
-		array_data[i].changeNumPts();
-	}
-	for (i = 0; i < num_diodes_fp(); i++)
-	{
-		fp_data[i].changeNumPts();
-	}
-
-	numTrials=trials;
-	numPts=pts;
-	maxRli = 0.0;
-}
-
-//=============================================================================
-void DataArray::changeNumTrials(int trials)
-{	
-	changeMemSize(trials, numPts);
-}
-
-//=============================================================================
-void DataArray::changeNumPts(int pts)
-{	
-	changeMemSize(numTrials, pts);
-}
-
-//=============================================================================
-void DataArray::changeRawDataSize(int w, int h)
-{	
-	if (m_raw_width == w && m_raw_height == h)
-		return;
-
-	// need to save these numbers
-	int trials = numTrials;
-	int pts = numPts;
-
-	// release all memory
-	release_mem();
-	alloc_raw_mem(w, h);
-	alloc_trial_mem(trials, pts);
-	alloc_binned_mem();
-}
-
-//=============================================================================
-int DataArray::raw_width()
-{
-	return m_raw_width;
-}
-
-//=============================================================================
-int DataArray::binned_width()
-{
-	// divide and round up
-	return (m_raw_width + (digital_binning - 1)) / digital_binning;
-}
-
-//=============================================================================
-int DataArray::raw_height()
-{
-	return m_raw_height;
-}
-
-//=============================================================================
-int DataArray::binned_height()
-{
-	// divide and round up
-	return (m_raw_height + (digital_binning - 1)) / digital_binning;
-}
-
-//=============================================================================
-int DataArray::depth()
-{
-	return m_raw_depth;
-}
-
-//=============================================================================
-int DataArray::binning()
-{
-	return digital_binning;
-}
-
-//=============================================================================
-void DataArray::binning(int binning)
-{
-	if (binning < 1 || binning == digital_binning)
-		return;
-
-	digital_binning = binning;
-	release_binned_mem();
-	alloc_binned_mem();
-}
-
-//=============================================================================
-int DataArray::num_raw_array_diodes()	
-{
-	return raw_width() * raw_height()/4;		//divide by 4 because each pdv channel has 1/4 of the diodes. Do it here so it gets used everywhere
-}
-
-//=============================================================================
-int DataArray::num_raw_diodes()
-{
-	return raw_width() * raw_height() + num_diodes_fp();
-}
-
-//=============================================================================
-int DataArray::num_binned_diodes()
-{
-//	cout << "da line 384 "<< binned_width() * binned_height()<< "\n";
-	return binned_width() * binned_height();
-}
-
-//=============================================================================
-int DataArray::num_diodes_fp()
-{
-	return NUM_FP_DIODES;
-}
-
-//=============================================================================
-Data *DataArray::getData(int index, int region)
-{
-/*	if (region != -1) {
-		memcpy((array_data->getRawDataMem()), aveData, sizeof(double) * dc->getNumPts());
-		return array_data; // +region + index;
-	}*/
-	if (index < 0)
-		return fp_data + index + NUM_FP_DIODES;
-		return array_data + index;
-}
-Data *DataArray::getROIAve(int region)
-{
-	if (array_data_ROI[region] == nullptr)
-	{
-		array_data_ROI[region] = new Data();
-	}
-		memcpy(array_data_ROI[region]->getProDataMem(), aveData, sizeof(double) * dc->getNumPts());
-		return array_data_ROI[region];						//works correctly for display values even though no use of region (i.e. +region)
-}
-
-void DataArray::aveROIData(int region)
-{
-	int numSelectedDiodesAverage = aw->getNumSelectedDiodesAverage(region) - 1;
-	double **proData = (double**)malloc(sizeof(double*)*numSelectedDiodesAverage);
-	int *selectedDiodesAverage = aw->getSelectedDiodesAverage(region);      //pointer to the indexes of the diodes in an ROI    
-	
-	if (proData == NULL) {
 		return;
 	}
-	for (int i = 0; i < numSelectedDiodesAverage; i++) {					//get average diodes
-		proData[i] = dataArray->getProDataMem(selectedDiodesAverage[i + 1]);
+
+	releaseMem();
+	this->numTrials=numTrials;
+	allocMem();
+	resetData();
+}
+
+//=============================================================================
+void DataArray::changeNumPts(int numPts)
+{	
+	if(this->numPts==numPts)
+	{
+		return;
 	}
 
-	aveData = new double[numPts];
-	for (int i = 0; i < numPts; i++)
+	releaseMem();
+	this->numPts=numPts;
+	allocMem();
+
+	//----------------------------
+	// Change rawData size of data
+	for(int i=0;i<Num_Diodes;i++)
 	{
-		double sum = 0;
-		for (int j = 0; j < numSelectedDiodesAverage; j++)
+		data[i]->releaseMem();
+		data[i]->allocMem();
+	}
+
+	resetData();
+}
+
+//=============================================================================
+void DataArray::resetData()
+{
+	int i,j,k;
+
+	for(j=0;j<Num_Diodes;j++)
+	{
+		for(i=0;i<numTrials;i++)// Reset rawData
 		{
-			sum += proData[j][i];
+			for(k=0;k<numPts;k++)
+			{
+				trialData[j][i][k]=0;
+			}
 		}
-		aveData[i] = sum/numSelectedDiodesAverage;
 	}
+
+	for(i=0;i<Num_Diodes;i++)// Reset Data
+	{
+		data[i]->reset();
+	}
+
+	// Reset Properties
+	maxRli=0;
 }
 
-double* DataArray::getAveData()
+//=============================================================================
+Data *DataArray::getData(int index)
 {
-	return aveData;
+	return data[index];
 }
+
+//=============================================================================
+short *DataArray::getMem(int trialNo,int diodeNo)
+{
+	return trialData[diodeNo][trialNo];
+}
+
+//=============================================================================
+double *DataArray::getRawDataMem(int diodeNo)
+{
+	return data[diodeNo]->getRawDataMem();
+}
+
 //=============================================================================
 double *DataArray::getProDataMem(int p)
 {
-	return getData(p)->getProDataMem();
+	return data[p]->getProDataMem();
 }
 
 //=============================================================================
 double *DataArray::getSavDataMem(int p)
 {
-	return getData(p)->getSavDataMem();
+	return data[p]->getSavDataMem();
 }
 
 //=============================================================================
 double *DataArray::getSlopeMem(int p)
 {
-	return getData(p)->getSlopeMem();
+	return data[p]->getSlopeMem();
 }
 
 //=============================================================================
@@ -485,95 +242,104 @@ double *DataArray::getSlopeMem(int p)
 //=============================================================================
 void DataArray::setRliLow(short *dataBlock)
 {
-	memcpy(rli_low, dataBlock, num_raw_array_diodes() * sizeof(short));
+	int i;
+
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->setRliLow(dataBlock[i]);
+	}
 }
 
 //=============================================================================
 void DataArray::setRliHigh(short *dataBlock)
 {
-	memcpy(rli_high, dataBlock, num_raw_array_diodes() * sizeof(short));
+	int i;
+
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->setRliHigh(dataBlock[i]);
+	}
 }
 
 //=============================================================================
 void DataArray::setRliMax(short *dataBlock)
 {
-	memcpy(rli_max, dataBlock, num_raw_array_diodes() * sizeof(short));
+	int i;
+
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->setRliMax(dataBlock[i]);
+	}
 }
 
 //=============================================================================
 void DataArray::setRliLow(int diodeNo,short rli)
 {
-	rli_low[diodeNo] = rli;
+	data[diodeNo]->setRliLow(rli);
 }
 
 //=============================================================================
 void DataArray::setRliHigh(int diodeNo,short rli)
 {
-	rli_high[diodeNo] = rli;
+	data[diodeNo]->setRliHigh(rli);
 }
 
 //=============================================================================
 void DataArray::setRliMax(int diodeNo,short rli)
 {
-	rli_max[diodeNo] = rli;
+	data[diodeNo]->setRliMax(rli);
 }
 
 //=============================================================================
 short DataArray::getRliLow(int index)
 {
-	return rli_low[index];
+	return data[index]->getRliLow();
 }
 
 //=============================================================================
 short DataArray::getRliHigh(int index)
 {
-	return rli_high[index];
+	return data[index]->getRliHigh();
 }
 
 //=============================================================================
 short DataArray::getRliMax(int index)
 {
-	return rli_max[index];
+	return data[index]->getRliMax();
 }
 
 //=============================================================================
-
 void DataArray::calRli()
 {
-	double rli;
-	short low, high, max;
-	// bin the rli
-	for (int i = 0; i < num_binned_diodes(); i++)
+	int i;
+
+	for(i=0;i<Num_Diodes;i++)
 	{
-		get_binned_rli(i, low, high, max);
-		double diff = (double) (high - low);
-//		rli = diff/ 3276.8;
-		rli = double(high) / 3278;
-/*		if (rli <= 0) // No RLI
-		{
-			rli = -1;  //commented out to test rli acquisition
-		}*/
-		array_data[i].setRli(rli);
+		data[i]->calRli();
 	}
 }
 
 //=============================================================================
 void DataArray::setMaxRli()
 {
+	int i;
+	double tmp;
 	maxRli=0;
 
-	for (int i = 0; i < num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		maxRli = max(array_data[i].getRli(), maxRli);
+		tmp=data[i]->getRli();
+		if(tmp>maxRli)
+		{
+			maxRli=tmp;
+		}
 	}
-
-	// don't check fp_data - all the rlis are 0
 }
 
 //=============================================================================
 double DataArray::getRli(int diodeNo)
 {
-	return getData(diodeNo)->getRli();
+	return data[diodeNo]->getRli();
 }
 
 //=============================================================================
@@ -581,7 +347,7 @@ double DataArray::getRli(int diodeNo)
 //=============================================================================
 double DataArray::getRliRatio(int p)
 {
-	return getData(p)->getRli()/ maxRli;
+	return data[p]->getRli()/maxRli;
 }
 
 //=============================================================================
@@ -613,21 +379,21 @@ double DataArray::getDataMaxAmp(int diodeIndex,int recordNoChoice)
 
 		for(i=0;i<numAveRec;i++)
 		{
-			sum+=getData(diodeIndex)->getMaxAmp(recordIndex-i);
+			sum+=data[diodeIndex]->getMaxAmp(recordIndex-i);
 		}
 
 		maxAmp=sum/numAveRec;
 	}
 	else
 	{
-		maxAmp=getData(diodeIndex)->getMaxAmp(recordIndex);
+		maxAmp=data[diodeIndex]->getMaxAmp(recordIndex);
 	}
 
 	return maxAmp;
 }
 
 //=============================================================================
-/*double DataArray::getDiodeMaxAmpSD(int diodeIndex,int recordNoChoice)
+double DataArray::getDiodeMaxAmpSD(int diodeIndex,int recordNoChoice)
 {
 	// Determine which record is going to processed.
 	int recordIndex;
@@ -660,7 +426,7 @@ double DataArray::getDataMaxAmp(int diodeIndex,int recordNoChoice)
 		// Calculate the mean
 		for(i=0;i<numAveRec;i++)
 		{
-			sum+=getData(diodeIndex)->getMaxAmp(recordIndex-i);
+			sum+=data[diodeIndex]->getMaxAmp(recordIndex-i);
 		}
 
 		double mean=sum/numAveRec;
@@ -668,7 +434,7 @@ double DataArray::getDataMaxAmp(int diodeIndex,int recordNoChoice)
 		// Calculate the sum of squares
 		for(i=0,sum=0;i<numAveRec;i++)
 		{
-			sum+=pow(getData(diodeIndex)->getMaxAmp(recordIndex-i)-mean,2);
+			sum+=pow(data[diodeIndex]->getMaxAmp(recordIndex-i)-mean,2);
 		}
 
 		// Calculate SD (Standard Deviation)
@@ -676,7 +442,7 @@ double DataArray::getDataMaxAmp(int diodeIndex,int recordNoChoice)
 	}
 
 	return sd;
-}*/
+}
 
 //=============================================================================
 // Max Amp Change
@@ -708,7 +474,7 @@ double DataArray::getDiodeMaxAmpChaSD(int diodeIndex)
 		// Calculate the mean
 		for(i=0;i<numAveRec;i++)
 		{
-			sum+=getData(diodeIndex)->getMaxAmp(record2No-i);
+			sum+=data[diodeIndex]->getMaxAmp(record2No-i);
 		}
 
 		double mean=sum/numAveRec;
@@ -716,7 +482,7 @@ double DataArray::getDiodeMaxAmpChaSD(int diodeIndex)
 		// Calculate the sum of squares
 		for(i=0,sum=0;i<numAveRec;i++)
 		{
-			sum+=pow(getData(diodeIndex)->getMaxAmp(record2No-i)-mean,2);
+			sum+=pow(data[diodeIndex]->getMaxAmp(record2No-i)-mean,2);
 		}
 
 		// Calculate SD (Standard Deviation)
@@ -759,7 +525,7 @@ double DataArray::getDiodeMaxAmpPerChaSD(int diodeIndex)
 		// Calculate the mean
 		for(i=0,sum=0;i<numAveRec;i++)
 		{
-			per[i]=100.0*(getData(diodeIndex)->getMaxAmp(record2No-i)-maxAmp1)/maxAmp1;
+			per[i]=100.0*(data[diodeIndex]->getMaxAmp(record2No-i)-maxAmp1)/maxAmp1;
 			sum+=per[i];
 		}
 
@@ -781,134 +547,79 @@ double DataArray::getDiodeMaxAmpPerChaSD(int diodeIndex)
 //=============================================================================
 double DataArray::getDataMaxAmpLatency(int index)
 {
-	return getData(index)->getMaxAmpLatency();
+	return data[index]->getMaxAmpLatency();
 }
 
 //=============================================================================
 int DataArray::getDataMaxAmpLatencyPt(int index)
 {
-	return getData(index)->getMaxAmpLatencyPt();
+	return data[index]->getMaxAmpLatencyPt();
 }
 
 //=============================================================================
 double DataArray::getDataHalfAmpLatency(int index)
 {
-	return getData(index)->getHalfAmpLatency();
-}
-
-double DataArray::getMaxSlope(int index)
-{
-	return getData(index)->getMaxSlope();
-}
-
-double DataArray::getMaxSlopeLatency(int index)
-{
-	return getData(index)->getMaxSlopeLatency();
+	return data[index]->getHalfAmpLatency();
 }
 
 //=============================================================================
 double DataArray::getAmp(int diodeNo,int ptNo)
 {
-	return getData(diodeNo)->getAmp(ptNo);
+	return data[diodeNo]->getAmp(ptNo);
 }
 
 //=============================================================================
-double DataArray::getSignalToNoise(int diodeNo)
-{
-	double SD=getData(diodeNo)->getSD();
-	double maxAmp = getData(diodeNo)->getMaxAmp();
-	return maxAmp/SD;
-}
-//=============================================================================
 double DataArray::getDataSD(int diodeNo)
 {
-	return getData(diodeNo)->getSD();
+	return data[diodeNo]->getSD();
 }
 
 //=============================================================================
 char DataArray::getFpFlag(int diodeNo)
 {
-	return diodeNo < 0;
+	return data[diodeNo]->getFpFlag();
 }
 
 //=============================================================================
 void DataArray::average()
 {
 	int i,j,k;
+	double gain=recControl->getAcquiGain();
+	double scale=1/(gain*3.2768);
 
-//	short Gain=recControl->getAcquiGain();
-	double Gain = 1.0;
-	double scale=1.0/(Gain*3.2768);		// this line originally had numTrials in the denominator which scaled twice because numTrials was divided in get_binned ~ line 210
-
-	// bin the traces
-	for (i = 0; i < num_binned_diodes(); i++)
+	if(numTrials==1)
 	{
-		double *binned_data = array_data[i].getRawDataMem();
-		get_binned_diode_trace(i, 0, numTrials, scale, binned_data);
-	}
-
-	// bin the fp traces
-	for (i = 0; i < num_diodes_fp(); i++)
-	{
-		double *fp_trace = fp_data[i].getRawDataMem();
-
-		for (j = 0; j < numPts; j++)		// removal appears to have no impact
+		for(i=0;i<Num_Diodes;i++)
 		{
-			fp_trace[j] = 0.0;
-		}
+			double *rawData=data[i]->getRawDataMem();
 
-		for (k = 0; k < numTrials; k++)
-		{
-			for (j = 0; j < numPts; j++)
+			for(j=0;j<numPts;j++)
 			{
-				fp_trace[j] += raw_diode_data[num_raw_array_diodes()+i][k][j];
+				rawData[j]=trialData[i][0][j]*scale;
 			}
 		}
+	}
+	else
+	{
+		scale/=numTrials;
 
-		for (j = 0; j < numPts; j++)
+		for(i=0;i<Num_Diodes;i++)
 		{
-			fp_trace[j] *= scale;
+			double *rawData=data[i]->getRawDataMem();
+
+			for(j=0;j<numPts;j++)
+			{
+				rawData[j]=0;
+
+				for(k=0;k<numTrials;k++)
+				{
+					rawData[j]+=trialData[i][k][j];
+				}
+
+				rawData[j]*=scale;
+			}
 		}
 	}
-}
-
-//=============================================================================
-void DataArray::resetData()
-{
-	int i,j;
-	for (i = 0; i < num_raw_diodes(); i++)
-	{
-		for (j = 0; j < numTrials; j++)
-			memset(raw_diode_data[i][j], 0, sizeof(short) * numPts);
-	}
-
-	for (i = 0; i < num_binned_diodes(); i++)
-	{
-		array_data[i].reset();
-	}
-
-	for (i = 0; i < num_diodes_fp(); i++)
-	{
-		fp_data[i].reset();
-	}
-
-	memset(rli_low, 0, sizeof(short) * num_raw_diodes());
-	memset(rli_high, 0, sizeof(short) * num_raw_diodes());
-	memset(rli_max, 0, sizeof(short) * num_raw_diodes());
-
-	maxRli = 0.0;
-}
-
-//=============================================================================
-const short* DataArray::getTrialMem(int trial, int diode)
-{
-	return raw_diode_data[diode][trial];
-}
-
-//=============================================================================
-void DataArray::assignTrialData(short *trial_data, int len, int trial, int diode)
-{
-	memcpy(raw_diode_data[diode][trial], trial_data, sizeof(short)*len);
 }
 
 //=============================================================================
@@ -921,39 +632,33 @@ void DataArray::loadTrialData(int trialNo)
 	else
 	{
 		int i,j;
-		double Gain = 1.0;
-		short gain=recControl->getAcquiGain();
-		double scale=1/(Gain*3.2768);
-		//double scale = 1/(gain*3.2768*recControl->getIntTrials());
+		double gain=recControl->getAcquiGain();
+		double scale=1/(gain*3.2768);
+
 		trialNo-=1;
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes;i++)
 		{
-			double *binned_data = array_data[i].getRawDataMem();
-			get_binned_diode_trace(i, trialNo, trialNo + 1, scale, binned_data);
-		}
+			double *rawData=data[i]->getRawDataMem();
 
-		for (i = 0; i < num_diodes_fp(); i++)
-		{
-			double *fp_trace = fp_data[i].getRawDataMem();
-			for (j = 0; j < numPts; j++)
+			for(j=0;j<numPts;j++)
 			{
-				fp_trace[j] = raw_diode_data[num_raw_array_diodes() + i][trialNo][j] * scale;
+				rawData[j]=trialData[i][trialNo][j]*scale;
 			}
 		}
 	}
 }
 
 //=============================================================================
-void DataArray::arrangeData(int trialNo, short* input)		// used in DapControllerAcqui with input from camera (memory)
+void DataArray::arrangeData(int trialNo,short* input)
 {
 	int i,j;
 
-	for (i = 0; i < num_raw_diodes(); i++)
+	for(i=0;i<Num_Diodes;i++)
 	{
-		for (j = 0; j < numPts; j++)
+		for(j=0;j<numPts;j++)
 		{
-			raw_diode_data[i][trialNo][j] = input[i + j*num_raw_diodes()];
+			trialData[i][trialNo][j]=input[Ch_IP[i]+j*512];
 		}
 	}
 }
@@ -964,6 +669,7 @@ void DataArray::process()
 	int i;
 
 	sp->process();
+
 	dataInversing();
 	rliDividing();
 	temporalFiltering();
@@ -972,26 +678,19 @@ void DataArray::process()
 	sp->baseLineCorrection();
 	sp->calSlope();
 
-	numRegions = aw->getNumRegions();
 	// Measure Properties
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].measureProperties();
-	for (i = 0; i < num_diodes_fp(); i++)
-		fp_data[i].measureProperties();
-	Data* data;
-	data = NULL;
-	for (i = 0; i < numRegions; i++) {			//added to enable timecourse for ROIs
-		dataArray->aveROIData(i);
-		data = dataArray->getROIAve(i);
-		data->measureProperties();
-		}
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->measureProperties();
+	}
+
 	// Normalization
 	if(normalizationFlag)
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
-			array_data[i].normalization();
-		for (i = 0; i < num_diodes_fp(); i++)
-			fp_data[i].normalization();
+		for(i=0;i<Num_Diodes;i++)
+		{
+			data[i]->normalization();
+		}
 	}
 }
 
@@ -1002,58 +701,69 @@ void DataArray::dataInversing()
 
 	if(sp->getDataInverseFlag())
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
-			array_data[i].inverseData();
+		for(i=0;i<464;i++)
+		{
+			data[i]->inverseData();
+		}
 	}
 	else
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
-			array_data[i].raw2pro();
+		for(i=0;i<464;i++)
+		{
+			data[i]->raw2pro();
+		}
 	}
 
 	if(sp->getFpInverseFlag())
 	{
-		for (i = 0; i < num_diodes_fp(); i++)
-			fp_data[i].inverseData();
+		for(i=464;i<472;i++)
+		{
+			data[i]->inverseData();
+		}
 	}
 	else
 	{
-		for (i = 0; i < num_diodes_fp(); i++)
-			fp_data[i].raw2pro();
+		for(i=464;i<472;i++)
+		{
+			data[i]->raw2pro();
+		}
 	}
+
 }
 
 //=============================================================================
-
 void DataArray::rliDividing()
 {
-	int i;
-	
-	if (!sp->getRliDivFlag())
+	if(!sp->getRliDivFlag())
+	{
 		return;
+	}
 
-for (i = 0; i < num_binned_diodes(); i++)
-	array_data[i].rliDividing();
+	int i;
+
+	for(i=0;i<464;i++)
+	{
+		data[i]->rliDividing();
+	}
 }
 
 //=============================================================================
 void DataArray::temporalFiltering()
 {
-	int i;
-
 	if(!sp->getTemporalFilterFlag())
 	{
 		return;
 	}
 
+	int i;
 	double* buf=new double[numPts];
 
 	sp->setGaussianWeights();
 
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].temporalFiltering(buf);
-	for (i = 0; i < num_diodes_fp(); i++)
-		fp_data[i].temporalFiltering(buf);
+	for(i=0;i<472;i++)
+	{
+		data[i]->temporalFiltering(buf);
+	}
 
 	delete [] buf;
 }
@@ -1061,13 +771,17 @@ void DataArray::temporalFiltering()
 //=============================================================================
 void DataArray::ampCorrecting()
 {
+	if(!sp->getCorrectionFlag())
+	{
+		return;
+	}
+
 	int i;
 
-	if(!sp->getCorrectionFlag())
-		return;
-
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].ampCorrecting();
+	for(i=0;i<464;i++)
+	{
+		data[i]->ampCorrecting();
+	}
 }
 
 //=============================================================================
@@ -1075,11 +789,12 @@ void DataArray::doSelection(int property)
 {
 	int i;
 	double threshold=atof(ui->thresholdTxt->value());
-	aw->clearSelected(0);
+
+	aw->clearSelected();
 
 	if(property==-1)	// Max Amp < Threshold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataMaxAmp(i)<threshold)
 			{
@@ -1089,7 +804,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==1)	// Max Amp > Threshold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataMaxAmp(i)>threshold)
 			{
@@ -1099,7 +814,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==-2)	// % Amp Latency < threshold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataHalfAmpLatency(i)<threshold)
 			{
@@ -1109,7 +824,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==2)	// % Amp Latency > threshold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataHalfAmpLatency(i)>threshold)
 			{
@@ -1119,7 +834,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==-3)	// SD < thredhold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataSD(i)<threshold)
 			{
@@ -1129,7 +844,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==3)	// SD > thredhold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getDataSD(i)>threshold)
 			{
@@ -1139,7 +854,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==-4)	// RLI < thredhold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getRli(i)<threshold)
 			{
@@ -1149,7 +864,7 @@ void DataArray::doSelection(int property)
 	}
 	else if(property==4)	// RLI > thredhold
 	{
-		for(i=0;i< num_binned_diodes();i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			if(getRli(i)>threshold)
 			{
@@ -1164,28 +879,28 @@ void DataArray::clearIgnoredFlag()
 {
 	int i;
 
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].clearIgnoredFlag();
-	for (i = 0; i < num_diodes_fp(); i++)
-		fp_data[i].clearIgnoredFlag();
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->clearIgnoredFlag();
+	}
 }
 
 //=============================================================================
 char DataArray::getIgnoredFlag(int dataNo)
 {
-	return getData(dataNo)->getIgnoredFlag();
+	return data[dataNo]->getIgnoredFlag();
 }
 
 //=============================================================================
 void DataArray::setIgnoredFlag(int dataNo,char flag)
 {
-	return getData(dataNo)->setIgnoredFlag(flag);
+	data[dataNo]->setIgnoredFlag(flag);
 }
 
 //=============================================================================
 void DataArray::ignore(int dataNo)
 {
-	return getData(dataNo)->ignore();
+	data[dataNo]->ignore();
 }
 
 //=============================================================================
@@ -1193,16 +908,16 @@ void DataArray::saveTraces2()
 {
 	int i;
 
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].saveTraces2();
-	for (i = 0; i < num_diodes_fp(); i++)
-		fp_data[i].saveTraces2();
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->saveTraces2();
+	}
 }
 
 //=============================================================================
 void DataArray::setCorrectionValue(int dataIndex,double value)
 {
-	getData(dataIndex)->setCorrectionValue(value);
+	data[dataIndex]->setCorrectionValue(value);
 }
 
 //=============================================================================
@@ -1237,7 +952,7 @@ void DataArray::makeCorrection()
 //=============================================================================
 double DataArray::getCorrectionValue(int index)
 {
-	return getData(index)->getCorrectionValue();
+	return data[index]->getCorrectionValue();
 }
 
 //=============================================================================
@@ -1317,9 +1032,9 @@ void DataArray::setRli2DataFeature()
 	double maxValue=1.0e-9;
 	double scale;
 
-	if (!compareFlag)
+	if(!compareFlag)
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			dataFeature[i]=getRli(i);
 
@@ -1329,38 +1044,39 @@ void DataArray::setRli2DataFeature()
 			}
 		}
 
-		if (nor2ArrayMaxFlag)
+		if(nor2ArrayMaxFlag)
 		{
 			scale=1/maxValue;
 
-			for (i = 0; i < num_binned_diodes(); i++)
+			for(i=0;i<Num_Diodes-8;i++)
+			{
 				dataFeature[i]*=scale;
+			}
 		}
 	}
 	else
 	{
-		if (record1No == record2No)
+		if(record1No==record2No)
 		{
 			resetDataFeature();
 			return;
 		}
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
-			Data *diode = getData(i);
-			dataFeature[i]=diode->getRli(record2No) - diode->getRli(record1No);
+			dataFeature[i]=data[i]->getRli(record2No) - data[i]->getRli(record1No);
 
 			dataFeature[i]=-dataFeature[i];
 
 			if(!absFlag)
 			{
-				if(diode->getRli(record1No)==0)
+				if(data[i]->getRli(record1No)==0)
 				{
 					dataFeature[i]/=1.0e-9;
 				}
 				else
 				{
-					dataFeature[i]/=diode->getRli(record1No);
+					dataFeature[i]/=data[i]->getRli(record1No);
 				}
 			}
 
@@ -1374,8 +1090,10 @@ void DataArray::setRli2DataFeature()
 		{
 			scale=1/maxValue;
 
-			for (int j = 0; j < num_binned_diodes(); j++)
-				dataFeature[j] *= scale;
+			for(i=0;i<Num_Diodes-8;i++)
+			{
+				dataFeature[i]*=scale;
+			}
 		}
 	}
 }
@@ -1404,9 +1122,9 @@ void DataArray::setMaxAmp2DataFeature()
 	if(!compareFlag)
 	{
 		// Get Max Amp
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
-			dataFeature[i] = getDataMaxAmp(i);
+			dataFeature[i]=getDataMaxAmp(i);
 
 			if(dataFeature[i] > maxValue)
 			{
@@ -1419,7 +1137,7 @@ void DataArray::setMaxAmp2DataFeature()
 		{
 			scale=1/maxValue;
 
-			for (i = 0; i < num_binned_diodes(); i++)
+			for(i=0;i<Num_Diodes-8;i++)
 			{
 				dataFeature[i]*=scale;
 			}
@@ -1429,7 +1147,7 @@ void DataArray::setMaxAmp2DataFeature()
 	else
 	{
 		// Set Max Amp Change
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			double maxAmp1;
 			double maxAmp2;
@@ -1466,41 +1184,10 @@ void DataArray::setMaxAmp2DataFeature()
 		{
 			scale=1/maxValue;
 
-			for (i = 0; i < num_binned_diodes(); i++)
+			for(i=0;i<Num_Diodes-8;i++)
 			{
 				dataFeature[i]*=scale;
 			}
-		}
-	}
-}
-
-//=============================================================================
-void DataArray::setSignalToNoise2DataFeature()
-{
-	int i;
-
-	double maxValue = 1.0e-9;
-	double scale;
-
-	// Get Max Amp
-	for (i = 0; i < num_binned_diodes(); i++)
-	{
-		dataFeature[i] = getSignalToNoise(i);
-
-		if (dataFeature[i] > maxValue)
-		{
-			maxValue = dataFeature[i];
-		}
-	}
-
-	// Normalization if feature is on.
-	if (nor2ArrayMaxFlag)
-	{
-		scale = 1 / maxValue;
-
-		for (i = 0; i < num_binned_diodes(); i++)
-		{
-			dataFeature[i] *= scale;
 		}
 	}
 }
@@ -1514,9 +1201,9 @@ void DataArray::setSpikeAmp2DataFeature()
 	double scale;
 
 	// Get Max Amp
-	for (i = 0; i < num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
-		dataFeature[i]=getData(i)->getSpikeAmp();
+		dataFeature[i]=data[i]->getSpikeAmp();
 
 		if(dataFeature[i] > maxValue)
 		{
@@ -1529,7 +1216,7 @@ void DataArray::setSpikeAmp2DataFeature()
 	{
 		scale=1/maxValue;
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			dataFeature[i]*=scale;
 		}
@@ -1543,7 +1230,7 @@ void DataArray::setMaxAmpLatency2DataFeature()
 
 	if(!compareFlag)
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			dataFeature[i]=(latencyStart+latencyWindow-getDataMaxAmpLatency(i))/latencyWindow;
 		}
@@ -1556,10 +1243,10 @@ void DataArray::setMaxAmpLatency2DataFeature()
 			return;
 		}
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
-			dataFeature[i]=getData(i)->getMaxAmpLatency(record2No)
-				- getData(i)->getMaxAmpLatency(record1No);
+			dataFeature[i]=data[i]->getMaxAmpLatency(record2No)
+				- data[i]->getMaxAmpLatency(record1No);
 
 			if(!increaseFlag)
 			{
@@ -1578,7 +1265,7 @@ void DataArray::setHalfAmpLatency2DataFeature()
 
 	if(!compareFlag)
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
 			dataFeature[i]=getDataHalfAmpLatency(i);
 		}
@@ -1591,10 +1278,10 @@ void DataArray::setHalfAmpLatency2DataFeature()
 			return;
 		}
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
-			dataFeature[i]=(getData(i)->getHalfAmpLatency(record2No)
-				- getData(i)->getHalfAmpLatency(record1No));
+			dataFeature[i]=(data[i]->getHalfAmpLatency(record2No)
+				- data[i]->getHalfAmpLatency(record1No));
 
 			if(!increaseFlag)
 			{
@@ -1613,9 +1300,9 @@ void DataArray::setEPSPLatency2DataFeature()
 	double last=0;
 
 	// Find first pt and last pt
-	for (i = 0; i < num_binned_diodes(); i++)
+	for(i=0;i<Num_Diodes-8;i++)
 	{
-		fittingVar=getData(i)->getFittingVar();
+		fittingVar=data[i]->getFittingVar();
 		dataFeature[i]=fittingVar[0];
 
 		if(dataFeature[i]>last)
@@ -1637,8 +1324,10 @@ void DataArray::setEPSPLatency2DataFeature()
 		range=20;
 	}
 
-	for (i = 0; i < num_binned_diodes(); i++)
-		dataFeature[i] = (last - dataFeature[i]) / range;
+	for(i=0;i<Num_Diodes-8;i++)
+	{
+		dataFeature[i]=(last-dataFeature[i])/range;
+	}
 }
 
 //=============================================================================
@@ -1650,9 +1339,11 @@ double DataArray::getDataFeature(int input)
 //=============================================================================
 void DataArray::resetDataFeature()
 {
-	for (int i = 0; i < num_binned_diodes(); i++)
+	int i;
+
+	for(i=0;i<Num_Diodes-8;i++)
 	{
-		dataFeature[i] = 0.0;
+		dataFeature[i]=0;
 	}
 }
 
@@ -1661,10 +1352,10 @@ void DataArray::measureAmp()
 {
 	int i;
 
-	for (i = 0; i < num_binned_diodes(); i++)
-		array_data[i].measureAmp();
-	for (i = 0; i < num_diodes_fp(); i++)
-		fp_data[i].measureAmp();
+	for(i=0;i<Num_Diodes;i++)
+	{
+		data[i]->measureAmp();
+	}
 }
 
 //=============================================================================
@@ -1701,13 +1392,6 @@ double DataArray::getLatencyStart()
 	return latencyStart;
 }
 
-void DataArray::setRliScalar(double input)
-{
-	if (input <= 0.001)
-		input = 0.1;
-	rliScalar = input;
-}
-
 //=============================================================================
 void DataArray::setLatencyWindow(double input)
 {
@@ -1725,8 +1409,10 @@ void DataArray::setHalfAmpLatencyRatio2DataFeature()
 
 	if(!compareFlag)
 	{
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
+		{
 			dataFeature[i]=(latencyStart+latencyWindow-getDataHalfAmpLatency(i))/latencyWindow;
+		}
 	}
 	else // Compare
 	{
@@ -1736,10 +1422,10 @@ void DataArray::setHalfAmpLatencyRatio2DataFeature()
 			return;
 		}
 
-		for (i = 0; i < num_binned_diodes(); i++)
+		for(i=0;i<Num_Diodes-8;i++)
 		{
-			dataFeature[i]=(getData(i)->getHalfAmpLatency(record2No)
-				- getData(i)->getHalfAmpLatency(record1No))/latencyWindow;
+			dataFeature[i]=(data[i]->getHalfAmpLatency(record2No)
+				- data[i]->getHalfAmpLatency(record1No))/latencyWindow;
 
 			if(!increaseFlag)
 			{

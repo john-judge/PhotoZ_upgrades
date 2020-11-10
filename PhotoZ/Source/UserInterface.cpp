@@ -16,13 +16,6 @@ void UserInterface::cb_Create(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->user_data()))->cb_Create_i(o,v);
 }
 
-void UserInterface::cb_open_i(Fl_Menu_*, void*) {
-  mc->openDataFileNP();
-}
-void UserInterface::cb_open(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->user_data()))->cb_open_i(o,v);
-}
-
 void UserInterface::cb_Exit_i(Fl_Menu_*, void*) {
   mc->quit();
 }
@@ -48,7 +41,6 @@ Fl_Menu_Item UserInterface::menu_Menu[] = {
  {"File", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 1, 14, 0},
  {"Open", 0,  (Fl_Callback*)UserInterface::cb_Open, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Create Folder", 0,  (Fl_Callback*)UserInterface::cb_Create, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"open np file", 0,  (Fl_Callback*)UserInterface::cb_open, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Exit (Esc)", 0,  (Fl_Callback*)UserInterface::cb_Exit, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0},
  {"Preference", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 1, 14, 0},
@@ -119,13 +111,6 @@ void UserInterface::cb_Save3_i(Fl_Button*, void*) {
 }
 void UserInterface::cb_Save3(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Save3_i(o,v);
-}
-
-void UserInterface::cb_lfRun_i(Fl_Light_Button* o, void*) {
-  mc->setLiveFeed(o->value());
-}
-void UserInterface::cb_lfRun(Fl_Light_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_lfRun_i(o,v);
 }
 
 void UserInterface::cb_Go_i(Fl_Button*, void*) {
@@ -324,13 +309,6 @@ void UserInterface::cb_EPSP(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_EPSP_i(o,v);
 }
 
-void UserInterface::cb_MaxAmp_i(Fl_Menu_*, void*) {
-  mc->setAwBackground(BG_SIGNAL_TO_NOISE);
-}
-void UserInterface::cb_MaxAmp(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_MaxAmp_i(o,v);
-}
-
 Fl_Menu_Item UserInterface::menu_Background[] = {
  {"None", 0,  (Fl_Callback*)UserInterface::cb_None, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Image", 0,  (Fl_Callback*)UserInterface::cb_Image, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
@@ -340,22 +318,21 @@ Fl_Menu_Item UserInterface::menu_Background[] = {
  {"% Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Amp, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Max1, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"EPSP Latency", 0,  (Fl_Callback*)UserInterface::cb_EPSP, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"MaxAmp/SD", 0,  (Fl_Callback*)UserInterface::cb_MaxAmp, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
-
-void UserInterface::cb_awFpYScale_i(Fl_Roller* o, void*) {
-  mc->setAwFpYScale(o->value());
-}
-void UserInterface::cb_awFpYScale(Fl_Roller* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_awFpYScale_i(o,v);
-}
 
 void UserInterface::cb_awYScale_i(Fl_Roller* o, void*) {
   mc->setAwYScale(o->value());
 }
 void UserInterface::cb_awYScale(Fl_Roller* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_awYScale_i(o,v);
+}
+
+void UserInterface::cb_awFpYScale_i(Fl_Roller* o, void*) {
+  mc->setAwFpYScale(o->value());
+}
+void UserInterface::cb_awFpYScale(Fl_Roller* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_awFpYScale_i(o,v);
 }
 
 void UserInterface::cb_awXScale_i(Fl_Roller* o, void*) {
@@ -422,24 +399,10 @@ void UserInterface::cb_(Fl_Value_Slider* o, void* v) {
 }
 
 void UserInterface::cb_Save5_i(Fl_Button*, void*) {
-  mc->saveLatestBackgroundImage();
-}
-void UserInterface::cb_Save5(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Save5_i(o,v);
-}
-
-void UserInterface::cb_resetCam_i(Fl_Button*, void*) {
-  mc->resetCamera();
-}
-void UserInterface::cb_resetCam(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_resetCam_i(o,v);
-}
-
-void UserInterface::cb_Save6_i(Fl_Button*, void*) {
   aw->saveBGData();
 }
-void UserInterface::cb_Save6(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Save6_i(o,v);
+void UserInterface::cb_Save5(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Save5_i(o,v);
 }
 
 void UserInterface::cb_Increase_i(Fl_Menu_*, void*) {
@@ -481,13 +444,6 @@ Fl_Menu_Item UserInterface::menu_Increase1[] = {
  {"Percent", 0,  (Fl_Callback*)UserInterface::cb_Percent, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
-
-void UserInterface::cb_digital_binning_i(Fl_Int_Input* o, void*) {
-  mc->set_digital_binning(o->value());
-}
-void UserInterface::cb_digital_binning(Fl_Int_Input* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_digital_binning_i(o,v);
-}
 
 void UserInterface::cb_RLI2_i(Fl_Light_Button* o, void*) {
   mc->setRliDiv(o->value());
@@ -552,20 +508,6 @@ void UserInterface::cb_of(Fl_Value_Slider* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_of_i(o,v);
 }
 
-void UserInterface::cb_rliScalarRoller_i(Fl_Roller* o, void*) {
-  mc->setRliScalar(o->value());
-}
-void UserInterface::cb_rliScalarRoller(Fl_Roller* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_rliScalarRoller_i(o,v);
-}
-
-void UserInterface::cb_rliScalarTxt_i(Fl_Float_Input* o, void*) {
-  mc->setRliScalar(o->value());
-}
-void UserInterface::cb_rliScalarTxt(Fl_Float_Input* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_rliScalarTxt_i(o,v);
-}
-
 void UserInterface::cb_Correction_i(Fl_Light_Button* o, void*) {
   mc->setCorrectionFlag(o->value());
 }
@@ -580,11 +522,11 @@ void UserInterface::cb_RLI3(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_RLI3_i(o,v);
 }
 
-void UserInterface::cb_Save7_i(Fl_Button*, void*) {
-  mc->saveSelected();
+void UserInterface::cb_Save6_i(Fl_Button*, void*) {
+  mc->saveMapValues();
 }
-void UserInterface::cb_Save7(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save7_i(o,v);
+void UserInterface::cb_Save6(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save6_i(o,v);
 }
 
 void UserInterface::cb_Load3_i(Fl_Button*, void*) {
@@ -662,6 +604,54 @@ void UserInterface::cb_Ignore_i(Fl_Button*, void*) {
 }
 void UserInterface::cb_Ignore(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Ignore_i(o,v);
+}
+
+void UserInterface::cb_T_i(Fl_Light_Button* o, void*) {
+  mc->setTemporalFilterFlag(o->value());
+}
+void UserInterface::cb_T(Fl_Light_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_T_i(o,v);
+}
+
+void UserInterface::cb_Binomial_i(Fl_Menu_*, void*) {
+  mc->setTemporalFilterType('G');
+}
+void UserInterface::cb_Binomial(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Binomial_i(o,v);
+}
+
+void UserInterface::cb_Mov_i(Fl_Menu_*, void*) {
+  mc->setTemporalFilterType('M');
+}
+void UserInterface::cb_Mov(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Mov_i(o,v);
+}
+
+Fl_Menu_Item UserInterface::menu_Filter[] = {
+ {"Binomial", 0,  (Fl_Callback*)UserInterface::cb_Binomial, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Mov Ave", 0,  (Fl_Callback*)UserInterface::cb_Mov, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0}
+};
+
+void UserInterface::cb_S_i(Fl_Light_Button* o, void*) {
+  mc->setSpatialFilterFlag(o->value());
+}
+void UserInterface::cb_S(Fl_Light_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_S_i(o,v);
+}
+
+void UserInterface::cb_s_i(Fl_Value_Slider* o, void*) {
+  mc->setSpatialFilterSigma(o->value());
+}
+void UserInterface::cb_s(Fl_Value_Slider* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_s_i(o,v);
+}
+
+void UserInterface::cb_Radius_i(Fl_Value_Slider* o, void*) {
+  mc->setTemporalFilterWidth(o->value());
+}
+void UserInterface::cb_Radius(Fl_Value_Slider* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Radius_i(o,v);
 }
 
 void UserInterface::cb_None1_i(Fl_Menu_*, void*) {
@@ -906,78 +896,6 @@ void UserInterface::cb_d(Fl_Roller* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_d_i(o,v);
 }
 
-void UserInterface::cb_T_i(Fl_Light_Button* o, void*) {
-  mc->setTemporalFilterFlag(o->value());
-}
-void UserInterface::cb_T(Fl_Light_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_T_i(o,v);
-}
-
-void UserInterface::cb_Binomial_i(Fl_Menu_*, void*) {
-  mc->setTemporalFilterType('G');
-}
-void UserInterface::cb_Binomial(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Binomial_i(o,v);
-}
-
-void UserInterface::cb_Mov_i(Fl_Menu_*, void*) {
-  mc->setTemporalFilterType('M');
-}
-void UserInterface::cb_Mov(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Mov_i(o,v);
-}
-
-void UserInterface::cb_binomial8_i(Fl_Menu_*, void*) {
-  mc->setTemporalFilterType('B');
-}
-void UserInterface::cb_binomial8(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_binomial8_i(o,v);
-}
-
-void UserInterface::cb_binomial6_i(Fl_Menu_*, void*) {
-  mc->setTemporalFilterType('C');
-}
-void UserInterface::cb_binomial6(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_binomial6_i(o,v);
-}
-
-void UserInterface::cb_binomial4_i(Fl_Menu_*, void*) {
-  mc->setTemporalFilterType('D');
-}
-void UserInterface::cb_binomial4(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_binomial4_i(o,v);
-}
-
-Fl_Menu_Item UserInterface::menu_Filter[] = {
- {"Binomial", 0,  (Fl_Callback*)UserInterface::cb_Binomial, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Mov Ave", 0,  (Fl_Callback*)UserInterface::cb_Mov, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"binomial8 (fast)", 0,  (Fl_Callback*)UserInterface::cb_binomial8, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"binomial6 (fast)", 0,  (Fl_Callback*)UserInterface::cb_binomial6, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"binomial4 (fast)", 0,  (Fl_Callback*)UserInterface::cb_binomial4, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {0,0,0,0,0,0,0,0,0}
-};
-
-void UserInterface::cb_S_i(Fl_Light_Button* o, void*) {
-  mc->setSpatialFilterFlag(o->value());
-}
-void UserInterface::cb_S(Fl_Light_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_S_i(o,v);
-}
-
-void UserInterface::cb_s_i(Fl_Value_Slider* o, void*) {
-  mc->setSpatialFilterSigma(o->value());
-}
-void UserInterface::cb_s(Fl_Value_Slider* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_s_i(o,v);
-}
-
-void UserInterface::cb_Radius_i(Fl_Value_Slider* o, void*) {
-  mc->setTemporalFilterWidth(o->value());
-}
-void UserInterface::cb_Radius(Fl_Value_Slider* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Radius_i(o,v);
-}
-
 void UserInterface::cb_None2_i(Fl_Menu_*, void*) {
   mc->setTwValueType('N');
 }
@@ -1000,31 +918,52 @@ void UserInterface::cb_Max2(Fl_Menu_* o, void* v) {
 }
 
 void UserInterface::cb_Max3_i(Fl_Menu_*, void*) {
-  mc->setTwValueType('Q');
+  mc->setTwValueType('4');
 }
 void UserInterface::cb_Max3(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max3_i(o,v);
 }
 
 void UserInterface::cb_Max4_i(Fl_Menu_*, void*) {
-  mc->setTwValueType('8');
+  mc->setTwValueType('5');
 }
 void UserInterface::cb_Max4(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max4_i(o,v);
 }
 
 void UserInterface::cb_Max5_i(Fl_Menu_*, void*) {
-  mc->setTwValueType('9');
+  mc->setTwValueType('6');
 }
 void UserInterface::cb_Max5(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max5_i(o,v);
 }
 
-void UserInterface::cb_Half_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Max6_i(Fl_Menu_*, void*) {
+  mc->setTwValueType('7');
+}
+void UserInterface::cb_Max6(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max6_i(o,v);
+}
+
+void UserInterface::cb_Max7_i(Fl_Menu_*, void*) {
+  mc->setTwValueType('8');
+}
+void UserInterface::cb_Max7(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max7_i(o,v);
+}
+
+void UserInterface::cb_Max8_i(Fl_Menu_*, void*) {
+  mc->setTwValueType('9');
+}
+void UserInterface::cb_Max8(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max8_i(o,v);
+}
+
+void UserInterface::cb_Spike1_i(Fl_Menu_*, void*) {
   mc->setTwValueType('p');
 }
-void UserInterface::cb_Half(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Half_i(o,v);
+void UserInterface::cb_Spike1(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Spike1_i(o,v);
 }
 
 void UserInterface::cb_Amplitude_i(Fl_Menu_*, void*) {
@@ -1048,25 +987,28 @@ void UserInterface::cb_Amp1(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Amp1_i(o,v);
 }
 
-void UserInterface::cb_Max6_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Max9_i(Fl_Menu_*, void*) {
   mc->setTwValueType('L');
 }
-void UserInterface::cb_Max6(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max6_i(o,v);
+void UserInterface::cb_Max9(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max9_i(o,v);
 }
 
 Fl_Menu_Item UserInterface::menu_Value[] = {
  {"None", 0,  (Fl_Callback*)UserInterface::cb_None2, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"RLI", 0,  (Fl_Callback*)UserInterface::cb_RLI4, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Max Amp", 0,  (Fl_Callback*)UserInterface::cb_Max2, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp/SD", 0,  (Fl_Callback*)UserInterface::cb_Max3, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max slope latency", 0,  (Fl_Callback*)UserInterface::cb_Max4, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Slope", 0,  (Fl_Callback*)UserInterface::cb_Max5, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Half Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Half, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp SD", 0,  (Fl_Callback*)UserInterface::cb_Max3, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Cha", 0,  (Fl_Callback*)UserInterface::cb_Max4, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Cha SD", 0,  (Fl_Callback*)UserInterface::cb_Max5, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Per Cha", 0,  (Fl_Callback*)UserInterface::cb_Max6, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Per Cha SD", 0,  (Fl_Callback*)UserInterface::cb_Max7, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Slope", 0,  (Fl_Callback*)UserInterface::cb_Max8, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Spike Amp", 0,  (Fl_Callback*)UserInterface::cb_Spike1, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Amplitude", 0,  (Fl_Callback*)UserInterface::cb_Amplitude, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"SD", 0,  (Fl_Callback*)UserInterface::cb_SD, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"% Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Amp1, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Max6, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Max9, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
 
@@ -1167,33 +1109,33 @@ void UserInterface::cb_Amplitude1(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Amplitude1_i(o,v);
 }
 
-void UserInterface::cb_Max7_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Maxa_i(Fl_Menu_*, void*) {
   mc->setTwTimeCourseType('M');
 }
-void UserInterface::cb_Max7(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Max7_i(o,v);
+void UserInterface::cb_Maxa(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Maxa_i(o,v);
 }
 
-void UserInterface::cb_Half1_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Amp2_i(Fl_Menu_*, void*) {
   mc->setTwTimeCourseType('H');
 }
-void UserInterface::cb_Half1(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Half1_i(o,v);
+void UserInterface::cb_Amp2(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Amp2_i(o,v);
 }
 
-void UserInterface::cb_Max8_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Maxb_i(Fl_Menu_*, void*) {
   mc->setTwTimeCourseType('L');
 }
-void UserInterface::cb_Max8(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Max8_i(o,v);
+void UserInterface::cb_Maxb(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Maxb_i(o,v);
 }
 
 Fl_Menu_Item UserInterface::menu_timeCourseType[] = {
  {"RLI", 0,  (Fl_Callback*)UserInterface::cb_RLI5, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Amplitude", 0,  (Fl_Callback*)UserInterface::cb_Amplitude1, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp", 0,  (Fl_Callback*)UserInterface::cb_Max7, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Half Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Half1, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Max8, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp", 0,  (Fl_Callback*)UserInterface::cb_Maxa, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"% Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Amp2, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Maxb, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
 
@@ -1213,11 +1155,11 @@ void UserInterface::cb_Reference(Fl_Light_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Reference_i(o,v);
 }
 
-void UserInterface::cb_Save8_i(Fl_Button*, void*) {
+void UserInterface::cb_Save7_i(Fl_Button*, void*) {
   mc->saveTraces2();
 }
-void UserInterface::cb_Save8(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save8_i(o,v);
+void UserInterface::cb_Save7(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save7_i(o,v);
 }
 
 void UserInterface::cb_Normalize_i(Fl_Light_Button* o, void*) {
@@ -1473,18 +1415,18 @@ Fl_Menu_Item UserInterface::menu_choice[] = {
  {0,0,0,0,0,0,0,0,0}
 };
 
-void UserInterface::cb_Save9_i(Fl_Button*, void*) {
+void UserInterface::cb_Save8_i(Fl_Button*, void*) {
   tw->saveTimeCourse();
+}
+void UserInterface::cb_Save8(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save8_i(o,v);
+}
+
+void UserInterface::cb_Save9_i(Fl_Button*, void*) {
+  mc->saveValues();
 }
 void UserInterface::cb_Save9(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Save9_i(o,v);
-}
-
-void UserInterface::cb_Savea_i(Fl_Button*, void*) {
-  mc->saveValues();
-}
-void UserInterface::cb_Savea(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Savea_i(o,v);
 }
 
 void UserInterface::cb_twSaveTracesStartPt_i(Fl_Int_Input* o, void*) {
@@ -1501,25 +1443,25 @@ void UserInterface::cb_twSaveTracesEndPt(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_twSaveTracesEndPt_i(o,v);
 }
 
-void UserInterface::cb_Saveb_i(Fl_Button*, void*) {
+void UserInterface::cb_Savea_i(Fl_Button*, void*) {
   tw->saveFittingVar();
+}
+void UserInterface::cb_Savea(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Savea_i(o,v);
+}
+
+void UserInterface::cb_Saveb_i(Fl_Button*, void*) {
+  tw->saveEPSP();
 }
 void UserInterface::cb_Saveb(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Saveb_i(o,v);
 }
 
 void UserInterface::cb_Savec_i(Fl_Button*, void*) {
-  tw->saveEPSP();
+  tw->saveAlphaVm();
 }
 void UserInterface::cb_Savec(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Savec_i(o,v);
-}
-
-void UserInterface::cb_Savee_i(Fl_Button*, void*) {
-  tw->saveAlphaVm();
-}
-void UserInterface::cb_Savee(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Savee_i(o,v);
 }
 
 void UserInterface::cb_Load4_i(Fl_Button*, void*) {
@@ -1529,64 +1471,31 @@ void UserInterface::cb_Load4(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Load4_i(o,v);
 }
 
-void UserInterface::cb_awStartNewRegion_i(Fl_Light_Button* o, void*) {
-  mc->setContinuous(o->value());
-}
-void UserInterface::cb_awStartNewRegion(Fl_Light_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_awStartNewRegion_i(o,v);
-}
-
-void UserInterface::cb_New_i(Fl_Menu_*, void*) {
-  mc->setTwValueType('N');
-}
-void UserInterface::cb_New(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_New_i(o,v);
-}
-
-Fl_Menu_Item UserInterface::menu_Current[] = {
- {"New Region", 0,  (Fl_Callback*)UserInterface::cb_New, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {0,0,0,0,0,0,0,0,0}
-};
-
-void UserInterface::cb_Savef_i(Fl_Button*, void*) {
-  mc->saveSelected();
-}
-void UserInterface::cb_Savef(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Savef_i(o,v);
-}
-
-void UserInterface::cb_Load5_i(Fl_Button*, void*) {
-  mc->loadSelected();
-}
-void UserInterface::cb_Load5(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_Load5_i(o,v);
-}
-
-void UserInterface::cb_resetOnset_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_resetOnset_i(Fl_Int_Input* o, void*) {
   mc->setResetOnset(o->value());
 }
-void UserInterface::cb_resetOnset(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_resetOnset(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_resetOnset_i(o,v);
 }
 
-void UserInterface::cb_resetDuration_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_resetDuration_i(Fl_Int_Input* o, void*) {
   mc->setResetDuration(o->value());
 }
-void UserInterface::cb_resetDuration(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_resetDuration(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_resetDuration_i(o,v);
 }
 
-void UserInterface::cb_shutterOnset_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_shutterOnset_i(Fl_Int_Input* o, void*) {
   mc->setShutterOnset(o->value());
 }
-void UserInterface::cb_shutterOnset(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_shutterOnset(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_shutterOnset_i(o,v);
 }
 
-void UserInterface::cb_shutterDuration_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_shutterDuration_i(Fl_Int_Input* o, void*) {
   mc->setShutterDuration(o->value());
 }
-void UserInterface::cb_shutterDuration(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_shutterDuration(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_shutterDuration_i(o,v);
 }
 
@@ -1597,31 +1506,31 @@ void UserInterface::cb_acquiOnset(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_acquiOnset_i(o,v);
 }
 
-void UserInterface::cb_sti1Onset_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_sti1Onset_i(Fl_Int_Input* o, void*) {
   mc->setStiOnset(1,o->value());
 }
-void UserInterface::cb_sti1Onset(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_sti1Onset(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_sti1Onset_i(o,v);
 }
 
-void UserInterface::cb_sti1Duration_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_sti1Duration_i(Fl_Int_Input* o, void*) {
   mc->setStiDuration(1,o->value());
 }
-void UserInterface::cb_sti1Duration(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_sti1Duration(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_sti1Duration_i(o,v);
 }
 
-void UserInterface::cb_sti2Onset_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_sti2Onset_i(Fl_Int_Input* o, void*) {
   mc->setStiOnset(2,o->value());
 }
-void UserInterface::cb_sti2Onset(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_sti2Onset(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_sti2Onset_i(o,v);
 }
 
-void UserInterface::cb_sti2Duration_i(Fl_Float_Input* o, void*) {
+void UserInterface::cb_sti2Duration_i(Fl_Int_Input* o, void*) {
   mc->setStiDuration(2,o->value());
 }
-void UserInterface::cb_sti2Duration(Fl_Float_Input* o, void* v) {
+void UserInterface::cb_sti2Duration(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_sti2Duration_i(o,v);
 }
 
@@ -1632,11 +1541,11 @@ void UserInterface::cb_numPts(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_numPts_i(o,v);
 }
 
-void UserInterface::cb_CameraProgram_i(Fl_Choice* o, void*) {
-  mc->setCameraProgram(o->value());
+void UserInterface::cb_intPts_i(Fl_Float_Input* o, void*) {
+  mc->setIntPts(o->value());
 }
-void UserInterface::cb_CameraProgram(Fl_Choice* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_CameraProgram_i(o,v);
+void UserInterface::cb_intPts(Fl_Float_Input* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_intPts_i(o,v);
 }
 
 void UserInterface::cb_numBursts1_i(Fl_Input* o, void*) {
@@ -1716,6 +1625,13 @@ void UserInterface::cb_numTrials(Fl_Int_Input* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_numTrials_i(o,v);
 }
 
+void UserInterface::cb_numSkippedTrials_i(Fl_Int_Input* o, void*) {
+  mc->setNumSkippedTrials(o->value());
+}
+void UserInterface::cb_numSkippedTrials(Fl_Int_Input* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_numSkippedTrials_i(o,v);
+}
+
 void UserInterface::cb_intTrials_i(Fl_Int_Input* o, void*) {
   mc->setIntTrials(o->value());
 }
@@ -1735,6 +1651,20 @@ void UserInterface::cb_f_i(Fl_Button*, void*) {
 }
 void UserInterface::cb_f(Fl_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_f_i(o,v);
+}
+
+void UserInterface::cb_10_i(Fl_Button*, void*) {
+  mc->setAmplifierGain(Decrease_RLI_Gain);
+}
+void UserInterface::cb_10(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_10_i(o,v);
+}
+
+void UserInterface::cb_11_i(Fl_Button*, void*) {
+  mc->setAmplifierGain(Increase_RLI_Gain);
+}
+void UserInterface::cb_11(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_11_i(o,v);
 }
 
 void UserInterface::cb_Map_i(Fl_Menu_*, void*) {
@@ -1770,72 +1700,72 @@ void UserInterface::cb_RLI6(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_RLI6_i(o,v);
 }
 
-void UserInterface::cb_Max9_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Maxc_i(Fl_Menu_*, void*) {
   cw->setMapMode(CW_Max_Amp);
 cw->valid(0);
 cw->redraw();
 }
-void UserInterface::cb_Max9(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Max9_i(o,v);
+void UserInterface::cb_Maxc(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Maxc_i(o,v);
 }
 
-void UserInterface::cb_Spike1_i(Fl_Menu_*, void*) {
+void UserInterface::cb_Spike2_i(Fl_Menu_*, void*) {
   cw->setMapMode(CW_Spike_Amp);
 cw->valid(0);
 cw->redraw();
 }
-void UserInterface::cb_Spike1(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Spike1_i(o,v);
+void UserInterface::cb_Spike2(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Spike2_i(o,v);
 }
-
-void UserInterface::cb_Amp2_i(Fl_Menu_*, void*) {
-  cw->setMapMode(CW_Per_Amp_Latency);
-cw->valid(0);
-cw->redraw();
-}
-void UserInterface::cb_Amp2(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Amp2_i(o,v);
-}
-
-void UserInterface::cb_Maxa_i(Fl_Menu_*, void*) {
-  cw->setMapMode(CW_Max_Amp_Latency);
-cw->valid(0);
-cw->redraw();
-}
-void UserInterface::cb_Maxa(Fl_Menu_* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Maxa_i(o,v);
-}
-
-Fl_Menu_Item UserInterface::menu_mapFeatureType[] = {
- {"RLI", 0,  (Fl_Callback*)UserInterface::cb_RLI6, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp", 0,  (Fl_Callback*)UserInterface::cb_Max9, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Spike Amp", 0,  (Fl_Callback*)UserInterface::cb_Spike1, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"% Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Amp2, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Maxa, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {0,0,0,0,0,0,0,0,0}
-};
 
 void UserInterface::cb_Amp3_i(Fl_Menu_*, void*) {
-  cw->setStopFlag(1);
-cw->setMovieMode(ColorWindow::AmpNor2ArrayMax);
+  cw->setMapMode(CW_Per_Amp_Latency);
+cw->valid(0);
 cw->redraw();
 }
 void UserInterface::cb_Amp3(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Amp3_i(o,v);
 }
 
+void UserInterface::cb_Maxd_i(Fl_Menu_*, void*) {
+  cw->setMapMode(CW_Max_Amp_Latency);
+cw->valid(0);
+cw->redraw();
+}
+void UserInterface::cb_Maxd(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Maxd_i(o,v);
+}
+
+Fl_Menu_Item UserInterface::menu_mapFeatureType[] = {
+ {"RLI", 0,  (Fl_Callback*)UserInterface::cb_RLI6, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp", 0,  (Fl_Callback*)UserInterface::cb_Maxc, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Spike Amp", 0,  (Fl_Callback*)UserInterface::cb_Spike2, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"% Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Amp3, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Max Amp Latency", 0,  (Fl_Callback*)UserInterface::cb_Maxd, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0}
+};
+
 void UserInterface::cb_Amp4_i(Fl_Menu_*, void*) {
   cw->setStopFlag(1);
-cw->setMovieMode(ColorWindow::AmpNor2DiodeMax);
+cw->setMovieMode(ColorWindow::AmpNor2ArrayMax);
 cw->redraw();
 }
 void UserInterface::cb_Amp4(Fl_Menu_* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Amp4_i(o,v);
 }
 
+void UserInterface::cb_Amp5_i(Fl_Menu_*, void*) {
+  cw->setStopFlag(1);
+cw->setMovieMode(ColorWindow::AmpNor2DiodeMax);
+cw->redraw();
+}
+void UserInterface::cb_Amp5(Fl_Menu_* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Amp5_i(o,v);
+}
+
 Fl_Menu_Item UserInterface::menu_Movie[] = {
- {"Amp (Normalized to array maximum)", 0,  (Fl_Callback*)UserInterface::cb_Amp3, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Amp (Normalized to diode maximum)", 0,  (Fl_Callback*)UserInterface::cb_Amp4, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Amp (Normalized to array maximum)", 0,  (Fl_Callback*)UserInterface::cb_Amp4, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Amp (Normalized to diode maximum)", 0,  (Fl_Callback*)UserInterface::cb_Amp5, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
 
@@ -1907,26 +1837,8 @@ Fl_Menu_Item UserInterface::menu_Control1[] = {
  {0,0,0,0,0,0,0,0,0}
 };
 
-void UserInterface::cb_10_i(Fl_Roller* o, void*) {
-  cw->setColorUpperBound(o->value());
-cw->valid(0);
-cw->redraw();
-}
-void UserInterface::cb_10(Fl_Roller* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_10_i(o,v);
-}
-
-void UserInterface::cb_11_i(Fl_Roller* o, void*) {
-  cw->setColorLowerBound(o->value());
-cw->valid(0);
-cw->redraw();
-}
-void UserInterface::cb_11(Fl_Roller* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_11_i(o,v);
-}
-
 void UserInterface::cb_12_i(Fl_Roller* o, void*) {
-  cw->setColorAmp(o->value());
+  cw->setColorUpperBound(o->value());
 cw->valid(0);
 cw->redraw();
 }
@@ -1935,12 +1847,30 @@ void UserInterface::cb_12(Fl_Roller* o, void* v) {
 }
 
 void UserInterface::cb_13_i(Fl_Roller* o, void*) {
-  cw->setColorCenter(o->value());
+  cw->setColorLowerBound(o->value());
 cw->valid(0);
 cw->redraw();
 }
 void UserInterface::cb_13(Fl_Roller* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_13_i(o,v);
+}
+
+void UserInterface::cb_14_i(Fl_Roller* o, void*) {
+  cw->setColorAmp(o->value());
+cw->valid(0);
+cw->redraw();
+}
+void UserInterface::cb_14(Fl_Roller* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_14_i(o,v);
+}
+
+void UserInterface::cb_15_i(Fl_Roller* o, void*) {
+  cw->setColorCenter(o->value());
+cw->valid(0);
+cw->redraw();
+}
+void UserInterface::cb_15(Fl_Roller* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_15_i(o,v);
 }
 
 void UserInterface::cb_Contour_i(Fl_Light_Button* o, void*) {
@@ -1952,28 +1882,28 @@ void UserInterface::cb_Contour(Fl_Light_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->parent()->user_data()))->cb_Contour_i(o,v);
 }
 
-void UserInterface::cb_14_i(Fl_Button*, void*) {
+void UserInterface::cb_16_i(Fl_Button*, void*) {
   cw->setStopFlag(1);
 cw->resetCurrentPt();
 cw->redraw();
 }
-void UserInterface::cb_14(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_14_i(o,v);
+void UserInterface::cb_16(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_16_i(o,v);
 }
 
-void UserInterface::cb_15_i(Fl_Button*, void*) {
+void UserInterface::cb_17_i(Fl_Button*, void*) {
   cw->setStopFlag(0);
 cw->playMovie();
 }
-void UserInterface::cb_15(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_15_i(o,v);
+void UserInterface::cb_17(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_17_i(o,v);
 }
 
-void UserInterface::cb_16_i(Fl_Button*, void*) {
+void UserInterface::cb_18_i(Fl_Button*, void*) {
   cw->setStopFlag(1);
 }
-void UserInterface::cb_16(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_16_i(o,v);
+void UserInterface::cb_18(Fl_Button* o, void* v) {
+  ((UserInterface*)(o->parent()->parent()->parent()->parent()->parent()->user_data()))->cb_18_i(o,v);
 }
 
 void UserInterface::cb_Repeat_i(Fl_Light_Button* o, void*) {
@@ -2028,17 +1958,10 @@ void UserInterface::cb_Black(Fl_Light_Button* o, void* v) {
   ((UserInterface*)(o->parent()->parent()->parent()->user_data()))->cb_Black_i(o,v);
 }
 
-void UserInterface::cb_Save10_i(Fl_Button*, void*) {
-  mc->exportAw_Jpeg();
-}
-void UserInterface::cb_Save10(Fl_Button* o, void* v) {
-  ((UserInterface*)(o->parent()->user_data()))->cb_Save10_i(o,v);
-}
-
 UserInterface::UserInterface() {
-  { mainWindow = new Fl_Double_Window(1374, 1008, "PhotoZ (c) 2006 PYC");
+  { mainWindow = new Fl_Double_Window(1280, 968, "PhotoZ (c) 2006 PYC");
     mainWindow->user_data((void*)(this));
-    { Fl_Box* o = new Fl_Box(5, 5, 140, 25, "PhotoZ LilJoe");
+    { Fl_Box* o = new Fl_Box(5, 5, 140, 25, "PhotoZ v.5.25");
       o->box(FL_UP_BOX);
       o->color((Fl_Color)175);
       o->selection_color((Fl_Color)4);
@@ -2052,16 +1975,31 @@ UserInterface::UserInterface() {
       o->labelfont(1);
       o->menu(menu_Menu);
     } // Fl_Menu_Bar* o
-    { Fl_Button* o = new Fl_Button(289, 5, 125, 25, "Save Left Window");
+    { Fl_Button* o = new Fl_Button(360, 5, 135, 25, "Save Left Window");
       o->color((Fl_Color)23);
       o->labelcolor((Fl_Color)4);
       o->callback((Fl_Callback*)cb_Save1);
     } // Fl_Button* o
-    { Fl_Button* o = new Fl_Button(510, 5, 130, 25, "Save Right Window");
+    { Fl_Button* o = new Fl_Button(500, 5, 135, 25, "Save Right Window");
       o->color((Fl_Color)23);
       o->labelcolor((Fl_Color)4);
       o->callback((Fl_Callback*)cb_Save2);
     } // Fl_Button* o
+    { Fl_Group* o = new Fl_Group(0, 35, 638, 620, "Array Window");
+      o->labeltype(FL_NO_LABEL);
+      { aw = new ArrayWindow(0, 35, 638, 620);
+        aw->box(FL_BORDER_FRAME);
+        aw->color(FL_FOREGROUND_COLOR);
+        aw->selection_color(FL_BACKGROUND_COLOR);
+        aw->labeltype(FL_NO_LABEL);
+        aw->labelfont(1);
+        aw->labelsize(14);
+        aw->labelcolor(FL_FOREGROUND_COLOR);
+        aw->align(Fl_Align(FL_ALIGN_CENTER));
+        aw->when(FL_WHEN_RELEASE);
+      } // ArrayWindow* aw
+      o->end();
+    } // Fl_Group* o
     { Fl_Tabs* o = new Fl_Tabs(5, 660, 250, 150, "Acquisition/Analysis Panel");
       o->labeltype(FL_NO_LABEL);
       { Fl_Group* o = new Fl_Group(5, 685, 250, 125, "Acquisition");
@@ -2101,11 +2039,6 @@ UserInterface::UserInterface() {
           o->labelfont(1);
           o->callback((Fl_Callback*)cb_Save3);
         } // Fl_Button* o
-        { lfRun = new Fl_Light_Button(75, 730, 90, 25, "Live Feed");
-          lfRun->labelfont(1);
-          lfRun->labelcolor(FL_SELECTION_COLOR);
-          lfRun->callback((Fl_Callback*)cb_lfRun);
-        } // Fl_Light_Button* lfRun
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(5, 685, 250, 125, "Analysis");
@@ -2217,7 +2150,7 @@ UserInterface::UserInterface() {
       } // Fl_Group* o
       o->end();
     } // Fl_Group* o
-    { Fl_Tabs* o = new Fl_Tabs(260, 660, 675, 320, "Main Control Panel");
+    { Fl_Tabs* o = new Fl_Tabs(260, 660, 375, 310, "Main Control Panel");
       o->labeltype(FL_NO_LABEL);
       { Fl_Group* o = new Fl_Group(260, 685, 375, 285, "Array");
         o->color((Fl_Color)23);
@@ -2244,26 +2177,28 @@ UserInterface::UserInterface() {
         } // Fl_Choice* o
         { Fl_Group* o = new Fl_Group(395, 745, 235, 100, "Scale");
           o->labeltype(FL_NO_LABEL);
-          { awFpYScale = new Fl_Roller(545, 745, 85, 25);
-            awFpYScale->type(1);
-            awFpYScale->maximum(10);
-            awFpYScale->step(0.01);
-            awFpYScale->value(4.65);
-            awFpYScale->callback((Fl_Callback*)cb_awFpYScale);
-            awFpYScale->align(Fl_Align(FL_ALIGN_LEFT));
-          } // Fl_Roller* awFpYScale
-          { awFpYScaleTxt = new Fl_Output(490, 745, 50, 25, "F.P Y Scale:");
-          } // Fl_Output* awFpYScaleTxt
-          { awYScale = new Fl_Roller(545, 770, 85, 25);
+          { awYScale = new Fl_Roller(545, 745, 85, 25);
             awYScale->type(1);
-            awYScale->maximum(10);
-            awYScale->step(0.01);
-            awYScale->value(4.65);
+            awYScale->minimum(1);
+            awYScale->maximum(1000);
+            awYScale->step(1);
+            awYScale->value(100);
             awYScale->callback((Fl_Callback*)cb_awYScale);
             awYScale->align(Fl_Align(FL_ALIGN_LEFT));
           } // Fl_Roller* awYScale
-          { awYScaleTxt = new Fl_Output(490, 770, 50, 25, "Y Scale:");
+          { awYScaleTxt = new Fl_Output(490, 745, 50, 25, "Y Scale:");
           } // Fl_Output* awYScaleTxt
+          { awFpYScale = new Fl_Roller(545, 770, 85, 25);
+            awFpYScale->type(1);
+            awFpYScale->minimum(1);
+            awFpYScale->maximum(1000);
+            awFpYScale->step(1);
+            awFpYScale->value(100);
+            awFpYScale->callback((Fl_Callback*)cb_awFpYScale);
+            awFpYScale->align(Fl_Align(FL_ALIGN_LEFT));
+          } // Fl_Roller* awFpYScale
+          { awFpYScaleTxt = new Fl_Output(490, 770, 50, 25, "F.P. Y Scale:");
+          } // Fl_Output* awFpYScaleTxt
           { awXScale = new Fl_Roller(545, 795, 85, 25);
             awXScale->type(1);
             awXScale->minimum(0.1);
@@ -2326,17 +2261,11 @@ UserInterface::UserInterface() {
             o->align(Fl_Align(FL_ALIGN_LEFT));
             o->when(FL_WHEN_RELEASE);
           } // Fl_Value_Slider* o
-          { Fl_Button* o = new Fl_Button(270, 940, 215, 20, "Save Latest LiveFeed image (test)");
-            o->callback((Fl_Callback*)cb_Save5);
-          } // Fl_Button* o
-          { resetCam = new Fl_Button(270, 900, 105, 25, "Reset Camera");
-            resetCam->callback((Fl_Callback*)cb_resetCam);
-          } // Fl_Button* resetCam
           o->end();
         } // Fl_Group* o
         { Fl_Button* o = new Fl_Button(400, 720, 230, 20, "Save Background Data");
           o->color((Fl_Color)231);
-          o->callback((Fl_Callback*)cb_Save6);
+          o->callback((Fl_Callback*)cb_Save5);
         } // Fl_Button* o
         { Fl_Choice* o = new Fl_Choice(395, 880, 90, 25, "Increase/Decrease");
           o->down_box(FL_BORDER_BOX);
@@ -2348,22 +2277,16 @@ UserInterface::UserInterface() {
           o->labeltype(FL_NO_LABEL);
           o->menu(menu_Increase1);
         } // Fl_Choice* o
-        { digital_binning = new Fl_Int_Input(365, 820, 75, 25, "Digital Binning:");
-          digital_binning->type(2);
-          digital_binning->callback((Fl_Callback*)cb_digital_binning);
-          digital_binning->when(FL_WHEN_ENTER_KEY);
-        } // Fl_Int_Input* digital_binning
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(260, 685, 675, 295, "DSP");
+      { Fl_Group* o = new Fl_Group(260, 685, 375, 285, "DSP");
         o->color((Fl_Color)23);
         o->hide();
-        { Fl_Tabs* o = new Fl_Tabs(265, 690, 670, 290, "DSP Tabs");
+        { Fl_Tabs* o = new Fl_Tabs(265, 690, 365, 275, "DSP Tabs");
           o->color((Fl_Color)23);
           o->labeltype(FL_NO_LABEL);
-          { Fl_Group* o = new Fl_Group(265, 715, 365, 265, "Main");
+          { Fl_Group* o = new Fl_Group(265, 715, 365, 250, "Main");
             o->color((Fl_Color)20);
-            o->hide();
             { Fl_Light_Button* o = new Fl_Light_Button(270, 720, 140, 25, "RLI Division");
               o->labelfont(1);
               o->callback((Fl_Callback*)cb_RLI2);
@@ -2435,23 +2358,11 @@ UserInterface::UserInterface() {
               } // Fl_Value_Slider* o
               o->end();
             } // Fl_Group* o
-            { rliScalarRoller = new Fl_Roller(425, 935, 65, 25);
-              rliScalarRoller->type(1);
-              rliScalarRoller->minimum(10);
-              rliScalarRoller->maximum(60000);
-              rliScalarRoller->step(10);
-              rliScalarRoller->value(3200);
-              rliScalarRoller->callback((Fl_Callback*)cb_rliScalarRoller);
-            } // Fl_Roller* rliScalarRoller
-            { rliScalarTxt = new Fl_Float_Input(360, 935, 65, 25, "RLI Scalar");
-              rliScalarTxt->type(1);
-              rliScalarTxt->callback((Fl_Callback*)cb_rliScalarTxt);
-              rliScalarTxt->when(FL_WHEN_ENTER_KEY);
-            } // Fl_Float_Input* rliScalarTxt
             o->end();
           } // Fl_Group* o
-          { Fl_Group* o = new Fl_Group(265, 715, 370, 255, "Correction");
+          { Fl_Group* o = new Fl_Group(265, 715, 365, 250, "Correction");
             o->color((Fl_Color)20);
+            o->hide();
             { Fl_Light_Button* o = new Fl_Light_Button(270, 720, 100, 25, "Correction");
               o->shortcut(0x4006d);
               o->labelfont(1);
@@ -2460,9 +2371,9 @@ UserInterface::UserInterface() {
             { Fl_Button* o = new Fl_Button(375, 720, 100, 25, "RLI -> Map");
               o->callback((Fl_Callback*)cb_RLI3);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(375, 750, 100, 25, "Save map");
+            { Fl_Button* o = new Fl_Button(375, 750, 100, 25, "Save Map");
               o->labelsize(15);
-              o->callback((Fl_Callback*)cb_Save7);
+              o->callback((Fl_Callback*)cb_Save6);
             } // Fl_Button* o
             { Fl_Button* o = new Fl_Button(480, 750, 100, 25, "Load Map");
               o->labelsize(15);
@@ -2522,6 +2433,47 @@ UserInterface::UserInterface() {
               o->labelfont(1);
               o->callback((Fl_Callback*)cb_Ignore);
             } // Fl_Button* o
+            o->end();
+          } // Fl_Group* o
+          { Fl_Group* o = new Fl_Group(265, 715, 365, 250, "Filter");
+            o->color((Fl_Color)20);
+            o->hide();
+            { Fl_Light_Button* o = new Fl_Light_Button(270, 720, 85, 25, "T-Filter");
+              o->shortcut(0x4006d);
+              o->labelfont(1);
+              o->callback((Fl_Callback*)cb_T);
+            } // Fl_Light_Button* o
+            { Fl_Choice* o = new Fl_Choice(435, 720, 95, 25, "Filter Type");
+              o->down_box(FL_BORDER_BOX);
+              o->menu(menu_Filter);
+            } // Fl_Choice* o
+            { Fl_Light_Button* o = new Fl_Light_Button(270, 815, 85, 25, "S-Filter");
+              o->shortcut(0x4006d);
+              o->labelfont(1);
+              o->callback((Fl_Callback*)cb_S);
+            } // Fl_Light_Button* o
+            { Fl_Value_Slider* o = new Fl_Value_Slider(380, 815, 150, 25, "s");
+              o->type(5);
+              o->selection_color((Fl_Color)1);
+              o->labelfont(12);
+              o->minimum(0.1);
+              o->step(0.1);
+              o->value(0.5);
+              o->callback((Fl_Callback*)cb_s);
+              o->align(Fl_Align(FL_ALIGN_LEFT));
+              o->when(FL_WHEN_RELEASE);
+            } // Fl_Value_Slider* o
+            { Fl_Value_Slider* o = new Fl_Value_Slider(340, 750, 280, 25, "Radius (Pt)");
+              o->type(5);
+              o->selection_color((Fl_Color)1);
+              o->minimum(1);
+              o->maximum(50);
+              o->step(1);
+              o->value(1);
+              o->callback((Fl_Callback*)cb_Radius);
+              o->align(Fl_Align(FL_ALIGN_LEFT));
+              o->when(FL_WHEN_RELEASE);
+            } // Fl_Value_Slider* o
             o->end();
           } // Fl_Group* o
           o->end();
@@ -2709,145 +2661,104 @@ UserInterface::UserInterface() {
         } // Fl_Tabs* o
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(270, 720, 365, 250, "Filter");
-        o->color((Fl_Color)20);
-        o->hide();
-        { Fl_Light_Button* o = new Fl_Light_Button(275, 725, 85, 25, "T-Filter");
-          o->shortcut(0x4006d);
-          o->labelfont(1);
-          o->callback((Fl_Callback*)cb_T);
-        } // Fl_Light_Button* o
-        { Fl_Choice* o = new Fl_Choice(440, 725, 95, 25, "Filter Type");
-          o->down_box(FL_BORDER_BOX);
-          o->menu(menu_Filter);
-        } // Fl_Choice* o
-        { Fl_Light_Button* o = new Fl_Light_Button(275, 820, 85, 25, "S-Filter");
-          o->shortcut(0x4006d);
-          o->labelfont(1);
-          o->callback((Fl_Callback*)cb_S);
-        } // Fl_Light_Button* o
-        { Fl_Value_Slider* o = new Fl_Value_Slider(385, 820, 150, 25, "s");
-          o->type(5);
-          o->selection_color((Fl_Color)1);
-          o->labelfont(12);
-          o->minimum(0.1);
-          o->step(0.1);
-          o->value(0.5);
-          o->callback((Fl_Callback*)cb_s);
-          o->align(Fl_Align(FL_ALIGN_LEFT));
-          o->when(FL_WHEN_RELEASE);
-        } // Fl_Value_Slider* o
-        { Fl_Value_Slider* o = new Fl_Value_Slider(345, 755, 280, 25, "Radius (Pt)");
-          o->type(5);
-          o->selection_color((Fl_Color)1);
-          o->minimum(1);
-          o->maximum(50);
-          o->step(1);
-          o->value(1);
-          o->callback((Fl_Callback*)cb_Radius);
-          o->align(Fl_Align(FL_ALIGN_LEFT));
-          o->when(FL_WHEN_RELEASE);
-        } // Fl_Value_Slider* o
-        o->end();
-      } // Fl_Group* o
       o->end();
     } // Fl_Tabs* o
-    { Fl_Tabs* o = new Fl_Tabs(640, 5, 680, 965, "Versatile Panel");
+    { Fl_Tabs* o = new Fl_Tabs(640, 5, 643, 965, "Versatile Panel");
       o->labeltype(FL_NO_LABEL);
-      { traceGroup = new Fl_Group(641, 35, 679, 935, "Trace");
+      { traceGroup = new Fl_Group(640, 30, 643, 940, "Trace");
         traceGroup->color((Fl_Color)26);
         { Fl_Group* o = new Fl_Group(645, 660, 215, 305, "Left");
           o->labeltype(FL_NO_LABEL);
-          { Fl_Choice* o = new Fl_Choice(690, 670, 165, 25, "Value:");
+          { Fl_Choice* o = new Fl_Choice(690, 660, 165, 25, "Value:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Value);
           } // Fl_Choice* o
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 760, 120, 25, "Trace");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 750, 120, 25, "Trace");
             o->value(1);
             o->labelfont(1);
             o->callback((Fl_Callback*)cb_Trace);
           } // Fl_Light_Button* o
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 910, 120, 30, "Alpha");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 900, 120, 25, "Alpha");
             o->callback((Fl_Callback*)cb_Alpha);
           } // Fl_Light_Button* o
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 880, 120, 25, "Vm");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 870, 120, 25, "Vm");
             o->callback((Fl_Callback*)cb_Vm);
           } // Fl_Light_Button* o
-          { twShowPointLine = new Fl_Light_Button(650, 730, 120, 25, "Point Line");
+          { twShowPointLine = new Fl_Light_Button(650, 720, 120, 25, "Point Line");
             twShowPointLine->labelfont(1);
             twShowPointLine->callback((Fl_Callback*)cb_twShowPointLine);
           } // Fl_Light_Button* twShowPointLine
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 820, 120, 25, "Time Course");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 810, 120, 25, "Time Course");
             o->labelfont(1);
             o->callback((Fl_Callback*)cb_Time);
           } // Fl_Light_Button* o
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 850, 120, 25, "Saved Traces");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 840, 120, 25, "Saved Traces");
             o->labelfont(1);
             o->callback((Fl_Callback*)cb_Saved);
           } // Fl_Light_Button* o
-          { Fl_Light_Button* o = new Fl_Light_Button(650, 790, 120, 25, "Slope");
+          { Fl_Light_Button* o = new Fl_Light_Button(650, 780, 120, 25, "Slope");
             o->labelfont(1);
             o->callback((Fl_Callback*)cb_Slope);
           } // Fl_Light_Button* o
-          { Fl_Choice* o = new Fl_Choice(690, 700, 80, 25, "Mode:");
+          { Fl_Choice* o = new Fl_Choice(690, 690, 80, 25, "Mode:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Mode);
           } // Fl_Choice* o
           o->end();
         } // Fl_Group* o
-        { Fl_Tabs* o = new Fl_Tabs(860, 660, 460, 295, "Display");
+        { Fl_Tabs* o = new Fl_Tabs(860, 660, 415, 305, "Display");
           o->labeltype(FL_NO_LABEL);
-          { Fl_Group* o = new Fl_Group(866, 685, 410, 205, "Display");
+          { Fl_Group* o = new Fl_Group(860, 685, 415, 280, "Display");
             o->color((Fl_Color)247);
-            { Fl_Group* o = new Fl_Group(866, 710, 345, 35, "Time Course");
+            { Fl_Group* o = new Fl_Group(865, 710, 345, 35, "Time Course");
               o->box(FL_DOWN_BOX);
               o->color((Fl_Color)162);
               o->labelfont(1);
               o->align(Fl_Align(FL_ALIGN_TOP_LEFT));
-              { timeCourseType = new Fl_Choice(866, 715, 145, 25, "Time Course");
+              { timeCourseType = new Fl_Choice(870, 715, 140, 25, "Time Course");
                 timeCourseType->down_box(FL_BORDER_BOX);
                 timeCourseType->labeltype(FL_NO_LABEL);
                 timeCourseType->menu(menu_timeCourseType);
               } // Fl_Choice* timeCourseType
-              { twShowFileLine = new Fl_Light_Button(1016, 715, 85, 25, "File Line");
+              { twShowFileLine = new Fl_Light_Button(1015, 715, 85, 25, "File Line");
                 twShowFileLine->labelfont(1);
                 twShowFileLine->callback((Fl_Callback*)cb_twShowFileLine);
               } // Fl_Light_Button* twShowFileLine
-              { Fl_Light_Button* o = new Fl_Light_Button(1106, 715, 100, 25, "Reference");
+              { Fl_Light_Button* o = new Fl_Light_Button(1105, 715, 100, 25, "Reference");
                 o->labelfont(1);
                 o->callback((Fl_Callback*)cb_Reference);
               } // Fl_Light_Button* o
               o->end();
             } // Fl_Group* o
-            { Fl_Group* o = new Fl_Group(866, 765, 400, 35, "Saved Traces");
+            { Fl_Group* o = new Fl_Group(865, 765, 400, 35, "Saved Traces");
               o->box(FL_DOWN_BOX);
               o->color((Fl_Color)182);
               o->labelfont(1);
               o->align(Fl_Align(FL_ALIGN_TOP_LEFT));
-              { Fl_Button* o = new Fl_Button(866, 770, 100, 25, "Save Traces");
-                o->callback((Fl_Callback*)cb_Save8);
+              { Fl_Button* o = new Fl_Button(870, 770, 95, 25, "Save Traces");
+                o->callback((Fl_Callback*)cb_Save7);
               } // Fl_Button* o
-              { secondFileName = new Fl_Output(1146, 770, 115, 25, "File Name:");
+              { secondFileName = new Fl_Output(1145, 770, 115, 25, "File Name:");
               } // Fl_Output* secondFileName
-              { savedTracesTrialNoTxt = new Fl_Output(1026, 770, 40, 25, "Trial No:");
+              { savedTracesTrialNoTxt = new Fl_Output(1025, 770, 40, 25, "Trial No:");
               } // Fl_Output* savedTracesTrialNoTxt
               o->end();
             } // Fl_Group* o
-            { Fl_Light_Button* o = new Fl_Light_Button(866, 835, 115, 25, "Normalize DI/I");
+            { Fl_Light_Button* o = new Fl_Light_Button(865, 835, 115, 25, "Normalize DI/I");
               o->callback((Fl_Callback*)cb_Normalize);
             } // Fl_Light_Button* o
-            { Fl_Light_Button* o = new Fl_Light_Button(866, 805, 115, 25, "Superimpose");
+            { Fl_Light_Button* o = new Fl_Light_Button(865, 805, 115, 25, "Superimpose");
               o->callback((Fl_Callback*)cb_Superimpose);
             } // Fl_Light_Button* o
-            { Fl_Light_Button* o = new Fl_Light_Button(866, 865, 115, 25, "Normalize LTP");
+            { Fl_Light_Button* o = new Fl_Light_Button(865, 865, 115, 25, "Normalize LTP");
               o->callback((Fl_Callback*)cb_Normalize1);
             } // Fl_Light_Button* o
             o->end();
           } // Fl_Group* o
-          { Fl_Group* o = new Fl_Group(865, 685, 455, 270, "Simulation");
+          { Fl_Group* o = new Fl_Group(860, 685, 415, 280, "Simulation");
             o->color((Fl_Color)215);
             o->hide();
-            { R1Slider = new Fl_Slider(1031, 790, 245, 25);
+            { R1Slider = new Fl_Slider(1025, 790, 245, 25);
               R1Slider->type(5);
               R1Slider->color((Fl_Color)17);
               R1Slider->selection_color((Fl_Color)1);
@@ -2856,14 +2767,14 @@ UserInterface::UserInterface() {
               R1Slider->step(1);
               R1Slider->callback((Fl_Callback*)cb_R1Slider);
             } // Fl_Slider* R1Slider
-            { R1Txt = new Fl_Output(956, 790, 75, 25, "Gsyn/Gleak");
+            { R1Txt = new Fl_Output(950, 790, 75, 25, "Gsyn/Gleak");
               R1Txt->labelfont(1);
               R1Txt->labelsize(12);
               R1Txt->textfont(1);
               R1Txt->textsize(12);
               R1Txt->when(FL_WHEN_NEVER);
             } // Fl_Output* R1Txt
-            { R2Slider = new Fl_Slider(1031, 765, 245, 25);
+            { R2Slider = new Fl_Slider(1025, 765, 245, 25);
               R2Slider->type(5);
               R2Slider->color((Fl_Color)17);
               R2Slider->selection_color((Fl_Color)1);
@@ -2872,14 +2783,14 @@ UserInterface::UserInterface() {
               R2Slider->step(1);
               R2Slider->callback((Fl_Callback*)cb_R2Slider);
             } // Fl_Slider* R2Slider
-            { R2Txt = new Fl_Output(956, 765, 75, 25, "Cm/Gleak");
+            { R2Txt = new Fl_Output(950, 765, 75, 25, "Cm/Gleak");
               R2Txt->labelfont(1);
               R2Txt->labelsize(12);
               R2Txt->textfont(1);
               R2Txt->textsize(12);
               R2Txt->when(FL_WHEN_NEVER);
             } // Fl_Output* R2Txt
-            { alphaTauSlider = new Fl_Slider(1031, 740, 245, 25);
+            { alphaTauSlider = new Fl_Slider(1025, 740, 245, 25);
               alphaTauSlider->type(5);
               alphaTauSlider->color((Fl_Color)17);
               alphaTauSlider->selection_color((Fl_Color)1);
@@ -2888,14 +2799,14 @@ UserInterface::UserInterface() {
               alphaTauSlider->step(1);
               alphaTauSlider->callback((Fl_Callback*)cb_alphaTauSlider);
             } // Fl_Slider* alphaTauSlider
-            { alphaTauTxt = new Fl_Output(956, 740, 75, 25, "Tau (pt)");
+            { alphaTauTxt = new Fl_Output(950, 740, 75, 25, "Tau (pt)");
               alphaTauTxt->labelfont(1);
               alphaTauTxt->labelsize(12);
               alphaTauTxt->textfont(1);
               alphaTauTxt->textsize(12);
               alphaTauTxt->when(FL_WHEN_NEVER);
             } // Fl_Output* alphaTauTxt
-            { alphaAmplitudeSlider = new Fl_Slider(1031, 715, 245, 25);
+            { alphaAmplitudeSlider = new Fl_Slider(1025, 715, 245, 25);
               alphaAmplitudeSlider->type(5);
               alphaAmplitudeSlider->color((Fl_Color)17);
               alphaAmplitudeSlider->selection_color((Fl_Color)1);
@@ -2905,27 +2816,27 @@ UserInterface::UserInterface() {
               alphaAmplitudeSlider->value(0.3);
               alphaAmplitudeSlider->callback((Fl_Callback*)cb_alphaAmplitudeSlider);
             } // Fl_Slider* alphaAmplitudeSlider
-            { alphaAmpTxt = new Fl_Output(956, 715, 75, 25, "Amp");
+            { alphaAmpTxt = new Fl_Output(950, 715, 75, 25, "Amp");
               alphaAmpTxt->labelfont(1);
               alphaAmpTxt->labelsize(12);
               alphaAmpTxt->textfont(1);
               alphaAmpTxt->textsize(12);
               alphaAmpTxt->when(FL_WHEN_NEVER);
             } // Fl_Output* alphaAmpTxt
-            { Fl_Button* o = new Fl_Button(1260, 845, 45, 25, "Fit x1");
+            { Fl_Button* o = new Fl_Button(1210, 845, 60, 25, "Fit x1");
               o->callback((Fl_Callback*)cb_Fit);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(1216, 875, 60, 25, "Fit x10");
+            { Fl_Button* o = new Fl_Button(1210, 875, 60, 25, "Fit x10");
               o->callback((Fl_Callback*)cb_Fit1);
             } // Fl_Button* o
-            { alphaStartPointRoller = new Fl_Roller(1031, 690, 50, 25);
+            { alphaStartPointRoller = new Fl_Roller(1025, 690, 50, 25);
               alphaStartPointRoller->type(1);
               alphaStartPointRoller->maximum(10000);
               alphaStartPointRoller->step(1);
               alphaStartPointRoller->value(160);
               alphaStartPointRoller->callback((Fl_Callback*)cb_alphaStartPointRoller);
             } // Fl_Roller* alphaStartPointRoller
-            { alphaStartPointTxt = new Fl_Int_Input(956, 690, 75, 25, "Onset (pt)");
+            { alphaStartPointTxt = new Fl_Int_Input(950, 690, 75, 25, "Onset (pt)");
               alphaStartPointTxt->type(2);
               alphaStartPointTxt->labelfont(1);
               alphaStartPointTxt->labelsize(12);
@@ -2934,59 +2845,59 @@ UserInterface::UserInterface() {
               alphaStartPointTxt->callback((Fl_Callback*)cb_alphaStartPointTxt);
               alphaStartPointTxt->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaStartPointTxt
-            { alphaSpikeStart = new Fl_Int_Input(956, 845, 45, 25, "Spike Start");
+            { alphaSpikeStart = new Fl_Int_Input(950, 845, 45, 25, "Spike Start");
               alphaSpikeStart->type(2);
               alphaSpikeStart->callback((Fl_Callback*)cb_alphaSpikeStart);
               alphaSpikeStart->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaSpikeStart
-            { alphaSpikeEnd = new Fl_Int_Input(1031, 845, 45, 25, "End");
+            { alphaSpikeEnd = new Fl_Int_Input(1025, 845, 45, 25, "End");
               alphaSpikeEnd->type(2);
               alphaSpikeEnd->callback((Fl_Callback*)cb_alphaSpikeEnd);
               alphaSpikeEnd->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaSpikeEnd
-            { alphaWindow = new Fl_Int_Input(1150, 900, 55, 25, "Fit Pts");
+            { alphaWindow = new Fl_Int_Input(1150, 875, 55, 25, "Fit Pts");
               alphaWindow->type(2);
               alphaWindow->callback((Fl_Callback*)cb_alphaWindow);
               alphaWindow->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaWindow
-            { alphaAxonStart = new Fl_Int_Input(956, 875, 45, 25, "Axon Start");
+            { alphaAxonStart = new Fl_Int_Input(950, 875, 45, 25, "Axon Start");
               alphaAxonStart->type(2);
               alphaAxonStart->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaAxonStart
-            { alphaAxonEnd = new Fl_Int_Input(1031, 875, 45, 25, "End");
+            { alphaAxonEnd = new Fl_Int_Input(1025, 875, 45, 25, "End");
               alphaAxonEnd->type(2);
               alphaAxonEnd->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* alphaAxonEnd
-            { Fl_Check_Button* o = new Fl_Check_Button(865, 715, 41, 25, "button");
+            { Fl_Check_Button* o = new Fl_Check_Button(860, 715, 25, 25, "button");
               o->down_box(FL_DOWN_BOX);
               o->value(1);
               o->labeltype(FL_NO_LABEL);
               o->callback((Fl_Callback*)cb_button);
             } // Fl_Check_Button* o
-            { Fl_Check_Button* o = new Fl_Check_Button(865, 740, 41, 25, "button");
+            { Fl_Check_Button* o = new Fl_Check_Button(860, 740, 25, 25, "button");
               o->down_box(FL_DOWN_BOX);
               o->value(1);
               o->labeltype(FL_NO_LABEL);
               o->callback((Fl_Callback*)cb_button1);
             } // Fl_Check_Button* o
-            { Fl_Check_Button* o = new Fl_Check_Button(865, 765, 41, 25, "button");
+            { Fl_Check_Button* o = new Fl_Check_Button(860, 765, 25, 25, "button");
               o->down_box(FL_DOWN_BOX);
               o->value(1);
               o->labeltype(FL_NO_LABEL);
               o->callback((Fl_Callback*)cb_button2);
             } // Fl_Check_Button* o
-            { Fl_Check_Button* o = new Fl_Check_Button(865, 690, 41, 25, "button");
+            { Fl_Check_Button* o = new Fl_Check_Button(860, 690, 25, 25, "button");
               o->down_box(FL_DOWN_BOX);
               o->value(1);
               o->labeltype(FL_NO_LABEL);
               o->callback((Fl_Callback*)cb_button3);
             } // Fl_Check_Button* o
-            { Fl_Check_Button* o = new Fl_Check_Button(865, 790, 41, 25, "button");
+            { Fl_Check_Button* o = new Fl_Check_Button(860, 790, 25, 25, "button");
               o->down_box(FL_DOWN_BOX);
               o->labeltype(FL_NO_LABEL);
               o->callback((Fl_Callback*)cb_button4);
             } // Fl_Check_Button* o
-            { fittingRange = new Fl_Value_Slider(916, 815, 115, 25, "Range");
+            { fittingRange = new Fl_Value_Slider(910, 815, 115, 25, "Range");
               fittingRange->type(5);
               fittingRange->selection_color((Fl_Color)1);
               fittingRange->minimum(1);
@@ -2996,25 +2907,25 @@ UserInterface::UserInterface() {
               fittingRange->align(Fl_Align(FL_ALIGN_LEFT));
               fittingRange->when(FL_WHEN_NEVER);
             } // Fl_Value_Slider* fittingRange
-            { Fl_Button* o = new Fl_Button(876, 910, 85, 15, "Set All Diodes");
+            { Fl_Button* o = new Fl_Button(865, 905, 95, 25, "Set All Diodes");
               o->callback((Fl_Callback*)cb_Set);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(880, 935, 85, 15, "Fit All Diodes");
+            { Fl_Button* o = new Fl_Button(865, 935, 95, 25, "Fit All Diodes");
               o->callback((Fl_Callback*)cb_Fit2);
             } // Fl_Button* o
-            { Fl_Light_Button* o = new Fl_Light_Button(1155, 930, 115, 15, "Cal. Whole Vm");
+            { Fl_Light_Button* o = new Fl_Light_Button(965, 935, 115, 25, "Cal. Whole Vm");
               o->callback((Fl_Callback*)cb_Cal);
             } // Fl_Light_Button* o
-            { Fl_Light_Button* o = new Fl_Light_Button(1075, 930, 55, 25, "Auto");
+            { Fl_Light_Button* o = new Fl_Light_Button(1075, 845, 55, 25, "Auto");
               o->value(1);
               o->callback((Fl_Callback*)cb_Auto);
             } // Fl_Light_Button* o
-            { spikeSlopeThreshold = new Fl_Float_Input(1195, 850, 65, 15, "Spike Slope Thre.");
+            { spikeSlopeThreshold = new Fl_Float_Input(1205, 905, 65, 25, "Spike Slope Thre.");
               spikeSlopeThreshold->type(1);
               spikeSlopeThreshold->callback((Fl_Callback*)cb_spikeSlopeThreshold);
               spikeSlopeThreshold->when(FL_WHEN_ENTER_KEY);
             } // Fl_Float_Input* spikeSlopeThreshold
-            { fittingStepSize = new Fl_Value_Slider(1106, 815, 170, 25, "Step Size");
+            { fittingStepSize = new Fl_Value_Slider(1100, 815, 170, 25, "Step Size");
               fittingStepSize->type(5);
               fittingStepSize->selection_color((Fl_Color)1);
               fittingStepSize->minimum(1);
@@ -3024,15 +2935,15 @@ UserInterface::UserInterface() {
               fittingStepSize->align(Fl_Align(FL_ALIGN_LEFT));
               fittingStepSize->when(FL_WHEN_NEVER);
             } // Fl_Value_Slider* fittingStepSize
-            { spikeAmpThreshold = new Fl_Float_Input(1215, 870, 65, 30, "Spike Amp Thre.");
+            { spikeAmpThreshold = new Fl_Float_Input(1205, 930, 65, 25, "Spike Amp Thre.");
               spikeAmpThreshold->type(1);
               spikeAmpThreshold->callback((Fl_Callback*)cb_spikeAmpThreshold);
               spikeAmpThreshold->when(FL_WHEN_ENTER_KEY);
             } // Fl_Float_Input* spikeAmpThreshold
-            { Fl_Button* o = new Fl_Button(980, 930, 70, 15, "Init. Amp");
+            { Fl_Button* o = new Fl_Button(965, 905, 70, 25, "Init. Amp");
               o->callback((Fl_Callback*)cb_Init);
             } // Fl_Button* o
-            { onsetLowerBoundTxt = new Fl_Int_Input(1171, 690, 45, 25, "Range (pt)");
+            { onsetLowerBoundTxt = new Fl_Int_Input(1165, 690, 45, 25, "Range (pt)");
               onsetLowerBoundTxt->type(2);
               onsetLowerBoundTxt->labelfont(1);
               onsetLowerBoundTxt->labelsize(12);
@@ -3041,7 +2952,7 @@ UserInterface::UserInterface() {
               onsetLowerBoundTxt->callback((Fl_Callback*)cb_onsetLowerBoundTxt);
               onsetLowerBoundTxt->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* onsetLowerBoundTxt
-            { onsetHigherBoundTxt = new Fl_Int_Input(1231, 690, 45, 25, "~ ");
+            { onsetHigherBoundTxt = new Fl_Int_Input(1225, 690, 45, 25, "~ ");
               onsetHigherBoundTxt->type(2);
               onsetHigherBoundTxt->labelfont(1);
               onsetHigherBoundTxt->labelsize(12);
@@ -3052,81 +2963,54 @@ UserInterface::UserInterface() {
             } // Fl_Int_Input* onsetHigherBoundTxt
             o->end();
           } // Fl_Group* o
-          { Fl_Group* o = new Fl_Group(866, 685, 410, 180, "Save/Load");
+          { Fl_Group* o = new Fl_Group(860, 685, 415, 280, "Save/Load");
             o->color((Fl_Color)174);
             o->labelfont(1);
             o->align(Fl_Align(FL_ALIGN_TOP_LEFT));
             o->hide();
-            { Fl_Button* o = new Fl_Button(866, 750, 55, 25, "Traces");
+            { Fl_Button* o = new Fl_Button(865, 750, 55, 25, "Traces");
               o->callback((Fl_Callback*)cb_Traces);
             } // Fl_Button* o
-            { Fl_Choice* o = new Fl_Choice(926, 750, 55, 25, "choice:");
+            { Fl_Choice* o = new Fl_Choice(925, 750, 55, 25, "choice:");
               o->down_box(FL_BORDER_BOX);
               o->labeltype(FL_NO_LABEL);
               o->menu(menu_choice);
             } // Fl_Choice* o
-            { Fl_Button* o = new Fl_Button(866, 720, 130, 25, "Save Time Course");
+            { Fl_Button* o = new Fl_Button(865, 720, 130, 25, "Save Time Course");
+              o->callback((Fl_Callback*)cb_Save8);
+            } // Fl_Button* o
+            { Fl_Button* o = new Fl_Button(865, 690, 130, 25, "Save Values");
               o->callback((Fl_Callback*)cb_Save9);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(866, 690, 130, 25, "Save Values");
-              o->callback((Fl_Callback*)cb_Savea);
-            } // Fl_Button* o
-            { twSaveTracesStartPt = new Fl_Int_Input(981, 750, 50, 25, "input:");
+            { twSaveTracesStartPt = new Fl_Int_Input(980, 750, 50, 25, "input:");
               twSaveTracesStartPt->type(2);
               twSaveTracesStartPt->labeltype(FL_NO_LABEL);
               twSaveTracesStartPt->callback((Fl_Callback*)cb_twSaveTracesStartPt);
               twSaveTracesStartPt->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* twSaveTracesStartPt
-            { twSaveTracesEndPt = new Fl_Int_Input(1031, 750, 50, 25, "(pt)");
+            { twSaveTracesEndPt = new Fl_Int_Input(1030, 750, 50, 25, "(pt)");
               twSaveTracesEndPt->type(2);
               twSaveTracesEndPt->callback((Fl_Callback*)cb_twSaveTracesEndPt);
               twSaveTracesEndPt->align(Fl_Align(FL_ALIGN_RIGHT));
               twSaveTracesEndPt->when(FL_WHEN_ENTER_KEY);
             } // Fl_Int_Input* twSaveTracesEndPt
-            { Fl_Button* o = new Fl_Button(866, 780, 150, 25, "Save Fitting Variables");
+            { Fl_Button* o = new Fl_Button(865, 780, 150, 25, "Save Fitting Variables");
+              o->callback((Fl_Callback*)cb_Savea);
+            } // Fl_Button* o
+            { Fl_Button* o = new Fl_Button(865, 840, 180, 25, "Save Simulation Properties");
               o->callback((Fl_Callback*)cb_Saveb);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(866, 840, 180, 25, "Save Simulation Properties");
+            { Fl_Button* o = new Fl_Button(865, 810, 180, 25, "Save Alpha/Vm Traces");
               o->callback((Fl_Callback*)cb_Savec);
             } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(866, 810, 180, 25, "Save Alpha/Vm Traces");
-              o->callback((Fl_Callback*)cb_Savee);
-            } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(1021, 780, 150, 25, "Load Fitting Variables");
+            { Fl_Button* o = new Fl_Button(1020, 780, 150, 25, "Load Fitting Variables");
               o->callback((Fl_Callback*)cb_Load4);
-            } // Fl_Button* o
-            o->end();
-          } // Fl_Group* o
-          { Fl_Group* o = new Fl_Group(860, 695, 411, 175, "ROI");
-            o->color((Fl_Color)215);
-            o->selection_color(FL_BACKGROUND2_COLOR);
-            o->align(Fl_Align(33));
-            o->hide();
-            { awStartNewRegion = new Fl_Light_Button(897, 730, 95, 25, "New Region");
-              awStartNewRegion->selection_color((Fl_Color)119);
-              awStartNewRegion->callback((Fl_Callback*)cb_awStartNewRegion);
-            } // Fl_Light_Button* awStartNewRegion
-            { allRegionsDisplay = new Fl_Group(1060, 750, 150, 65, "Regions");
-              allRegionsDisplay->box(FL_DOWN_BOX);
-              allRegionsDisplay->color(FL_BACKGROUND2_COLOR);
-              allRegionsDisplay->align(Fl_Align(33));
-              allRegionsDisplay->end();
-            } // Fl_Group* allRegionsDisplay
-            { Fl_Choice* o = new Fl_Choice(1091, 700, 165, 25, "Current Region");
-              o->down_box(FL_BORDER_BOX);
-              o->menu(menu_Current);
-            } // Fl_Choice* o
-            { Fl_Button* o = new Fl_Button(1055, 835, 75, 35, "Save ROIs");
-              o->callback((Fl_Callback*)cb_Savef);
-            } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(1140, 835, 75, 35, "Load ROIs");
-              o->callback((Fl_Callback*)cb_Load5);
             } // Fl_Button* o
             o->end();
           } // Fl_Group* o
           o->end();
         } // Fl_Tabs* o
-        { tw = new TraceWindow(670, 35, 635, 620);
+        { tw = new TraceWindow(640, 35, 638, 620);
           tw->box(FL_BORDER_FRAME);
           tw->color(FL_FOREGROUND_COLOR);
           tw->selection_color(FL_BACKGROUND_COLOR);
@@ -3139,108 +3023,105 @@ UserInterface::UserInterface() {
         } // TraceWindow* tw
         traceGroup->end();
       } // Fl_Group* traceGroup
-      { dapGroup = new Fl_Group(671, 25, 640, 940, "DAP");
+      { dapGroup = new Fl_Group(640, 30, 640, 940, "DAP");
         dapGroup->color((Fl_Color)26);
         dapGroup->hide();
-        { Fl_Group* o = new Fl_Group(676, 30, 630, 165, "TTL Output Controls");
+        { Fl_Group* o = new Fl_Group(645, 35, 630, 165, "TTL Output Controls");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)254);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { Fl_Box* o = new Fl_Box(776, 45, 60, 20, "ONSET");
+          { Fl_Box* o = new Fl_Box(745, 50, 60, 20, "ONSET");
             o->color(FL_FOREGROUND_COLOR);
             o->labelfont(8);
             o->align(Fl_Align(FL_ALIGN_CENTER|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { Fl_Box* o = new Fl_Box(836, 45, 135, 20, "DURATION ( m sec)");
+          { Fl_Box* o = new Fl_Box(805, 50, 135, 20, "DURATION ( m sec)");
             o->color(FL_FOREGROUND_COLOR);
             o->labelfont(8);
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { Fl_Box* o = new Fl_Box(676, 65, 95, 25, "Reset");
+          { Fl_Box* o = new Fl_Box(645, 70, 95, 25, "Reset");
             o->color(FL_FOREGROUND_COLOR);
             o->align(Fl_Align(FL_ALIGN_RIGHT|FL_ALIGN_INSIDE));
-            o->hide();
           } // Fl_Box* o
-          { resetOnset = new Fl_Float_Input(771, 65, 50, 25);
-            resetOnset->type(1);
+          { resetOnset = new Fl_Int_Input(740, 70, 50, 25);
+            resetOnset->type(2);
             resetOnset->callback((Fl_Callback*)cb_resetOnset);
             resetOnset->align(Fl_Align(FL_ALIGN_RIGHT));
             resetOnset->when(FL_WHEN_ENTER_KEY);
-            resetOnset->hide();
-          } // Fl_Float_Input* resetOnset
-          { resetDuration = new Fl_Float_Input(821, 65, 50, 25);
-            resetDuration->type(1);
+          } // Fl_Int_Input* resetOnset
+          { resetDuration = new Fl_Int_Input(790, 70, 50, 25);
+            resetDuration->type(2);
             resetDuration->callback((Fl_Callback*)cb_resetDuration);
             resetDuration->align(Fl_Align(FL_ALIGN_RIGHT));
             resetDuration->when(FL_WHEN_ENTER_KEY);
-            resetDuration->hide();
-          } // Fl_Float_Input* resetDuration
-          { Fl_Box* o = new Fl_Box(676, 70, 95, 25, "Light On");
+          } // Fl_Int_Input* resetDuration
+          { Fl_Box* o = new Fl_Box(645, 95, 95, 25, "Shutter");
             o->color(FL_FOREGROUND_COLOR);
             o->align(Fl_Align(FL_ALIGN_RIGHT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { shutterOnset = new Fl_Float_Input(771, 70, 50, 25);
-            shutterOnset->type(1);
+          { shutterOnset = new Fl_Int_Input(740, 95, 50, 25);
+            shutterOnset->type(2);
             shutterOnset->callback((Fl_Callback*)cb_shutterOnset);
             shutterOnset->align(Fl_Align(FL_ALIGN_RIGHT));
             shutterOnset->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* shutterOnset
-          { shutterDuration = new Fl_Float_Input(821, 70, 50, 25);
-            shutterDuration->type(1);
+          } // Fl_Int_Input* shutterOnset
+          { shutterDuration = new Fl_Int_Input(790, 95, 50, 25);
+            shutterDuration->type(2);
             shutterDuration->callback((Fl_Callback*)cb_shutterDuration);
             shutterDuration->align(Fl_Align(FL_ALIGN_RIGHT));
             shutterDuration->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* shutterDuration
-          { Fl_Box* o = new Fl_Box(676, 95, 95, 25, "Acquisition");
+          } // Fl_Int_Input* shutterDuration
+          { Fl_Box* o = new Fl_Box(645, 120, 95, 25, "Acquisition");
             o->color(FL_FOREGROUND_COLOR);
             o->align(Fl_Align(FL_ALIGN_RIGHT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { acquiOnset = new Fl_Int_Input(771, 95, 50, 25);
+          { acquiOnset = new Fl_Int_Input(740, 120, 50, 25);
             acquiOnset->type(2);
             acquiOnset->callback((Fl_Callback*)cb_acquiOnset);
             acquiOnset->align(Fl_Align(FL_ALIGN_RIGHT));
             acquiOnset->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* acquiOnset
-          { acquiDuration = new Fl_Output(821, 95, 50, 25);
+          { acquiDuration = new Fl_Output(790, 120, 50, 25);
             acquiDuration->labeltype(FL_NO_LABEL);
             acquiDuration->textfont(1);
             acquiDuration->textcolor((Fl_Color)4);
             acquiDuration->when(FL_WHEN_NEVER);
           } // Fl_Output* acquiDuration
-          { Fl_Box* o = new Fl_Box(676, 120, 95, 25, "Stimulator #1");
+          { Fl_Box* o = new Fl_Box(645, 145, 95, 25, "Stimulator #1");
             o->color(FL_FOREGROUND_COLOR);
             o->align(Fl_Align(FL_ALIGN_RIGHT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { sti1Onset = new Fl_Float_Input(771, 120, 50, 25);
-            sti1Onset->type(1);
+          { sti1Onset = new Fl_Int_Input(740, 145, 50, 25);
+            sti1Onset->type(2);
             sti1Onset->callback((Fl_Callback*)cb_sti1Onset);
             sti1Onset->align(Fl_Align(FL_ALIGN_RIGHT));
             sti1Onset->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* sti1Onset
-          { sti1Duration = new Fl_Float_Input(821, 120, 50, 25);
-            sti1Duration->type(1);
+          } // Fl_Int_Input* sti1Onset
+          { sti1Duration = new Fl_Int_Input(790, 145, 50, 25);
+            sti1Duration->type(2);
             sti1Duration->callback((Fl_Callback*)cb_sti1Duration);
             sti1Duration->align(Fl_Align(FL_ALIGN_RIGHT));
             sti1Duration->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* sti1Duration
-          { Fl_Box* o = new Fl_Box(676, 145, 95, 25, "Stimulator #2");
+          } // Fl_Int_Input* sti1Duration
+          { Fl_Box* o = new Fl_Box(645, 170, 95, 25, "Stimulator #2");
             o->color(FL_FOREGROUND_COLOR);
             o->align(Fl_Align(FL_ALIGN_RIGHT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { sti2Onset = new Fl_Float_Input(771, 145, 50, 25);
-            sti2Onset->type(1);
+          { sti2Onset = new Fl_Int_Input(740, 170, 50, 25);
+            sti2Onset->type(2);
             sti2Onset->callback((Fl_Callback*)cb_sti2Onset);
             sti2Onset->align(Fl_Align(FL_ALIGN_RIGHT));
             sti2Onset->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* sti2Onset
-          { sti2Duration = new Fl_Float_Input(821, 145, 50, 25);
-            sti2Duration->type(1);
+          } // Fl_Int_Input* sti2Onset
+          { sti2Duration = new Fl_Int_Input(790, 170, 50, 25);
+            sti2Duration->type(2);
             sti2Duration->callback((Fl_Callback*)cb_sti2Duration);
             sti2Duration->align(Fl_Align(FL_ALIGN_RIGHT));
             sti2Duration->when(FL_WHEN_ENTER_KEY);
-          } // Fl_Float_Input* sti2Duration
-          { dapWindow = new DapWindow(871, 72, 430, 109);
+          } // Fl_Int_Input* sti2Duration
+          { dapWindow = new DapWindow(840, 70, 430, 125);
             dapWindow->box(FL_BORDER_BOX);
             dapWindow->color(FL_FOREGROUND_COLOR);
             dapWindow->selection_color(FL_BACKGROUND_COLOR);
@@ -3253,201 +3134,201 @@ UserInterface::UserInterface() {
           } // DapWindow* dapWindow
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(676, 200, 350, 110, "Acquisition Controls");
+        { Fl_Group* o = new Fl_Group(645, 205, 350, 115, "Acquisition Controls");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)87);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { numPts = new Fl_Int_Input(841, 225, 75, 25, "Number of Points:");
+          { numPts = new Fl_Int_Input(810, 230, 75, 25, "Number of Points:");
             numPts->type(2);
             numPts->callback((Fl_Callback*)cb_numPts);
             numPts->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* numPts
-          { CameraProgram = new Fl_Choice(796, 260, 120, 25);
-            CameraProgram->down_box(FL_BORDER_BOX);
-            CameraProgram->callback((Fl_Callback*)cb_CameraProgram);
-          } // Fl_Choice* CameraProgram
+          { intPts = new Fl_Float_Input(810, 260, 75, 25, "Interval between Points:");
+            intPts->type(1);
+            intPts->callback((Fl_Callback*)cb_intPts);
+            intPts->when(FL_WHEN_ENTER_KEY);
+          } // Fl_Float_Input* intPts
+          { samplingRate = new Fl_Output(810, 290, 105, 25, "Sampling Rate:");
+            samplingRate->box(FL_BORDER_FRAME);
+            samplingRate->color((Fl_Color)26);
+            samplingRate->selection_color((Fl_Color)26);
+            samplingRate->labelfont(1);
+            samplingRate->textfont(1);
+          } // Fl_Output* samplingRate
+          { Fl_Box* o = new Fl_Box(885, 260, 110, 25, "(0.06~10 m sec)");
+            o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
+          } // Fl_Box* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(676, 325, 295, 135, "Stimulator #1");
+        { Fl_Group* o = new Fl_Group(645, 330, 295, 135, "Stimulator #1");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)222);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { numBursts1 = new Fl_Input(841, 405, 75, 25, "Number of Bursts:");
+          { numBursts1 = new Fl_Input(810, 410, 75, 25, "Number of Bursts:");
             numBursts1->callback((Fl_Callback*)cb_numBursts1);
             numBursts1->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* numBursts1
-          { intBursts1 = new Fl_Input(841, 430, 75, 25, "Interval between Bursts:");
+          { intBursts1 = new Fl_Input(810, 435, 75, 25, "Interval between Bursts:");
             intBursts1->callback((Fl_Callback*)cb_intBursts1);
             intBursts1->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* intBursts1
-          { Fl_Box* o = new Fl_Box(916, 430, 55, 25, "(m sec)");
+          { Fl_Box* o = new Fl_Box(885, 435, 55, 25, "(m sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { numPulses1 = new Fl_Input(841, 350, 75, 25, "Number of pulses:");
+          { numPulses1 = new Fl_Input(810, 355, 75, 25, "Number of pulses:");
             numPulses1->callback((Fl_Callback*)cb_numPulses1);
             numPulses1->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* numPulses1
-          { intPulses1 = new Fl_Input(841, 375, 75, 25, "Interval between pulses:");
+          { intPulses1 = new Fl_Input(810, 380, 75, 25, "Interval between pulses:");
             intPulses1->callback((Fl_Callback*)cb_intPulses1);
             intPulses1->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* intPulses1
-          { Fl_Box* o = new Fl_Box(916, 375, 55, 25, "(m sec)");
+          { Fl_Box* o = new Fl_Box(885, 380, 55, 25, "(m sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(976, 325, 295, 135, "Stimulator #2");
+        { Fl_Group* o = new Fl_Group(945, 330, 295, 135, "Stimulator #2");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)222);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { numBursts2 = new Fl_Input(1141, 405, 75, 25, "Number of Bursts:");
+          { numBursts2 = new Fl_Input(1110, 410, 75, 25, "Number of Bursts:");
             numBursts2->callback((Fl_Callback*)cb_numBursts2);
             numBursts2->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* numBursts2
-          { intBursts2 = new Fl_Input(1141, 430, 75, 25, "Interval between Bursts:");
+          { intBursts2 = new Fl_Input(1110, 435, 75, 25, "Interval between Bursts:");
             intBursts2->callback((Fl_Callback*)cb_intBursts2);
             intBursts2->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* intBursts2
-          { Fl_Box* o = new Fl_Box(1216, 430, 55, 25, "(m sec)");
+          { Fl_Box* o = new Fl_Box(1185, 435, 55, 25, "(m sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { numPulses2 = new Fl_Input(1141, 350, 75, 25, "Number of pulses:");
+          { numPulses2 = new Fl_Input(1110, 355, 75, 25, "Number of pulses:");
             numPulses2->callback((Fl_Callback*)cb_numPulses2);
             numPulses2->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* numPulses2
-          { intPulses2 = new Fl_Input(1141, 375, 75, 25, "Interval between pulses:");
+          { intPulses2 = new Fl_Input(1110, 380, 75, 25, "Interval between pulses:");
             intPulses2->callback((Fl_Callback*)cb_intPulses2);
             intPulses2->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* intPulses2
-          { Fl_Box* o = new Fl_Box(1216, 375, 55, 25, "(m sec)");
+          { Fl_Box* o = new Fl_Box(1185, 380, 55, 25, "(m sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(714, 475, 310, 85, "Record Schedule");
+        { Fl_Group* o = new Fl_Group(645, 480, 310, 85, "Record Schedule");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)103);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { intRecords = new Fl_Int_Input(889, 525, 60, 25, "Interval between Records:");
+          { intRecords = new Fl_Int_Input(820, 530, 60, 25, "Interval between Records:");
             intRecords->type(2);
             intRecords->callback((Fl_Callback*)cb_intRecords);
             intRecords->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* intRecords
-          { numRecords = new Fl_Int_Input(889, 495, 60, 25, "Number of Records:");
+          { numRecords = new Fl_Int_Input(820, 500, 60, 25, "Number of Records:");
             numRecords->type(2);
             numRecords->callback((Fl_Callback*)cb_numRecords);
             numRecords->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* numRecords
-          { Fl_Box* o = new Fl_Box(949, 525, 75, 25, "(sec)");
+          { Fl_Box* o = new Fl_Box(880, 530, 75, 25, "(sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(714, 575, 310, 90, "Trial Controls");
+        { Fl_Group* o = new Fl_Group(645, 580, 310, 120, "Trial Controls");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)175);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { Fl_Box* o = new Fl_Box(944, 630, 40, 25, "(sec)");
+          { Fl_Box* o = new Fl_Box(875, 635, 40, 25, "(sec)");
             o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
           } // Fl_Box* o
-          { numTrials = new Fl_Int_Input(894, 600, 50, 25, "Number of Trials:");
+          { numTrials = new Fl_Int_Input(825, 605, 50, 25, "Number of Trials:");
             numTrials->type(2);
             numTrials->callback((Fl_Callback*)cb_numTrials);
             numTrials->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* numTrials
-          { intTrials = new Fl_Int_Input(894, 630, 50, 25, "Interval between Trials:");
+          { numSkippedTrials = new Fl_Int_Input(825, 670, 50, 25, "Number of Skipped Trials:");
+            numSkippedTrials->type(2);
+            numSkippedTrials->callback((Fl_Callback*)cb_numSkippedTrials);
+            numSkippedTrials->when(FL_WHEN_ENTER_KEY);
+            numSkippedTrials->deactivate();
+          } // Fl_Int_Input* numSkippedTrials
+          { intTrials = new Fl_Int_Input(825, 635, 50, 25, "Interval between Trials:");
             intTrials->type(2);
             intTrials->callback((Fl_Callback*)cb_intTrials);
             intTrials->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* intTrials
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(1039, 490, 250, 75, "Gain (3 = most attenuation)");
+        { Fl_Group* o = new Fl_Group(965, 480, 245, 85, "Gain");
           o->box(FL_DOWN_BOX);
           o->color((Fl_Color)172);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { Fl_Button* o = new Fl_Button(1209, 520, 30, 25, "@<");
+          { Fl_Button* o = new Fl_Button(1135, 500, 30, 25, "@<");
             o->callback((Fl_Callback*)cb_e);
           } // Fl_Button* o
-          { Fl_Button* o = new Fl_Button(1244, 520, 30, 25, "@>");
+          { Fl_Button* o = new Fl_Button(1170, 500, 30, 25, "@>");
             o->callback((Fl_Callback*)cb_f);
           } // Fl_Button* o
-          { acquiGain = new Fl_Output(1154, 520, 50, 25, "Acquisition Gain:");
+          { Fl_Button* o = new Fl_Button(1135, 530, 30, 25, "@<");
+            o->callback((Fl_Callback*)cb_10);
+          } // Fl_Button* o
+          { Fl_Button* o = new Fl_Button(1170, 530, 30, 25, "@>");
+            o->callback((Fl_Callback*)cb_11);
+          } // Fl_Button* o
+          { acquiGain = new Fl_Output(1080, 500, 50, 25, "Acquisition Gain:");
             acquiGain->when(FL_WHEN_NEVER);
           } // Fl_Output* acquiGain
+          { rliGain = new Fl_Output(1080, 530, 50, 25, "RLI Gain:");
+          } // Fl_Output* rliGain
           o->end();
         } // Fl_Group* o
         dapGroup->end();
       } // Fl_Group* dapGroup
-      { mapGroup = new Fl_Group(666, 30, 640, 940, "Map/Movie");
+      { mapGroup = new Fl_Group(640, 30, 640, 940, "Map/Movie");
         mapGroup->color((Fl_Color)26);
         mapGroup->hide();
-        { Fl_Group* o = new Fl_Group(671, 660, 615, 25, "Mode Control");
+        { Fl_Group* o = new Fl_Group(645, 660, 615, 25, "Mode Control");
           o->labeltype(FL_NO_LABEL);
-          { Fl_Choice* o = new Fl_Choice(716, 660, 70, 25, "Mode:");
+          { Fl_Choice* o = new Fl_Choice(690, 660, 70, 25, "Mode:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Mode1);
           } // Fl_Choice* o
-          { mapFeatureType = new Fl_Choice(831, 660, 145, 25, "Map:");
+          { mapFeatureType = new Fl_Choice(805, 660, 145, 25, "Map:");
             mapFeatureType->down_box(FL_BORDER_BOX);
             mapFeatureType->menu(menu_mapFeatureType);
           } // Fl_Choice* mapFeatureType
-          { Fl_Choice* o = new Fl_Choice(1031, 660, 255, 25, "Movie:");
+          { Fl_Choice* o = new Fl_Choice(1005, 660, 255, 25, "Movie:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Movie);
           } // Fl_Choice* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(671, 690, 320, 170, "Color Controls");
+        { Fl_Group* o = new Fl_Group(645, 690, 320, 170, "Color Controls");
           o->box(FL_DOWN_FRAME);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { Fl_Choice* o = new Fl_Choice(776, 715, 125, 25, "Color Scale:");
+          { Fl_Choice* o = new Fl_Choice(750, 715, 125, 25, "Color Scale:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Color1);
           } // Fl_Choice* o
-          { Fl_Choice* o = new Fl_Choice(776, 745, 125, 25, "Control Mode:");
+          { Fl_Choice* o = new Fl_Choice(750, 745, 125, 25, "Control Mode:");
             o->down_box(FL_BORDER_BOX);
             o->menu(menu_Control1);
           } // Fl_Choice* o
-          { Fl_Tabs* o = new Fl_Tabs(776, 775, 205, 80, "Color Scale Bar");
+          { Fl_Tabs* o = new Fl_Tabs(750, 775, 205, 80, "Color Scale Bar");
             o->color((Fl_Color)26);
             o->labeltype(FL_NO_LABEL);
-            { Fl_Group* o = new Fl_Group(776, 795, 205, 60, "Bounds");
+            { Fl_Group* o = new Fl_Group(750, 795, 205, 60, "Bounds");
               o->color((Fl_Color)23);
               o->when(FL_WHEN_NEVER);
-              { Fl_Roller* o = new Fl_Roller(896, 800, 75, 25);
-                o->type(1);
-                o->minimum(-100);
-                o->maximum(100);
-                o->step(0.01);
-                o->value(1);
-                o->callback((Fl_Callback*)cb_10);
-              } // Fl_Roller* o
-              { cwColorUpperBound = new Fl_Output(831, 800, 60, 25, "Upper:");
-              } // Fl_Output* cwColorUpperBound
-              { cwColorLowerBound = new Fl_Output(831, 825, 60, 25, "Lower:");
-              } // Fl_Output* cwColorLowerBound
-              { Fl_Roller* o = new Fl_Roller(896, 825, 75, 25);
-                o->type(1);
-                o->minimum(-100);
-                o->maximum(100);
-                o->step(0.01);
-                o->callback((Fl_Callback*)cb_11);
-              } // Fl_Roller* o
-              o->end();
-            } // Fl_Group* o
-            { Fl_Group* o = new Fl_Group(776, 795, 205, 60, "Center");
-              o->color((Fl_Color)23);
-              o->when(FL_WHEN_NEVER);
-              o->hide();
-              { Fl_Roller* o = new Fl_Roller(896, 800, 75, 25);
+              { Fl_Roller* o = new Fl_Roller(870, 800, 75, 25);
                 o->type(1);
                 o->minimum(-100);
                 o->maximum(100);
@@ -3455,11 +3336,11 @@ UserInterface::UserInterface() {
                 o->value(1);
                 o->callback((Fl_Callback*)cb_12);
               } // Fl_Roller* o
-              { cwColorAmp = new Fl_Output(831, 800, 60, 25, "Amp:");
-              } // Fl_Output* cwColorAmp
-              { cwColorCenter = new Fl_Output(831, 825, 60, 25, "Center:");
-              } // Fl_Output* cwColorCenter
-              { Fl_Roller* o = new Fl_Roller(896, 825, 75, 25);
+              { cwColorUpperBound = new Fl_Output(805, 800, 60, 25, "Upper:");
+              } // Fl_Output* cwColorUpperBound
+              { cwColorLowerBound = new Fl_Output(805, 825, 60, 25, "Lower:");
+              } // Fl_Output* cwColorLowerBound
+              { Fl_Roller* o = new Fl_Roller(870, 825, 75, 25);
                 o->type(1);
                 o->minimum(-100);
                 o->maximum(100);
@@ -3468,44 +3349,69 @@ UserInterface::UserInterface() {
               } // Fl_Roller* o
               o->end();
             } // Fl_Group* o
+            { Fl_Group* o = new Fl_Group(750, 795, 205, 60, "Center");
+              o->color((Fl_Color)23);
+              o->when(FL_WHEN_NEVER);
+              o->hide();
+              { Fl_Roller* o = new Fl_Roller(870, 800, 75, 25);
+                o->type(1);
+                o->minimum(-100);
+                o->maximum(100);
+                o->step(0.01);
+                o->value(1);
+                o->callback((Fl_Callback*)cb_14);
+              } // Fl_Roller* o
+              { cwColorAmp = new Fl_Output(805, 800, 60, 25, "Amp:");
+              } // Fl_Output* cwColorAmp
+              { cwColorCenter = new Fl_Output(805, 825, 60, 25, "Center:");
+              } // Fl_Output* cwColorCenter
+              { Fl_Roller* o = new Fl_Roller(870, 825, 75, 25);
+                o->type(1);
+                o->minimum(-100);
+                o->maximum(100);
+                o->step(0.01);
+                o->callback((Fl_Callback*)cb_15);
+              } // Fl_Roller* o
+              o->end();
+            } // Fl_Group* o
             o->end();
           } // Fl_Tabs* o
-          { Fl_Light_Button* o = new Fl_Light_Button(906, 715, 80, 25, "Contour");
+          { Fl_Light_Button* o = new Fl_Light_Button(880, 715, 80, 25, "Contour");
             o->value(1);
             o->callback((Fl_Callback*)cb_Contour);
           } // Fl_Light_Button* o
           o->end();
         } // Fl_Group* o
-        { Fl_Group* o = new Fl_Group(1031, 690, 255, 170, "Movie Controls");
+        { Fl_Group* o = new Fl_Group(1005, 690, 255, 170, "Movie Controls");
           o->box(FL_DOWN_FRAME);
           o->labelfont(1);
           o->align(Fl_Align(FL_ALIGN_TOP|FL_ALIGN_INSIDE));
-          { Fl_Group* o = new Fl_Group(1036, 715, 215, 25);
-            { Fl_Button* o = new Fl_Button(1041, 715, 40, 25, "@|<");
-              o->callback((Fl_Callback*)cb_14);
-            } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(1086, 715, 40, 25, "@>");
-              o->callback((Fl_Callback*)cb_15);
-            } // Fl_Button* o
-            { Fl_Button* o = new Fl_Button(1131, 715, 40, 25, "@||");
+          { Fl_Group* o = new Fl_Group(1010, 715, 215, 25);
+            { Fl_Button* o = new Fl_Button(1015, 715, 40, 25, "@|<");
               o->callback((Fl_Callback*)cb_16);
             } // Fl_Button* o
-            { Fl_Light_Button* o = new Fl_Light_Button(1176, 715, 75, 25, "Repeat");
+            { Fl_Button* o = new Fl_Button(1060, 715, 40, 25, "@>");
+              o->callback((Fl_Callback*)cb_17);
+            } // Fl_Button* o
+            { Fl_Button* o = new Fl_Button(1105, 715, 40, 25, "@||");
+              o->callback((Fl_Callback*)cb_18);
+            } // Fl_Button* o
+            { Fl_Light_Button* o = new Fl_Light_Button(1150, 715, 75, 25, "Repeat");
               o->selection_color((Fl_Color)1);
               o->callback((Fl_Callback*)cb_Repeat);
             } // Fl_Light_Button* o
             o->end();
           } // Fl_Group* o
-          { cwCurrentPtRoller = new Fl_Roller(1176, 745, 75, 25);
+          { cwCurrentPtRoller = new Fl_Roller(1150, 745, 75, 25);
             cwCurrentPtRoller->type(1);
             cwCurrentPtRoller->maximum(10000);
             cwCurrentPtRoller->step(1);
             cwCurrentPtRoller->value(160);
             cwCurrentPtRoller->callback((Fl_Callback*)cb_cwCurrentPtRoller);
           } // Fl_Roller* cwCurrentPtRoller
-          { cwCurrentPtText = new Fl_Output(1121, 745, 50, 25, "Current Pt");
+          { cwCurrentPtText = new Fl_Output(1095, 745, 50, 25, "Current Pt");
           } // Fl_Output* cwCurrentPtText
-          { Fl_Value_Slider* o = new Fl_Value_Slider(1086, 825, 190, 25, "Speed");
+          { Fl_Value_Slider* o = new Fl_Value_Slider(1060, 825, 190, 25, "Speed");
             o->type(5);
             o->color(FL_LIGHT2);
             o->selection_color((Fl_Color)1);
@@ -3516,25 +3422,25 @@ UserInterface::UserInterface() {
             o->callback((Fl_Callback*)cb_Speed);
             o->align(Fl_Align(FL_ALIGN_LEFT));
           } // Fl_Value_Slider* o
-          { cwStartPt = new Fl_Int_Input(1121, 770, 50, 25, "Start Pt");
+          { cwStartPt = new Fl_Int_Input(1095, 770, 50, 25, "Start Pt");
             cwStartPt->type(2);
             cwStartPt->callback((Fl_Callback*)cb_cwStartPt);
             cwStartPt->when(FL_WHEN_ENTER_KEY);
           } // Fl_Int_Input* cwStartPt
-          { cwEndPt = new Fl_Input(1121, 795, 50, 25, "End Pt");
+          { cwEndPt = new Fl_Input(1095, 795, 50, 25, "End Pt");
             cwEndPt->callback((Fl_Callback*)cb_cwEndPt);
             cwEndPt->when(FL_WHEN_ENTER_KEY);
           } // Fl_Input* cwEndPt
-          { Fl_Light_Button* o = new Fl_Light_Button(1176, 795, 100, 25, "Make Movie");
+          { Fl_Light_Button* o = new Fl_Light_Button(1150, 795, 100, 25, "Make Movie");
             o->callback((Fl_Callback*)cb_Make1);
           } // Fl_Light_Button* o
           o->end();
         } // Fl_Group* o
-        { Fl_Light_Button* o = new Fl_Light_Button(906, 745, 80, 25, "Black BG");
+        { Fl_Light_Button* o = new Fl_Light_Button(880, 745, 80, 25, "Black BG");
           o->value(1);
           o->callback((Fl_Callback*)cb_Black);
         } // Fl_Light_Button* o
-        { cw = new ColorWindow(666, 35, 638, 620, "ColorWin");
+        { cw = new ColorWindow(640, 35, 638, 620, "ColorWin");
           cw->box(FL_BORDER_FRAME);
           cw->color(FL_FOREGROUND_COLOR);
           cw->selection_color(FL_BACKGROUND_COLOR);
@@ -3549,25 +3455,6 @@ UserInterface::UserInterface() {
       } // Fl_Group* mapGroup
       o->end();
     } // Fl_Tabs* o
-    { Fl_Group* o = new Fl_Group(0, 35, 645, 625, "Array Window");
-      o->labeltype(FL_NO_LABEL);
-      { aw = new ArrayWindow(0, 35, 645, 625);
-        aw->box(FL_BORDER_FRAME);
-        aw->color(FL_FOREGROUND_COLOR);
-        aw->selection_color(FL_BACKGROUND_COLOR);
-        aw->labeltype(FL_NO_LABEL);
-        aw->labelfont(1);
-        aw->labelsize(14);
-        aw->labelcolor(FL_FOREGROUND_COLOR);
-        aw->align(Fl_Align(FL_ALIGN_CENTER));
-        aw->when(FL_WHEN_RELEASE);
-      } // ArrayWindow* aw
-      o->end();
-    } // Fl_Group* o
-    { Fl_Button* o = new Fl_Button(418, 5, 90, 25, "Save as Jpeg");
-      o->labelcolor((Fl_Color)4);
-      o->callback((Fl_Callback*)cb_Save10);
-    } // Fl_Button* o
     mainWindow->end();
     mainWindow->resizable(mainWindow);
   } // Fl_Double_Window* mainWindow

@@ -1,7 +1,6 @@
 //=============================================================================
 // MainController.h
 //=============================================================================
-
 #ifndef _MainController_h
 #define _MainController_h
 //=============================================================================
@@ -28,9 +27,6 @@ public:
 	//===========================================
 	// Constructors
 	MainController();
-	//	Destructor
-	~MainController();
-
 
 	//===========================================
 	void start();
@@ -65,9 +61,6 @@ public:
 	void setLatencyStart(double);
 	void setLatencyWindow(double);
 
-	void setRliScalar(const char*);
-	void setRliScalar(double);
-
 	// Acquisition & File Management
 	void saveProcessedData();
 
@@ -80,7 +73,6 @@ public:
 
 	void createDir();
 	void openDataFile();
-	void openDataFileNP();
 	void saveData2File();
 	void saveTraces2();
 	void loadPre();
@@ -123,21 +115,15 @@ public:
 	void setIntBursts(int,const char*);
 
 	void setNumTrials(const char*);
-	// void setNumSkippedTrials(const char*);
+	void setNumSkippedTrials(const char*);
 	void setIntTrials(const char*);
 
 	void setAmplifierGain(int);
 	void setNumPts(const char*);
 	void setIntPts(const char*);
 
-	void setCameraProgram(int);
-
-	void set_digital_binning(const char*);
-
 	void setIntRecords(const char*);
 	void setNumRecords(const char*);
-
-	void resetCamera();
 
 	// Array Window
 	void setAwShowTrace(char);
@@ -176,15 +162,12 @@ public:
 	// WindowExporter
 	void setImageType(char);
 	void exportAw();
-	void exportAw_Jpeg();
 	void exportTw();
 
 	//
 	void setPerAmp(double);
 	void doSelection(int);
 	void ignoreSelectedDiodes();
-
-	void setContinuous(int continuous);
 
 	// Compare
 	void setRecordXNo(int,const char*);
@@ -204,15 +187,10 @@ public:
 	void setColorAmp(double);
 	void setColorCenter(double);
 
-	void setLiveFeed(char);
-
 	// Do All
 	void doAll();
 
-	void saveLatestBackgroundImage();
-
 	void sleep(double seconds);
-	double *aveData;
 };
 
 //=============================================================================

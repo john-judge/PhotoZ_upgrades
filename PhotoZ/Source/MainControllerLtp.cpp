@@ -2,7 +2,6 @@
 // MainControllerLtp.cpp
 //=============================================================================
 #include <stdlib.h>
-#include <iostream>
 
 #include "MainController.h"
 #include "RecControl.h"
@@ -11,13 +10,13 @@
 #include "DataArray.h"
 #include "Definitions.h"
 
-using namespace std;
 //=============================================================================
 void MainController::timeCourseMeasurement()
 {
 	char success=1;
 	char* fileName;
 	recControl->setRecordNo(1);
+
 	while(success)
 	{
 		fileName=recControl->createFileName();

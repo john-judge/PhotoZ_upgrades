@@ -10,12 +10,13 @@ extern MainController *mc;
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Button.H>
-#include <FL/Fl_Tabs.H>
 #include <FL/Fl_Group.H>
+#include "ArrayWindow.h"
+#include <FL/Fl_Tabs.H>
 #include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Int_Input.H>
+#include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Roller.H>
 #include <FL/Fl_Value_Slider.H>
@@ -28,7 +29,6 @@ extern MainController *mc;
 #include "DapWindow.h"
 #include <FL/Fl_Input.H>
 #include "ColorWindow.h"
-#include "ArrayWindow.h"
 
 class UserInterface {
 public:
@@ -40,8 +40,6 @@ private:
   static void cb_Open(Fl_Menu_*, void*);
   inline void cb_Create_i(Fl_Menu_*, void*);
   static void cb_Create(Fl_Menu_*, void*);
-  inline void cb_open_i(Fl_Menu_*, void*);
-  static void cb_open(Fl_Menu_*, void*);
   inline void cb_Exit_i(Fl_Menu_*, void*);
   static void cb_Exit(Fl_Menu_*, void*);
   inline void cb_Save_i(Fl_Menu_*, void*);
@@ -52,6 +50,9 @@ private:
   static void cb_Save1(Fl_Button*, void*);
   inline void cb_Save2_i(Fl_Button*, void*);
   static void cb_Save2(Fl_Button*, void*);
+public:
+  ArrayWindow *aw;
+private:
   inline void cb_Take_i(Fl_Button*, void*);
   static void cb_Take(Fl_Button*, void*);
   inline void cb_Record_i(Fl_Button*, void*);
@@ -72,11 +73,6 @@ private:
   static void cb_RLI(Fl_Check_Button*, void*);
   inline void cb_Save3_i(Fl_Button*, void*);
   static void cb_Save3(Fl_Button*, void*);
-public:
-  Fl_Light_Button *lfRun;
-private:
-  inline void cb_lfRun_i(Fl_Light_Button*, void*);
-  static void cb_lfRun(Fl_Light_Button*, void*);
   inline void cb_Go_i(Fl_Button*, void*);
   static void cb_Go(Fl_Button*, void*);
   inline void cb_Save4_i(Fl_Button*, void*);
@@ -185,21 +181,19 @@ private:
   static void cb_Max1(Fl_Menu_*, void*);
   inline void cb_EPSP_i(Fl_Menu_*, void*);
   static void cb_EPSP(Fl_Menu_*, void*);
-  inline void cb_MaxAmp_i(Fl_Menu_*, void*);
-  static void cb_MaxAmp(Fl_Menu_*, void*);
 public:
-  Fl_Roller *awFpYScale;
-private:
-  inline void cb_awFpYScale_i(Fl_Roller*, void*);
-  static void cb_awFpYScale(Fl_Roller*, void*);
-public:
-  Fl_Output *awFpYScaleTxt;
   Fl_Roller *awYScale;
 private:
   inline void cb_awYScale_i(Fl_Roller*, void*);
   static void cb_awYScale(Fl_Roller*, void*);
 public:
   Fl_Output *awYScaleTxt;
+  Fl_Roller *awFpYScale;
+private:
+  inline void cb_awFpYScale_i(Fl_Roller*, void*);
+  static void cb_awFpYScale(Fl_Roller*, void*);
+public:
+  Fl_Output *awFpYScaleTxt;
   Fl_Roller *awXScale;
 private:
   inline void cb_awXScale_i(Fl_Roller*, void*);
@@ -235,13 +229,6 @@ private:
   static void cb_(Fl_Value_Slider*, void*);
   inline void cb_Save5_i(Fl_Button*, void*);
   static void cb_Save5(Fl_Button*, void*);
-public:
-  Fl_Button *resetCam;
-private:
-  inline void cb_resetCam_i(Fl_Button*, void*);
-  static void cb_resetCam(Fl_Button*, void*);
-  inline void cb_Save6_i(Fl_Button*, void*);
-  static void cb_Save6(Fl_Button*, void*);
   static Fl_Menu_Item menu_Increase[];
   inline void cb_Increase_i(Fl_Menu_*, void*);
   static void cb_Increase(Fl_Menu_*, void*);
@@ -252,11 +239,6 @@ private:
   static void cb_Actual(Fl_Menu_*, void*);
   inline void cb_Percent_i(Fl_Menu_*, void*);
   static void cb_Percent(Fl_Menu_*, void*);
-public:
-  Fl_Int_Input *digital_binning;
-private:
-  inline void cb_digital_binning_i(Fl_Int_Input*, void*);
-  static void cb_digital_binning(Fl_Int_Input*, void*);
   inline void cb_RLI2_i(Fl_Light_Button*, void*);
   static void cb_RLI2(Fl_Light_Button*, void*);
   inline void cb_Data_i(Fl_Light_Button*, void*);
@@ -287,22 +269,12 @@ private:
   static void cb_Width(Fl_Value_Slider*, void*);
   inline void cb_of_i(Fl_Value_Slider*, void*);
   static void cb_of(Fl_Value_Slider*, void*);
-public:
-  Fl_Roller *rliScalarRoller;
-private:
-  inline void cb_rliScalarRoller_i(Fl_Roller*, void*);
-  static void cb_rliScalarRoller(Fl_Roller*, void*);
-public:
-  Fl_Float_Input *rliScalarTxt;
-private:
-  inline void cb_rliScalarTxt_i(Fl_Float_Input*, void*);
-  static void cb_rliScalarTxt(Fl_Float_Input*, void*);
   inline void cb_Correction_i(Fl_Light_Button*, void*);
   static void cb_Correction(Fl_Light_Button*, void*);
   inline void cb_RLI3_i(Fl_Button*, void*);
   static void cb_RLI3(Fl_Button*, void*);
-  inline void cb_Save7_i(Fl_Button*, void*);
-  static void cb_Save7(Fl_Button*, void*);
+  inline void cb_Save6_i(Fl_Button*, void*);
+  static void cb_Save6(Fl_Button*, void*);
   inline void cb_Load3_i(Fl_Button*, void*);
   static void cb_Load3(Fl_Button*, void*);
   inline void cb_Make_i(Fl_Button*, void*);
@@ -328,6 +300,19 @@ private:
   static void cb_8(Fl_Button*, void*);
   inline void cb_Ignore_i(Fl_Button*, void*);
   static void cb_Ignore(Fl_Button*, void*);
+  inline void cb_T_i(Fl_Light_Button*, void*);
+  static void cb_T(Fl_Light_Button*, void*);
+  static Fl_Menu_Item menu_Filter[];
+  inline void cb_Binomial_i(Fl_Menu_*, void*);
+  static void cb_Binomial(Fl_Menu_*, void*);
+  inline void cb_Mov_i(Fl_Menu_*, void*);
+  static void cb_Mov(Fl_Menu_*, void*);
+  inline void cb_S_i(Fl_Light_Button*, void*);
+  static void cb_S(Fl_Light_Button*, void*);
+  inline void cb_s_i(Fl_Value_Slider*, void*);
+  static void cb_s(Fl_Value_Slider*, void*);
+  inline void cb_Radius_i(Fl_Value_Slider*, void*);
+  static void cb_Radius(Fl_Value_Slider*, void*);
 public:
   Fl_Choice *BLCType;
   static Fl_Menu_Item menu_BLCType[];
@@ -428,25 +413,6 @@ public:
 private:
   inline void cb_d_i(Fl_Roller*, void*);
   static void cb_d(Fl_Roller*, void*);
-  inline void cb_T_i(Fl_Light_Button*, void*);
-  static void cb_T(Fl_Light_Button*, void*);
-  static Fl_Menu_Item menu_Filter[];
-  inline void cb_Binomial_i(Fl_Menu_*, void*);
-  static void cb_Binomial(Fl_Menu_*, void*);
-  inline void cb_Mov_i(Fl_Menu_*, void*);
-  static void cb_Mov(Fl_Menu_*, void*);
-  inline void cb_binomial8_i(Fl_Menu_*, void*);
-  static void cb_binomial8(Fl_Menu_*, void*);
-  inline void cb_binomial6_i(Fl_Menu_*, void*);
-  static void cb_binomial6(Fl_Menu_*, void*);
-  inline void cb_binomial4_i(Fl_Menu_*, void*);
-  static void cb_binomial4(Fl_Menu_*, void*);
-  inline void cb_S_i(Fl_Light_Button*, void*);
-  static void cb_S(Fl_Light_Button*, void*);
-  inline void cb_s_i(Fl_Value_Slider*, void*);
-  static void cb_s(Fl_Value_Slider*, void*);
-  inline void cb_Radius_i(Fl_Value_Slider*, void*);
-  static void cb_Radius(Fl_Value_Slider*, void*);
 public:
   Fl_Group *traceGroup;
   static Fl_Menu_Item menu_Value[];
@@ -463,16 +429,22 @@ private:
   static void cb_Max4(Fl_Menu_*, void*);
   inline void cb_Max5_i(Fl_Menu_*, void*);
   static void cb_Max5(Fl_Menu_*, void*);
-  inline void cb_Half_i(Fl_Menu_*, void*);
-  static void cb_Half(Fl_Menu_*, void*);
+  inline void cb_Max6_i(Fl_Menu_*, void*);
+  static void cb_Max6(Fl_Menu_*, void*);
+  inline void cb_Max7_i(Fl_Menu_*, void*);
+  static void cb_Max7(Fl_Menu_*, void*);
+  inline void cb_Max8_i(Fl_Menu_*, void*);
+  static void cb_Max8(Fl_Menu_*, void*);
+  inline void cb_Spike1_i(Fl_Menu_*, void*);
+  static void cb_Spike1(Fl_Menu_*, void*);
   inline void cb_Amplitude_i(Fl_Menu_*, void*);
   static void cb_Amplitude(Fl_Menu_*, void*);
   inline void cb_SD_i(Fl_Menu_*, void*);
   static void cb_SD(Fl_Menu_*, void*);
   inline void cb_Amp1_i(Fl_Menu_*, void*);
   static void cb_Amp1(Fl_Menu_*, void*);
-  inline void cb_Max6_i(Fl_Menu_*, void*);
-  static void cb_Max6(Fl_Menu_*, void*);
+  inline void cb_Max9_i(Fl_Menu_*, void*);
+  static void cb_Max9(Fl_Menu_*, void*);
   inline void cb_Trace_i(Fl_Light_Button*, void*);
   static void cb_Trace(Fl_Light_Button*, void*);
   inline void cb_Alpha_i(Fl_Light_Button*, void*);
@@ -505,12 +477,12 @@ private:
   static void cb_RLI5(Fl_Menu_*, void*);
   inline void cb_Amplitude1_i(Fl_Menu_*, void*);
   static void cb_Amplitude1(Fl_Menu_*, void*);
-  inline void cb_Max7_i(Fl_Menu_*, void*);
-  static void cb_Max7(Fl_Menu_*, void*);
-  inline void cb_Half1_i(Fl_Menu_*, void*);
-  static void cb_Half1(Fl_Menu_*, void*);
-  inline void cb_Max8_i(Fl_Menu_*, void*);
-  static void cb_Max8(Fl_Menu_*, void*);
+  inline void cb_Maxa_i(Fl_Menu_*, void*);
+  static void cb_Maxa(Fl_Menu_*, void*);
+  inline void cb_Amp2_i(Fl_Menu_*, void*);
+  static void cb_Amp2(Fl_Menu_*, void*);
+  inline void cb_Maxb_i(Fl_Menu_*, void*);
+  static void cb_Maxb(Fl_Menu_*, void*);
 public:
   Fl_Light_Button *twShowFileLine;
 private:
@@ -518,8 +490,8 @@ private:
   static void cb_twShowFileLine(Fl_Light_Button*, void*);
   inline void cb_Reference_i(Fl_Light_Button*, void*);
   static void cb_Reference(Fl_Light_Button*, void*);
-  inline void cb_Save8_i(Fl_Button*, void*);
-  static void cb_Save8(Fl_Button*, void*);
+  inline void cb_Save7_i(Fl_Button*, void*);
+  static void cb_Save7(Fl_Button*, void*);
 public:
   Fl_Output *secondFileName;
   Fl_Output *savedTracesTrialNoTxt;
@@ -640,10 +612,10 @@ private:
   static void cb_pt(Fl_Menu_*, void*);
   inline void cb_ms_i(Fl_Menu_*, void*);
   static void cb_ms(Fl_Menu_*, void*);
+  inline void cb_Save8_i(Fl_Button*, void*);
+  static void cb_Save8(Fl_Button*, void*);
   inline void cb_Save9_i(Fl_Button*, void*);
   static void cb_Save9(Fl_Button*, void*);
-  inline void cb_Savea_i(Fl_Button*, void*);
-  static void cb_Savea(Fl_Button*, void*);
 public:
   Fl_Int_Input *twSaveTracesStartPt;
 private:
@@ -654,51 +626,36 @@ public:
 private:
   inline void cb_twSaveTracesEndPt_i(Fl_Int_Input*, void*);
   static void cb_twSaveTracesEndPt(Fl_Int_Input*, void*);
+  inline void cb_Savea_i(Fl_Button*, void*);
+  static void cb_Savea(Fl_Button*, void*);
   inline void cb_Saveb_i(Fl_Button*, void*);
   static void cb_Saveb(Fl_Button*, void*);
   inline void cb_Savec_i(Fl_Button*, void*);
   static void cb_Savec(Fl_Button*, void*);
-  inline void cb_Savee_i(Fl_Button*, void*);
-  static void cb_Savee(Fl_Button*, void*);
   inline void cb_Load4_i(Fl_Button*, void*);
   static void cb_Load4(Fl_Button*, void*);
 public:
-  Fl_Light_Button *awStartNewRegion;
-private:
-  inline void cb_awStartNewRegion_i(Fl_Light_Button*, void*);
-  static void cb_awStartNewRegion(Fl_Light_Button*, void*);
-public:
-  Fl_Group *allRegionsDisplay;
-  static Fl_Menu_Item menu_Current[];
-private:
-  inline void cb_New_i(Fl_Menu_*, void*);
-  static void cb_New(Fl_Menu_*, void*);
-  inline void cb_Savef_i(Fl_Button*, void*);
-  static void cb_Savef(Fl_Button*, void*);
-  inline void cb_Load5_i(Fl_Button*, void*);
-  static void cb_Load5(Fl_Button*, void*);
-public:
   TraceWindow *tw;
   Fl_Group *dapGroup;
-  Fl_Float_Input *resetOnset;
+  Fl_Int_Input *resetOnset;
 private:
-  inline void cb_resetOnset_i(Fl_Float_Input*, void*);
-  static void cb_resetOnset(Fl_Float_Input*, void*);
+  inline void cb_resetOnset_i(Fl_Int_Input*, void*);
+  static void cb_resetOnset(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *resetDuration;
+  Fl_Int_Input *resetDuration;
 private:
-  inline void cb_resetDuration_i(Fl_Float_Input*, void*);
-  static void cb_resetDuration(Fl_Float_Input*, void*);
+  inline void cb_resetDuration_i(Fl_Int_Input*, void*);
+  static void cb_resetDuration(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *shutterOnset;
+  Fl_Int_Input *shutterOnset;
 private:
-  inline void cb_shutterOnset_i(Fl_Float_Input*, void*);
-  static void cb_shutterOnset(Fl_Float_Input*, void*);
+  inline void cb_shutterOnset_i(Fl_Int_Input*, void*);
+  static void cb_shutterOnset(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *shutterDuration;
+  Fl_Int_Input *shutterDuration;
 private:
-  inline void cb_shutterDuration_i(Fl_Float_Input*, void*);
-  static void cb_shutterDuration(Fl_Float_Input*, void*);
+  inline void cb_shutterDuration_i(Fl_Int_Input*, void*);
+  static void cb_shutterDuration(Fl_Int_Input*, void*);
 public:
   Fl_Int_Input *acquiOnset;
 private:
@@ -706,25 +663,25 @@ private:
   static void cb_acquiOnset(Fl_Int_Input*, void*);
 public:
   Fl_Output *acquiDuration;
-  Fl_Float_Input *sti1Onset;
+  Fl_Int_Input *sti1Onset;
 private:
-  inline void cb_sti1Onset_i(Fl_Float_Input*, void*);
-  static void cb_sti1Onset(Fl_Float_Input*, void*);
+  inline void cb_sti1Onset_i(Fl_Int_Input*, void*);
+  static void cb_sti1Onset(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *sti1Duration;
+  Fl_Int_Input *sti1Duration;
 private:
-  inline void cb_sti1Duration_i(Fl_Float_Input*, void*);
-  static void cb_sti1Duration(Fl_Float_Input*, void*);
+  inline void cb_sti1Duration_i(Fl_Int_Input*, void*);
+  static void cb_sti1Duration(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *sti2Onset;
+  Fl_Int_Input *sti2Onset;
 private:
-  inline void cb_sti2Onset_i(Fl_Float_Input*, void*);
-  static void cb_sti2Onset(Fl_Float_Input*, void*);
+  inline void cb_sti2Onset_i(Fl_Int_Input*, void*);
+  static void cb_sti2Onset(Fl_Int_Input*, void*);
 public:
-  Fl_Float_Input *sti2Duration;
+  Fl_Int_Input *sti2Duration;
 private:
-  inline void cb_sti2Duration_i(Fl_Float_Input*, void*);
-  static void cb_sti2Duration(Fl_Float_Input*, void*);
+  inline void cb_sti2Duration_i(Fl_Int_Input*, void*);
+  static void cb_sti2Duration(Fl_Int_Input*, void*);
 public:
   DapWindow *dapWindow;
   Fl_Int_Input *numPts;
@@ -732,11 +689,12 @@ private:
   inline void cb_numPts_i(Fl_Int_Input*, void*);
   static void cb_numPts(Fl_Int_Input*, void*);
 public:
-  Fl_Choice *CameraProgram;
+  Fl_Float_Input *intPts;
 private:
-  inline void cb_CameraProgram_i(Fl_Choice*, void*);
-  static void cb_CameraProgram(Fl_Choice*, void*);
+  inline void cb_intPts_i(Fl_Float_Input*, void*);
+  static void cb_intPts(Fl_Float_Input*, void*);
 public:
+  Fl_Output *samplingRate;
   Fl_Input *numBursts1;
 private:
   inline void cb_numBursts1_i(Fl_Input*, void*);
@@ -792,6 +750,11 @@ private:
   inline void cb_numTrials_i(Fl_Int_Input*, void*);
   static void cb_numTrials(Fl_Int_Input*, void*);
 public:
+  Fl_Int_Input *numSkippedTrials;
+private:
+  inline void cb_numSkippedTrials_i(Fl_Int_Input*, void*);
+  static void cb_numSkippedTrials(Fl_Int_Input*, void*);
+public:
   Fl_Int_Input *intTrials;
 private:
   inline void cb_intTrials_i(Fl_Int_Input*, void*);
@@ -800,8 +763,13 @@ private:
   static void cb_e(Fl_Button*, void*);
   inline void cb_f_i(Fl_Button*, void*);
   static void cb_f(Fl_Button*, void*);
+  inline void cb_10_i(Fl_Button*, void*);
+  static void cb_10(Fl_Button*, void*);
+  inline void cb_11_i(Fl_Button*, void*);
+  static void cb_11(Fl_Button*, void*);
 public:
   Fl_Output *acquiGain;
+  Fl_Output *rliGain;
   Fl_Group *mapGroup;
   static Fl_Menu_Item menu_Mode1[];
 private:
@@ -815,19 +783,19 @@ public:
 private:
   inline void cb_RLI6_i(Fl_Menu_*, void*);
   static void cb_RLI6(Fl_Menu_*, void*);
-  inline void cb_Max9_i(Fl_Menu_*, void*);
-  static void cb_Max9(Fl_Menu_*, void*);
-  inline void cb_Spike1_i(Fl_Menu_*, void*);
-  static void cb_Spike1(Fl_Menu_*, void*);
-  inline void cb_Amp2_i(Fl_Menu_*, void*);
-  static void cb_Amp2(Fl_Menu_*, void*);
-  inline void cb_Maxa_i(Fl_Menu_*, void*);
-  static void cb_Maxa(Fl_Menu_*, void*);
-  static Fl_Menu_Item menu_Movie[];
+  inline void cb_Maxc_i(Fl_Menu_*, void*);
+  static void cb_Maxc(Fl_Menu_*, void*);
+  inline void cb_Spike2_i(Fl_Menu_*, void*);
+  static void cb_Spike2(Fl_Menu_*, void*);
   inline void cb_Amp3_i(Fl_Menu_*, void*);
   static void cb_Amp3(Fl_Menu_*, void*);
+  inline void cb_Maxd_i(Fl_Menu_*, void*);
+  static void cb_Maxd(Fl_Menu_*, void*);
+  static Fl_Menu_Item menu_Movie[];
   inline void cb_Amp4_i(Fl_Menu_*, void*);
   static void cb_Amp4(Fl_Menu_*, void*);
+  inline void cb_Amp5_i(Fl_Menu_*, void*);
+  static void cb_Amp5(Fl_Menu_*, void*);
   static Fl_Menu_Item menu_Color1[];
   inline void cb_Color2_i(Fl_Menu_*, void*);
   static void cb_Color2(Fl_Menu_*, void*);
@@ -842,30 +810,30 @@ private:
   static void cb_Bounds1(Fl_Menu_*, void*);
   inline void cb_Center1_i(Fl_Menu_*, void*);
   static void cb_Center1(Fl_Menu_*, void*);
-  inline void cb_10_i(Fl_Roller*, void*);
-  static void cb_10(Fl_Roller*, void*);
+  inline void cb_12_i(Fl_Roller*, void*);
+  static void cb_12(Fl_Roller*, void*);
 public:
   Fl_Output *cwColorUpperBound;
   Fl_Output *cwColorLowerBound;
 private:
-  inline void cb_11_i(Fl_Roller*, void*);
-  static void cb_11(Fl_Roller*, void*);
-  inline void cb_12_i(Fl_Roller*, void*);
-  static void cb_12(Fl_Roller*, void*);
+  inline void cb_13_i(Fl_Roller*, void*);
+  static void cb_13(Fl_Roller*, void*);
+  inline void cb_14_i(Fl_Roller*, void*);
+  static void cb_14(Fl_Roller*, void*);
 public:
   Fl_Output *cwColorAmp;
   Fl_Output *cwColorCenter;
 private:
-  inline void cb_13_i(Fl_Roller*, void*);
-  static void cb_13(Fl_Roller*, void*);
+  inline void cb_15_i(Fl_Roller*, void*);
+  static void cb_15(Fl_Roller*, void*);
   inline void cb_Contour_i(Fl_Light_Button*, void*);
   static void cb_Contour(Fl_Light_Button*, void*);
-  inline void cb_14_i(Fl_Button*, void*);
-  static void cb_14(Fl_Button*, void*);
-  inline void cb_15_i(Fl_Button*, void*);
-  static void cb_15(Fl_Button*, void*);
   inline void cb_16_i(Fl_Button*, void*);
   static void cb_16(Fl_Button*, void*);
+  inline void cb_17_i(Fl_Button*, void*);
+  static void cb_17(Fl_Button*, void*);
+  inline void cb_18_i(Fl_Button*, void*);
+  static void cb_18(Fl_Button*, void*);
   inline void cb_Repeat_i(Fl_Light_Button*, void*);
   static void cb_Repeat(Fl_Light_Button*, void*);
 public:
@@ -894,14 +862,8 @@ private:
   static void cb_Black(Fl_Light_Button*, void*);
 public:
   ColorWindow *cw;
-  ArrayWindow *aw;
-private:
-  inline void cb_Save10_i(Fl_Button*, void*);
-  static void cb_Save10(Fl_Button*, void*);
-public:
   void show();
   void init(); 
   void setValue(); 
-  void killUI(); 
 };
 #endif
