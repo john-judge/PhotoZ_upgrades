@@ -16,7 +16,7 @@ class Camera;
 class DapController  
 {
 private:
-	TaskHandle taskHandleGet = 0;
+	TaskHandle taskHandleLed = 0;
 	TaskHandle taskHandlePut = 0;
 	HDAP dap820Put;
 	HDAP dap820Get;
@@ -49,7 +49,10 @@ private:
 	char ltpIndFlag;
 	char scheduleFlag;
 	char scheduleRliFlag;
-
+	//int **outputs; //old idea! Let's try saving space
+	//int **pseudoOutputs;
+	uint8_t *outputs;
+	uint8_t *pseudoOutputs;
 public:
 	// Constructors
 	DapController();
@@ -80,7 +83,7 @@ public:
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
-	void fillPDOut(std::fstream &, char realFlag);
+	void fillPDOut(uint8_t *outputs, char realFlag);
 
 	// Acquisition Control
 	int sendFile2Dap(const char *);

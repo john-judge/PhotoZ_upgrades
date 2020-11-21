@@ -157,8 +157,8 @@ double DapController::getIntPts()
 int DapController::acqui(short *memory, Camera &cam)
 {
 	int i;
-	short *buf = new short[8*numPts];
-	DapInputFlush(dap820Get);
+	short *buf = new int[4*numPts];
+						//DapInputFlush(dap820Get);
 
 	unsigned char *image;
 	int width = cam.width();
@@ -177,8 +177,16 @@ int DapController::acqui(short *memory, Camera &cam)
 	Sleep(100);
 
 	cam.start_images();
-	DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
-
+	//DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
+	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
+		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
+	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;	
+	int32 defaultReadSuccess = -1; int32* successfulSamplesIn=&defaultReadSuccess;
+	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, false, 0, DAQmx_Val_GroupByChannel, outputs, successfulSamples, NULL));
+	int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);	
+	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
+	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcqui, (numPts+7+start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4*numpts, successfulSamplesIn, NULL));
+	DAQmxErrChk(DAQmxStartTask (taskHandleAcqui));
 	int tos = 0;
 	for (int ii=0; ii<7; ii++) image = cam.wait_image();		// throw away first seven frames to clear camera saturation
 																// be sure to add 7 to COUNT in lines 327 and 399
@@ -203,24 +211,37 @@ int DapController::acqui(short *memory, Camera &cam)
 
 
 	// Get Binary Data (digital outputs)
-	int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
-	for (i = 0; i < numPts; i++)
-		memcpy(memory + (width * height) + (num_diodes*i), buf + (i*8), 8*sizeof(short));	// copy camera buffer into memory location set aside for raw data
+	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
+	DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui),30);
+	cout << "Successful samples written: " << successfulSamples<<"\n";
+	cout << "Successful samples received: " << successfulSamplesIn<<"\n";
+	for (i = 0; i < numPts*4; i++)
+		*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
 	return 0;
+	free(buf);
+	free(outputs);
 }
 
 //=============================================================================
 void DapController::pseudoAcqui()
 {
-	DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output");
+	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;
+	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, true, 0, DAQmx_Val_GroupByChannel, pseudoOutputs, successfulSamples, NULL));
+	//wait till complete
+	DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui),30);
+
 }
 
 //=============================================================================
 void DapController::resetDAPs()
 {
-	DapLinePut(dap820Put,"RESET");
+	//pass
+	//DapLinePut(dap820Put,"RESET");
 	//don't need to do anything for NI since different tasks
 	//might run stop or setDaps again to confirm clean tasks
+	//maybe just ensure stopped
+	DAQmxErrChk(DAQmxStopTask(taskHandleGet));
+	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
 }
 
 void DapController::resetCamera()
@@ -261,171 +282,153 @@ void DapController::resetCamera()
 int DapController::stop()
 {
 	stopFlag=1;
-
-	setDAPs();
 	//resetDAPs();
 	DAQmxErrChk(DAQmxStopTask(taskHandleGet));
-	DAQmxErrChk(DAQmxStopTask(taskHandlePut));
+	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
 	return  0;
 }
 
 //=============================================================================
 int DapController::sendFile2Dap(const char *fileName820)
 {
-	char fileName1[64]="\\PhotoZ\\";
+	//probably don't need this function
+	// char fileName1[64]="\\PhotoZ\\";
 
-	strcat_s(fileName1, 64,fileName820);
+	// strcat_s(fileName1, 64,fileName820);
 
-	if(!DapConfig(dap820Put,fileName1)) {
-		char buf[64];
-		DapLastErrorTextGet(buf,64);
-		printf("DAP ERROR: %s\n", buf);
-		return 0;
-	}
-	Sleep(500);		// wait .5 second for dap file to reach dap	 ?? needed
+	// if(!DapConfig(dap820Put,fileName1)) {
+	// 	char buf[64];
+	// 	DapLastErrorTextGet(buf,64);
+	// 	printf("DAP ERROR: %s\n", buf);
+	// 	return 0;
+	// }
+	// Sleep(500);		// wait .5 second for dap file to reach dap	 ?? needed
 	return 1;
 }
 
 //=============================================================================
-void DapController::createAcquiDapFile()
+void DapController::createAcquiDapFile()//set outputs samples array here//configure tasks here
 {
-	fstream file;
 	int i;
 
-	//-------------------------------------------------------------------
-	// Record-820 v5.dap
+								//-------------------------------------------------------------------
+								// Record-820 v5.dap
 
-	file.open("\\PhotoZ\\Record-820 v5.dap",ios::out|ios::trunc);
+								// file.open("\\PhotoZ\\Record-820 v5.dap",ios::out|ios::trunc);
 
-	file<<";*****************************************\n";
-	file<<";* Photoz5 Author:Payne Y. Chang  (c)2005*\n";
-	file<<";*****************************************\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Photoz5 Author:Payne Y. Chang  (c)2005*\n";
+								// file<<";*****************************************\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Fill Pipe_Output\n";
-	file<<";*****************************************\n";
-	fillPDOut(file,1);
-	file<<"\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Fill Pipe_Output\n";
+								// file<<";*****************************************\n";
+	//outputs = new int*[3]; //old idea
+	fillPDOut(outputs,1);
+								// file<<"\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Start Output\n";
-	file<<";*****************************************\n";
-	file<<"ODEF Start_Output 3\n";
-	file<<" OUTPUTWAIT 100\n";
-	file<<" UPDATE BURST\n";
-	file<<" SET OPIPE0 B0\n";
-	file<<" SET OPIPE1 A0\n";
-	file<<" SET OPIPE2 A1\n";
-	file<<" TIME 333.33\n"; // 1000/3
-	file<<"END\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Start Output\n";
+								// file<<";*****************************************\n";
+								// file<<"ODEF Start_Output 3\n";
+								// file<<" OUTPUTWAIT 100\n";
+								// file<<" UPDATE BURST\n";
+								// file<<" SET OPIPE0 B0\n";
+								// file<<" SET OPIPE1 A0\n";
+								// file<<" SET OPIPE2 A1\n";
+								// file<<" TIME 333.33\n"; // 1000/3
+								// file<<"END\n\n";
 
-	//-------------------------------------------------------------------
-	// Input procedures
+								// //-------------------------------------------------------------------
+								// // Input procedures
 
-	file<<";*****************************************\n";
-	file<<";* Define Input\n";
-	file<<";*****************************************\n";
-	file<<"IDEF Define_Input 8\n";
-	file<<" vrange -10 10\n";
+								// // file<<";*****************************************\n";
+								// // file<<";* Define Input\n";
+								// // file<<";*****************************************\n";
+								// // file<<"IDEF Define_Input 8\n";
+								// // file<<" vrange -10 10\n";
 
-	// Set IPipe-S map
-	for(i=0;i<8;i++)
-		file << " set IPIPE" << i << " S" << i << '\n';
+								// // Set IPipe-S map
+								// for(i=0;i<8;i++)
+								// 	file << " set IPIPE" << i << " S" << i << '\n';
 
-	// need to translate the offset count for 1000ms interval to the current interval.
-	// full calculation is 1.0ms * CAM_INPUT_OFFSET / intPts
-	// also need to do so for acquiOnset
-	int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);
-	file << "\n TIME " << intPts * 125 << "\n";	// 1000/8
-	//file << " HTrigger Oneshot\n";	// might be able to sync with outputs
-	file << " COUNT " << 8 * (numPts+7 + start_offset) << "\n";			// added 5 to numPts to compensate for images skipped at beginning (line 171)
-	file << "\nEND\n\n";
+								// // need to translate the offset count for 1000ms interval to the current interval.
+								// // full calculation is 1.0ms * CAM_INPUT_OFFSET / intPts
+								// // also need to do so for acquiOnset
 
-	file << ";*****************************************\n";
-	file << ";* Send Data to PC\n";
-	file << ";*****************************************\n";
-	file << "PDEF Send_Data\n";
-	file << " SKIP(IPIPE(0..7), " << 8*start_offset << ", 1, 0, $BINOUT)\n";
-	file << "END\n\n";
+								// file << "\n TIME " << intPts * 125 << "\n";	// 1000/8
+								// //file << " HTrigger Oneshot\n";	// might be able to sync with outputs
+								// file << " COUNT " << 8 * (numPts+7 + start_offset) << "\n";			// added 5 to numPts to compensate for images skipped at beginning (line 171)
+								// file << "\nEND\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Send Pipe_Output to Output Pipe\n";
-	file<<";*****************************************\n";
-	file<<"PDEF Send_Pipe_Output\n";
-	file<<" COPY(Pipe_Output,OPIPE0)\n";
-	file<<" COPY(PX,OPIPE1)\n";
-	file<<" COPY(PX1,OPIPE2)\n";
-	file<<"END\n\n";
-
-	file << ";*****************************************\n";
-	file << ";* END\n";
-	file << ";*****************************************\n";
-
-	file.close();
-
-	//-------------------------------------------------------------------
+	// int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);(numPts+7+start_offset)
+	//Set timing for inputs
+		// DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiIn,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising,8*(numPts+7+start_offset)));
+		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcqui,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising, duration+10));
 	// PseudoRecord-820 v5.dap
+	//pseudoOutputs = new int*[3]; //old idea
+	fillPDOut(pseudoOutputs,1);
+								// file.open("\\PhotoZ\\PseudoRecord-820 v5.dap",ios::out|ios::trunc);
 
-	file.open("\\PhotoZ\\PseudoRecord-820 v5.dap",ios::out|ios::trunc);
+								// file<<";*****************************************\n";
+								// file<<";* Photoz5 Author:Payne Y. Chang  (c)2005*\n";
+								// file<<";*****************************************\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Photoz5 Author:Payne Y. Chang  (c)2005*\n";
-	file<<";*****************************************\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Fill Pipe_Output\n";
+								// file<<";*****************************************\n";
+								// fillPDOut(file,0);
+								// file<<"\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Fill Pipe_Output\n";
-	file<<";*****************************************\n";
-	fillPDOut(file,0);
-	file<<"\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Send Pipe_Output to Output Pipe\n";
+								// file<<";*****************************************\n";
+								// file<<"PDEF Send_Pipe_Output\n";
+								// file<<" COPY(Pipe_Output,OPIPE0)\n";
+								// file<<"END\n\n";
 
-	file<<";*****************************************\n";
-	file<<";* Send Pipe_Output to Output Pipe\n";
-	file<<";*****************************************\n";
-	file<<"PDEF Send_Pipe_Output\n";
-	file<<" COPY(Pipe_Output,OPIPE0)\n";
-	file<<"END\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Start Output\n";
+								// file<<";*****************************************\n";
+								// file<<"ODEF Start_Output 1\n";
+								// file<<" OUTPUTWAIT 10\n";
+								// file<<" UPDATE BURST\n";
+								// file<<" SET OPIPE0 B0\n";
+								// file<<" TIME 1000\n";
+								// file<<"END\n\n";
+						//input definitions are not required for pseudo acqui 
+								// //-------------------------------------------------------------------
+								// // Input procedures
 
-	file<<";*****************************************\n";
-	file<<";* Start Output\n";
-	file<<";*****************************************\n";
-	file<<"ODEF Start_Output 1\n";
-	file<<" OUTPUTWAIT 10\n";
-	file<<" UPDATE BURST\n";
-	file<<" SET OPIPE0 B0\n";
-	file<<" TIME 1000\n";
-	file<<"END\n\n";
+								// file<<";*****************************************\n";
+								// file<<";* Define Input\n";
+								// file<<";*****************************************\n";
+								// file<<"IDEF Define_Input 8\n";
+								// file<<" vrange -10 10\n";
 
-	//-------------------------------------------------------------------
-	// Input procedures
+								// // Set IPipe-S map
+								// for(i=0;i<8;i++)
+								// 	file << " set IPIPE" << i << " S" << i << '\n';
 
-	file<<";*****************************************\n";
-	file<<";* Define Input\n";
-	file<<";*****************************************\n";
-	file<<"IDEF Define_Input 8\n";
-	file<<" vrange -10 10\n";
+								// file << "\n TIME " << intPts * 125 << "\n";	// 1000/8
+								// //file << " HTrigger Oneshot\n";	// might be able to sync with outputs
+								// file << " COUNT " << 8 * (numPts+7) << "\n";
+								// file << "\nEND\n\n";
 
-	// Set IPipe-S map
-	for(i=0;i<8;i++)
-		file << " set IPIPE" << i << " S" << i << '\n';
+								// file << ";*****************************************\n";
+								// file << ";* Send Data to PC\n";
+								// file << ";*****************************************\n";
+								// file << "PDEF Send_Data\n";
+								// file << " MERGE(IPIPE(0..7),$BINOUT)\n";
+								// file << "END\n\n";
 
-	file << "\n TIME " << intPts * 125 << "\n";	// 1000/8
-	//file << " HTrigger Oneshot\n";	// might be able to sync with outputs
-	file << " COUNT " << 8 * (numPts+7) << "\n";
-	file << "\nEND\n\n";
+								// file << ";*****************************************\n";
+								// file << ";* END\n";
+								// file << ";*****************************************\n";
 
-	file << ";*****************************************\n";
-	file << ";* Send Data to PC\n";
-	file << ";*****************************************\n";
-	file << "PDEF Send_Data\n";
-	file << " MERGE(IPIPE(0..7),$BINOUT)\n";
-	file << "END\n\n";
-
-	file << ";*****************************************\n";
-	file << ";* END\n";
-	file << ";*****************************************\n";
-
-	file.close();
-	// END OF PSEUDORECORD
+								// file.close();
+								// // END OF PSEUDORECORD
 }
 
 //=============================================================================
@@ -466,20 +469,31 @@ float DapController::getDuration() {
 }
 
 //=============================================================================
-void DapController::fillPDOut(fstream & file,char realFlag)
+void DapController::fillPDOut(uint8_t *outputs,char realFlag)
 {
 	int i, j, k;
 	float start,end;
-	int *pipe = new int[60000];
-
-	const int shutter_mask = (1 << 1);		// digital out 1
-	const int sti1_mask = (1 << 2);			// digital out 2
-	const int sti2_mask = (1 << 3);			// digital out 3
-	const int cam_mask = (1 << 7);			// digital out 7
+	// int **outputs = new int*[3];
+	//don't need 60000 ints for pipe
+	// outputs[0] = new int[duration+10];
+	// outputs[1] = new int[duration+10];
+	// outputs[2] = new int[duration+10];
+	// int *pipe = outputs[0];
+	// int *pipe_st1 = outputs[1];
+	// int *pipe_st2 = outputs[2];
+	outputs = new uint8_t[duration+10];
+	const uint8_t shutter_mask = (1);		// digital out 0 based on virtual channel
+	const uint8_t sti1_mask = (1 << 1);			// digital out 2
+	const uint8_t sti2_mask = (1 << 2);			// digital out 3
+	// const int cam_mask = (1 << 7);			// digital out 7
 
 	//--------------------------------------------------------------
 	// Reset the array
-	memset(pipe, 0, sizeof(int) * 60000);
+//	memset(pipe, 0, sizeof(int) * 60000);
+	//don't need 60000
+	memset(outputs, 0, sizeof(uint8_t) * (duration+10));
+	// memset(pipe_st1, 0, sizeof(int) * duration+10);
+	// memset(pipe_st2, 0, sizeof(int) * duration+10);
 
 	//--------------------------------------------------------------
 	// Reset : output[i]+=1
@@ -498,7 +512,7 @@ void DapController::fillPDOut(fstream & file,char realFlag)
 		end=(start+shutter->getDuration());
 
 		for(i=(int)start;i<end;i++)
-			pipe[i] |= shutter_mask;
+			outputs[i] |= shutter_mask;
 	}
 	//--------------------------------------------------------------
 	// Stimulator #1
@@ -509,7 +523,7 @@ void DapController::fillPDOut(fstream & file,char realFlag)
 			start=sti1->getOnset()+j*intPulses1+k*intBursts1;
 			end=(start+sti1->getDuration());
 			for(i=(int)start;i<end;i++)
-				pipe[i] |= sti1_mask;
+				outputs[i] |= sti1_mask;
 		}
 	}
 	//--------------------------------------------------------------
@@ -521,48 +535,38 @@ void DapController::fillPDOut(fstream & file,char realFlag)
 			start=sti2->getOnset()+j*intPulses2+k*intBursts2;
 			end=(start+sti2->getDuration());
 			for(i=(int)start;i<end;i++)
-				pipe[i] |= sti2_mask;
+				outputs[i] |= sti2_mask;
 		}
 	}
+			//include depending on professor meyer's reply
+			// //--------------------------------------------------------------
+			// // Camera Acquire
+			// //for (i = acquiOnset; i < acquiOnset + getAcquiDuration() + 0.5; i++)
+			// for (i = (int)acquiOnset; i < duration; i++)
+			// 	pipe[i] |= cam_mask;
+	
 	//--------------------------------------------------------------
-	// Camera Acquire
-	//for (i = acquiOnset; i < acquiOnset + getAcquiDuration() + 0.5; i++)
-	for (i = (int)acquiOnset; i < duration; i++)
-		pipe[i] |= cam_mask;
+	// file << "PIPE Pipe_Output MAXSIZE=60000\n";
+	// for (i = 0; i < duration; i++) {
+	// 	if( (i%10) == 0)
+	// 		file << "\n Fill Pipe_Output";
+	// 	file << " " << pipe[i];
+	// }
+	//file << "\n Fill Pipe_Output 0 0 0 0 0 0 0 0 0 0";
 
-	//--------------------------------------------------------------
-	file << "PIPE Pipe_Output MAXSIZE=60000\n";
-	for (i = 0; i < duration; i++) {
-		if( (i%10) == 0)
-			file << "\n Fill Pipe_Output";
-		file << " " << pipe[i];
-	}
-	file << "\n Fill Pipe_Output 0 0 0 0 0 0 0 0 0 0";
+			// include depending on professor meyer's reply
+			// for (i = 0; i < duration; i++) {
+			// 	if (pipe[i] & sti1_mask)
+			// 		pipe_st1 = 32767;
+			// }
 
+			// for (i = 0; i < duration; i++) {
+			// 	if (pipe[i] & sti2_mask)
+			// 			pipe_st1 = 32767;
+			// }
 
-	file << "\n\n\nPIPE PX MAXSIZE=60000";
-	for (i = 0; i < duration; i++) {
-		if((i%10) == 0)
-			file << "\n FILL PX";
-		if (pipe[i] & sti1_mask)
-			file << " 32767";
-		else
-			file << " 0";
-	}
-	file << "\n Fill PX 0 0 0 0 0 0 0 0 0 0";
-
-	file << "\n\n\nPIPE PX1 MAXSIZE=60000";
-	for (i = 0; i < duration; i++) {
-		if((i%10) == 0)
-			file << "\n FILL PX1";
-		if (pipe[i] & sti2_mask)
-			file << " 32767";
-		else
-			file << " 0";
-	}
-	file << "\n Fill PX1 0 0 0 0 0 0 0 0 0 0";
-
-	delete [] pipe;
+	// delete [] pipe;
+	//deleted after data is sent now
 }
 
 //=============================================================================
@@ -628,18 +632,19 @@ Error:
 	//Sends the digital samples to port 0 line 0 (connected to LED)
 //	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
-	DAQmxWriteDigitalLines(taskHandlePut, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
-//	DAQmxErrChk(DAQmxCreateTask("", &taskHandlePut));															code adapted from Chun's above
-//	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));
-//	DAQmxErrChk(DAQmxStartTask(taskHandlePut));
-//	DAQmxWriteDigitalLines(taskHandlePut, 1, 1, 10, DAQmx_Val_GroupByChannel, data, NULL, NULL);
+	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
+//	DAQmxErrChk(DAQmxCreateTask("", &taskHandleRLI));															code adapted from Chun's above
+//	DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));
+//	DAQmxErrChk(DAQmxStartTask(taskHandleRLI));
+//	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data, NULL, NULL);
 //	cout << "DapController line 626 LED on \n";
 //	Sleep(1000);
 	//Number of samples is 348 as seen in dap file.
-	bool32 isDone = false;
-	while (!isDone) {
-		DAQmxErrChk(DAQmxIsTaskDone(taskHandlePut, &isDone));
-	}
+	//int32 DAQmxWaitUntilTaskDone (TaskHandle taskHandle, float64 timeToWait);
+//    DAQmxWaitUntilTaskDone(taskHandleRLI,-1);
+//can't wait because light will be off by the time camera captures
+
+
 
 	cam.init_cam();
 //	cam.serial_write("@TXC 0\r");
@@ -675,7 +680,7 @@ Error:
 
 	cam.end_images();
 	memcpy(memory, memory + array_diodes, array_diodes* sizeof(image[1]));		//*sizeof(short)
-//	DAQmxWriteDigitalLines(taskHandlePut, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
+//	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
 	return 0;
 }
 
@@ -822,22 +827,40 @@ char DapController::getScheduleRliFlag()
 }
 
 //=============================================================================
-int DapController::setDAPs(float64 SamplingRate)
+int DapController::setDAPs(float64 SamplingRate) //creates tasks
 {
-	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleGet));
-	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandlePut));
-
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleRLI));
+	//two tasks RLI and acqui
 	//int32 DAQmxCreateDOChan (TaskHandle taskHandle, const char lines[], const char nameToAssignToLines[], int32 lineGrouping);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreatedochan/
 		//Channel names: http://zone.ni.com/reference/en-XX/help/370466AH-01/mxcncpts/physchannames/
-	
-//	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));	//			this one did not work and was changed to the line below
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
-
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
 	//Set timing.
 	//int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
-	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandlePut, NULL,SamplingRate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps, 348));
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleRLI, NULL,SamplingRate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps, 348));
+
+
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcqui));
+			//old idea
+			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
+			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
+			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line3", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1, Dev1/port1/line1, Dev1/port1/line3", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
+	//int32 DAQmxCreateAOVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
+		//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
+	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", -10, 10, DAQmx_Val_Volts, NULL));
+	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line3", "ledOutSt2", -10, 10, DAQmx_Val_Volts, NULL));
+	//configure in acqui
+
+//	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcquiIn));
+	//1, 4, 7, and 10
+	//int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai0", "acquiInput0", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai1", "acquiInput1", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai2", "acquiInput2", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai3", "acquiInput3", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
+	//TO DO: configure elsewhere
 	cout << "line 815  " << SamplingRate<< "\n";
 	return 0;
 }
@@ -846,7 +869,7 @@ int DapController::setDAPs(float64 SamplingRate)
 void DapController::releaseDAPs()
 {
 	DAQmxClearTask(taskHandleGet);//	DapHandleClose(dap820Get); 
-	DAQmxClearTask(taskHandlePut);//	DapHandleClose(dap820Put); 
+	DAQmxClearTask(taskHandleRLI);//	DapHandleClose(dap820Put); 
 }
 
 //=============================================================================
