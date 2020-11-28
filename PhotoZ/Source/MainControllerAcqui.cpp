@@ -56,7 +56,7 @@ void MainController::takeRli()
 //	int freq = Camera::FREQ[program];
 	
 //	cam.program(program);
-	dapControl->setDAPs();
+	dapControl->setDAPs(freq);
 	cout << "MainCAcqui line 57 setDAPs  \n";
 	/*dapControl->resetDAPs();
 
