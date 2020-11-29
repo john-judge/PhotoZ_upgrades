@@ -2,38 +2,40 @@
 
 CFG=Release
 PDVHOME=..
+INTDIR=.\$(CFGNAME)
 
-CC = cl
-
-OPTIM = -O2 -DNDEBUG -D_MBCS -MD
-
-
-CFLAGS = $(OPTIM) -DWIN32 -nologo $(CFLAGS) -I$(PDVHOME)/pdvplus -I$(PDVHOME)/tiff/libtiff
-
+CFLAGS = $(OPTIM) -D_MBCS -DWIN32 -nologo $(CFLAGS) -I$(PDVHOME)\pdvplus -I$(PDVHOME)\tiff\libtiff -I$(PDVHOME)\jpeg-6b
 
 LIBOBJS = \
-$(CFGNAME)/Imagefiletiff.obj \
-$(CFGNAME)/imagefile.obj \
-$(CFGNAME)/imagefilebmp.obj \
-$(CFGNAME)/imagefilemgr.obj \
-$(CFGNAME)/imagefileraw.obj \
-$(CFGNAME)/imagefiletype.obj 
+$(INTDIR)\imagefile.obj \
+$(INTDIR)\imagefilemgr.obj \
+$(INTDIR)\imagefileraw.obj \
+$(INTDIR)\imagefilebmp.obj \
+$(INTDIR)\Imagefiletiff.obj \
+$(INTDIR)\imagefilejpeg.obj \
+$(INTDIR)\imagefiletype.obj 
 
-LIB = ../lib/$(ARCH)/imgfiles.lib
+TARGETLIB = $(LIBDIR)\imgfiles.lib
 
-all : $(LIB)
+all : $(TARGETLIB)
 
-dir : $(CFGNAME)
+dir : $(LIBDIR) $(INTDIR)
 
-$(CFGNAME):
-	if not exist $(CFGNAME)/ mkdir $(CFGNAME)
+$(LIBDIR):
+	if not exist $(LIBDIR)/ mkdir $(LIBDIR)
 
-$(LIB) : dir $(LIBOBJS)
-	$(LIB32) $(LIBFLAGS) /OUT:$(LIB) $(LIBOBJS) 
+$(INTDIR):
+	if not exist $(INTDIR)/ mkdir $(INTDIR)
 
-{}.c{$(CFGNAME)}.obj:
-	$(CC) -c $(CFLAGS) -Fo$(CFGNAME)\ $<
+$(TARGETLIB) : dir $(LIBOBJS)
+	$(LINK32) /lib /OUT:$(TARGETLIB) $(LIBOBJS) 
 
-{}.cpp{$(CFGNAME)}.obj:
-	$(CC) -c $(CFLAGS) -Fo$(CFGNAME)\ $<
+{}.c{$(INTDIR)}.obj:
+	$(CC) -c $(CFLAGS) -Fo$(INTDIR)\ $<
 
+{}.cpp{$(INTDIR)}.obj:
+	$(CC) -c $(CFLAGS) -Fo$(INTDIR)\ $<
+
+clean: 
+    del /Q $(TARGETLIB) 2>nul
+    -if exist $(INTDIR) del /Q $(LIBOBJS) 2>nul

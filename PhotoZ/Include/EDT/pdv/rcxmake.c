@@ -248,7 +248,7 @@ main(int argc, char **argv)
 		    {
 			char *p;
 
-			if (sscanf(tbuf,"%s", &tmpstr) != 1)
+			if (sscanf(tbuf,"%s", (char *)&tmpstr) != 1)
 			    error_out("burn (bad block name)");
 
 			back_to_fwd(tmpstr);

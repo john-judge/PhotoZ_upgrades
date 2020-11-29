@@ -1,5 +1,5 @@
 /*
- * "$Id: fl_utf8.h 11266 2016-03-02 12:15:08Z AlbrechtS $"
+ * "$Id$"
  *
  * Author: Jean-Marc Lienher ( http://oksid.ch )
  * Copyright 2000-2010 by O'ksi'D.
@@ -41,7 +41,7 @@
 #  include <locale.h>
 #  include <ctype.h>
 #  define xchar wchar_t
-#  if !defined(FL_DLL) && !defined(__CYGWIN__)
+#  if !0 && !defined(__CYGWIN__)
 #    undef strdup
 #    define strdup _strdup
 #    undef putenv
@@ -244,5 +244,5 @@ FL_EXPORT char fl_make_path( const char *path );
 #endif /* _HAVE_FL_UTF8_HDR_ */
 
 /*
- * End of "$Id: fl_utf8.h 11266 2016-03-02 12:15:08Z AlbrechtS $".
+ * End of "$Id$".
  */

@@ -2,6 +2,7 @@
 // WindowExporter.cpp: implementation of the WindowExporter class.
 //=============================================================================
 #include <windows.h>
+
 #include <stdlib.h>
 #include <string>
 #include <iostream>
@@ -9,6 +10,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_File_Chooser.H>
 
+/*
 #include <paintlib/plstdpch.h>		// Must have one for paintlib
 #include <paintlib/planydec.h>
 #include <paintlib/plwinbmp.h>
@@ -16,7 +18,7 @@
 #include <paintlib/pljpegenc.h>
 #include <paintlib/plpngenc.h>
 #include <paintlib/pltiffenc.h>
-
+*/
 #include "WindowExporter.h"
 #include "MainController.h"
 
@@ -27,11 +29,12 @@ WindowExporter::WindowExporter()
 {
 	imageType='P';
 
+	/*
 	jpegEncoder=new PLJPEGEncoder();
 	pngEncoder=new PLPNGEncoder();
 	bmpEncoder=new PLBmpEncoder();
 	tiffEncoder=new PLTIFFEncoder();
-
+	*/
 	hdcMonitor=CreateDC("DISPLAY",NULL,NULL,NULL);	// Handle for DC
 	hdcWindow=CreateCompatibleDC(hdcMonitor);
 }
@@ -39,11 +42,12 @@ WindowExporter::WindowExporter()
 //=============================================================================
 WindowExporter::~WindowExporter()
 {
+	/*
 	delete jpegEncoder;
 	delete pngEncoder;
 	delete bmpEncoder;
 	delete tiffEncoder;
-
+	*/
 	DeleteObject(hdcMonitor);
 }
 
@@ -91,13 +95,14 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	  DIB_RGB_COLORS			// RGB
 	);
 		
-	PLWinBmp *winBmp=new PLWinBmp;
-	winBmp->CreateFromHBitmap(hbm);
+	//PLWinBmp *winBmp=new PLWinBmp;
+	//winBmp->CreateFromHBitmap(hbm);
 
 	//
 	int     x,y;
-	PLPixel32 ** pLineArray = winBmp->GetLineArray32();
-	PLPixel32  * pLine;
+	//PLPixel32 ** pLineArray = winBmp->GetLineArray32();
+	//PLPixel32  * pLine;
+	/*
 	int width=winBmp->GetWidth();
 	int height=winBmp->GetHeight();
 	for (y=0;y<height;y++)
@@ -110,7 +115,7 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 			pLine[x].SetB(buf[4*(width*y+x)]);
 			pLine[x].SetA(buf[4*(width*y+x)+3]);
 		}
-	}
+	}*/
 	//
 	delete [] buf;
 		
@@ -118,30 +123,30 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	if(imageType=='B')
 	{
 		fileName=fl_file_chooser("BMP file name","*.bmp","Image.bmp");
-		if(fileName)
-			bmpEncoder->MakeFileFromBmp(fileName,winBmp);
+		if(fileName) {}
+			//bmpEncoder->MakeFileFromBmp(fileName,winBmp);
 	}
 	else if(imageType=='J')
 	{
 		fileName=fl_file_chooser("JPEG file name","*.jpg","Image.jpg");
-		if(fileName)
-			jpegEncoder->MakeFileFromBmp(fileName,winBmp);
+		if (fileName) {}
+			//jpegEncoder->MakeFileFromBmp(fileName,winBmp);
 	}
 	else if(imageType=='P')
 	{
 		fileName=fl_file_chooser("Enter PNG file name","*.png","Image.png");
-		if(fileName)
-			pngEncoder->MakeFileFromBmp(fileName,winBmp);
+		if(fileName) {}
+			//pngEncoder->MakeFileFromBmp(fileName,winBmp);
 	}
 	else if(imageType=='T')
 	{
 		fileName=fl_file_chooser("TIFF file name","*.tif*","Image.tif");
-		if(fileName)
-			tiffEncoder->MakeFileFromBmp(fileName,winBmp);
+		if(fileName) {}
+			//tiffEncoder->MakeFileFromBmp(fileName,winBmp);
 	}
 
 	//
-	delete winBmp;
+	//delete winBmp;
 	DeleteObject(hbm);
 }
 
@@ -166,11 +171,13 @@ void WindowExporter::export2(int x0, int y0, int w, int h, const char* fileName)
 	);
 
 	//
+	int     x, y;
+	/*
 	PLWinBmp *winBmp=new PLWinBmp;
 	winBmp->CreateFromHBitmap(hbm);
 
 	//
-	int     x,y;
+	
 	PLPixel32 ** pLineArray = winBmp->GetLineArray32();
 	PLPixel32  * pLine;
 	int width=winBmp->GetWidth();
@@ -186,15 +193,15 @@ void WindowExporter::export2(int x0, int y0, int w, int h, const char* fileName)
 			pLine[x].SetB(buf[4*(width*y+x)]);
 			pLine[x].SetA(buf[4*(width*y+x)+3]);
 		}
-	}
+	}*/
 
 	//
 	delete [] buf;
 
-	pngEncoder->MakeFileFromBmp(fileName,winBmp);
+	//pngEncoder->MakeFileFromBmp(fileName,winBmp);
 
 	//
-	delete winBmp;
+	//delete winBmp;
 	DeleteObject(hbm);
 }
 
@@ -220,13 +227,16 @@ void WindowExporter::snapshot(int x0, int y0, int w, int h, int num)
 	);
 
 	//
+	int     x, y;
+	/*
 	PLWinBmp *winBmp=new PLWinBmp;
 	winBmp->CreateFromHBitmap(hbm);
 
 	//
-	int     x,y;
+	
 	PLPixel32 ** pLineArray = winBmp->GetLineArray32();
 	PLPixel32  * pLine;
+	
 	int width=winBmp->GetWidth();
 	int height=winBmp->GetHeight();
 
@@ -241,15 +251,15 @@ void WindowExporter::snapshot(int x0, int y0, int w, int h, int num)
 			pLine[x].SetA(buf[4*(width*y+x)+3]);
 		}
 	}
+	*/
 
 	//
 	delete [] buf;
 
 	std::string fileName = std::to_string(num) + ".jpg";
-	jpegEncoder->MakeFileFromBmp(fileName.c_str(), winBmp);
+	//jpegEncoder->MakeFileFromBmp(fileName.c_str(), winBmp);
 
-	//
-	delete winBmp;
+	// delete winBmp;
 	DeleteObject(hbm);
 }
 

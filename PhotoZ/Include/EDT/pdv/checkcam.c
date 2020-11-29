@@ -153,12 +153,15 @@ char *argv[];
 
 	case PDVFOX_ID:
 	case PDVCL_ID:
+	case PE1DVVL_ID:
+	case PE4DVVL_ID:
 	case PE4DVCL_ID:
 	case PE8DVCL_ID:
 	case PE4DVFCI_ID:
 	case PE8DVFCI_ID:
 	case PE4DVFOX_ID:
 	case PE8DVFOX_ID:
+	case PE4DVVLFOX_ID:
 	    checkclcount();
 	    break;
 
@@ -181,7 +184,7 @@ char *argv[];
 void
 checkclcount()
 {
-    PrintRegister(edt_p, "CLOCKSSPERLINE", PDV_CL_PIXELSPERLINE, NULL);
+    PrintRegister(edt_p, "CLOCKSPERLINE", PDV_CL_PIXELSPERLINE, NULL);
     PrintRegister(edt_p, "LINESPERFRAME", PDV_CL_LINESPERFRAME, NULL);
 }
 

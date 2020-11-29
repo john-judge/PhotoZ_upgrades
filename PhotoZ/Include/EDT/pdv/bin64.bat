@@ -3,3 +3,4 @@
 
 copy bin\amd64\*.* .
 copy lib\amd64\*.* .
+copy wbin\amd64\*.* .

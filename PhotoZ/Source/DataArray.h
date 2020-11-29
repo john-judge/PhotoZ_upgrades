@@ -4,7 +4,7 @@
 #ifndef DataArray_H
 #define DataArray_H
 //=============================================================================
-#include "ArrayWindow.h"
+//#include "ArrayWindow.h"
 
 #define Max_Trials 100
 

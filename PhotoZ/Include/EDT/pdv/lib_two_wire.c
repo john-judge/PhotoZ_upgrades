@@ -689,10 +689,10 @@ edt_serial_dev_reg_read_block(EdtDev *edt_p,
                         u_char *block) 
 
 {
-    uint_t i;
+    int i;
     uint_t addr = address;
 
-    for (i=0;i<length;i++)
+    for (i=0;i<(int)length;i++)
     {
         block[i] = edt_serial_dev_reg_read(edt_p,
                         base_desc, 
@@ -713,10 +713,10 @@ edt_serial_dev_reg_write_block(EdtDev *edt_p,
                         u_char *block) 
 
 {
-    uint_t i;
+    int i;
     uint_t addr = address;
 
-    for (i=0;i<length;i++)
+    for (i=0;i<(int)length;i++)
     {
         edt_serial_dev_reg_write(edt_p,
                         base_desc, 

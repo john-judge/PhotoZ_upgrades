@@ -37,7 +37,6 @@ char **argv;
     int unit 	= 0;
     u_int spi_reg_base = 0; 	/* 0 value specifies default spi register base of 0x60 */
     int loops	= -1;
-    int ret;
     /*int i; */
 
     puts("0.2");
@@ -109,7 +108,7 @@ char **argv;
 	fputs("\nEnter command:  ", stdout);
 	fflush(stdout);
 
-	ret = fgets(str, 1023, stdin);
+	fgets(str, 1023, stdin);
 	fputs(str, stdout);
 
 	switch (*str)

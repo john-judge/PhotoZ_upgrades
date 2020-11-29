@@ -58,7 +58,7 @@ edt_msg_net_send (void *target, int level, char *message)
 	if (net_info->use_stdout) {
 		/* send duplicate message to stdout.
 		 * useful for apps wanting to print & log to network. */
-		 printf(message);
+		 printf("%s", message);
 	}
 	return 0;
 }

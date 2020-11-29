@@ -1,5 +1,7 @@
 
-#set basic defines for makefiles under pdv
+#set basic defines for windows makefiles under pdv
+
+EDTDEV=pdv
 
 !IFNDEF ARCH
 
@@ -15,9 +17,16 @@ ARCH=x86
 
 !ENDIF
 
+!IFNDEF PDVHOME
+PDVHOME = .
+!ENDIF
+
+TIFFDIR=$(PDVHOME)\tiff\libtiff
+JPEGDIR=$(PDVHOME)\jpeg-6b
+
 HEADER_DIR =$(PDVHOME)
 
-INCLUDEFLAGS=-I$(HEADER_DIR) -I$(PDVHOME)/tiff/libtiff
+INCLUDEFLAGS=-I$(HEADER_DIR) -I$(TIFFDIR) -I$(JPEGDIR)
 
 INCLUDES = $(HEADER_DIR)/edtinc.h \
         $(HEADER_DIR)/libedt.h \
@@ -28,11 +37,27 @@ INCLUDES = $(HEADER_DIR)/edtinc.h \
         $(HEADER_DIR)/edt_error.h \
         $(HEADER_DIR)/initcam.h \
         $(HEADER_DIR)/clsim_lib.h \
-        $(HEADER_DIR)/pdv_dependent.h
+        $(HEADER_DIR)/edt_utils.h \
+        $(HEADER_DIR)/pdv_dependent.h \
+        $(HEADER_DIR)/edt_os_nt.h
 
 CFG=Release
 
-OPTIM = -O2
+CC = cl
+
+VS2005DEFINES = -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE
+
+!IF "$(CFG)" == "Release"
+
+OPTIM = -O2 -MD -W1 -D"NDEBUG" $(VS2005DEFINES) -DWINVER="0x0600"
+CCOPTIM = -O2 -W1 -D"NDEBUG" $(VS2005DEFINES) -DWINVER="0x0600"
+
+!ELSE
+
+OPTIM = -MDd -W3 -Zi  $(VS2005DEFINES)
+CCOPTIM = -W3 -Zi $(VS2005DEFINES)
+
+!ENDIF
 
 !IFDEF BUILD_ID
 
@@ -57,7 +82,6 @@ LIBDIR=$(PDVHOME)
 
 CFGNAME=$(CFG)$(ARCH)
 
-
 !IF "$(ARCH)" == "x86"
 
 #MMX_FLAG=-DUSE_MMX
@@ -71,11 +95,9 @@ MMX_LIB=
 !ENDIF
 
 
-VS2005DEFINES = -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE
 
-CFLAGS = -W3 $(OPTIM) -MD -nologo $(VS2005DEFINES) $(INCLUDEFLAGS) $(MMX_FLAG) $(PSN_FLAG) $(BUILDFLAGS) -DWIN32 
-
-CCFLAGS = -W3 $(OPTIM) -MD -nologo $(VS2005DEFINES) $(INCLUDEFLAGS)  $(MMX_FLAG)  -DWIN32 
+CFLAGS = $(OPTIM) -nologo $(INCLUDEFLAGS) $(MMX_FLAG) $(PSN_FLAG) $(BUILDFLAGS) -DWIN32 
+CCFLAGS = $(CCOPTIM) -nologo $(INCLUDEFLAGS) $(BUILDFLAGS) -DWIN32 
 
 LIB32 = link -lib
 LIBFLAGS = 
@@ -86,7 +108,7 @@ LDFLAGS = /LIBPATH:$(LIBDIR)
 
 DLLFLAGS = $(LDFLAGS) /dll /nologo 
 
-LIBS = $(LIBDIR)/pdvlib.lib $(MMX_LIB) $(LIBDIR)/libtiff.lib $(LIBDIR)/edtimage.lib $(LIBDIR)/clseredt.lib
+LIBS = $(LIBDIR)/pdvlib.lib $(LIBDIR)/libtiff.lib $(LIBDIR)/edtimage.lib $(LIBDIR)/pdvplus.lib $(LIBDIR)/imgfiles.lib
 
 # Windows libraries required by some programs (e.g. win_sysinfo).
 WINLIBS = Advapi32.lib user32.lib gdi32.lib

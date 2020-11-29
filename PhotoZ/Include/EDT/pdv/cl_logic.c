@@ -19,7 +19,7 @@ ClLogicSummary cls;
 void
 usage(char *progname, char *err)
 {
-    printf(err);
+    printf("%s", err);
     printf("usage: %s \n", progname);
     printf("  -u unit         - %s unit number (default 0)\n", EDT_INTERFACE);
     printf("  -l loops        - number of loops (default 1)\n");

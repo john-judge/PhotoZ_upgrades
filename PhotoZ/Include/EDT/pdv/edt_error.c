@@ -48,13 +48,13 @@ EdtMsgHandler edt_default_msg;
 static int edt_default_msg_initialized = 0;
 
 static int 
-edt_msg_printf(void *f_p, int level, char *message)
+edt_msg_printf(void *f_p, int level,  const char *message)
 {
     FILE *f = (FILE *) f_p;
 
 
     if (f)
-	return fprintf(f, message);
+	return fprintf(f, "%s", message);
 
     else
 	return -1;
@@ -91,7 +91,7 @@ edt_err_num(void)
 }
 
 static int
-edt_msg_output_vprintf_perror(EdtMsgHandler *msg_p,  int level, char *format, va_list ap)
+edt_msg_output_vprintf_perror(EdtMsgHandler *msg_p,  int level, const char *format, va_list ap)
 {
 
     char *fullmsg; /* callers message + perror message */
@@ -276,7 +276,7 @@ edt_msg_close(EdtMsgHandler *msg_p)
 * @return 0 on success, -1 on failure.   
 */
 int
-edt_msg(int level, char *format, ...)
+edt_msg(int level, const char *format, ...)
 {
     va_list	stack;
 
@@ -341,7 +341,7 @@ edt_msg(int level, char *format, ...)
 * to an example program.
 */
 int
-edt_msg_output(EdtMsgHandler *msg_p,  int level, char *format, ...)
+edt_msg_output(EdtMsgHandler *msg_p,  int level, const char *format, ...)
 {
 
     va_list	stack;
@@ -496,7 +496,7 @@ edt_msg_set_file(EdtMsgHandler *msg_p, FILE *fp)
 * written to that file.
 */
 void 
-edt_msg_set_name(EdtMsgHandler *msg_p, char *name)
+edt_msg_set_name(EdtMsgHandler *msg_p, const char *name)
 
 {
     if ((msg_p == &edt_default_msg) && !edt_default_msg_initialized)
@@ -603,7 +603,7 @@ edt_msg_perror(int level, const char *msg)
 * @see edt_perror 
 */
 int
-edt_msg_output_perror(EdtMsgHandler *msg_p, int level, char *msg)
+edt_msg_output_perror(EdtMsgHandler *msg_p, int level, const char *msg)
 
 {
     char message[MAX_MESSAGE];
@@ -670,7 +670,7 @@ edt_msg_output_perror(EdtMsgHandler *msg_p, int level, char *msg)
 * @return 0 on success, -1 on failure.  
 */
 int 
-edt_msg_printf_perror(int level, char *format, ...)
+edt_msg_printf_perror(int level, const char *format, ...)
 {
     va_list stack;
     va_start(stack, format);
@@ -696,7 +696,7 @@ edt_msg_printf_perror(int level, char *format, ...)
 * @see edt_msg_printf_perror for an example
 */
 int
-edt_msg_output_printf_perror(EdtMsgHandler *msg_p,  int level, char *format, ...)
+edt_msg_output_printf_perror(EdtMsgHandler *msg_p,  int level, const char *format, ...)
 {
     va_list stack;
     va_start(stack, format);

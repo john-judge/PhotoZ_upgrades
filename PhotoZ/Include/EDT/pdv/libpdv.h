@@ -34,6 +34,7 @@ typedef  EdtDev PdvDev ;
 
 EDTAPI EdtDev *pdv_open(char *edt_devname, int unit);
 
+EDTAPI PdvDev * pdv_open_device(const char *edt_devname, int unit, int channel, int verbose);
 EDTAPI PdvDev * pdv_open_channel(const char *edt_devname, int unit, int channel);
 EDTAPI void pdv_serial_txrx(PdvDev * pdv_p, char *txbuf, int txcount, char *rxbuf, 
 	                    int rxcount, int timeout, u_char *wchar);
@@ -64,6 +65,7 @@ EDTAPI unsigned char  *pdv_wait_last_image_timed_raw(PdvDev *pdv_p, u_int *timep
 EDTAPI unsigned char  *pdv_wait_image_timed_raw(PdvDev *pdv_p, u_int *timep, int doRaw) ;
 EDTAPI unsigned char  *pdv_wait_images_timed_raw(PdvDev *pdv_p, int count, u_int *timep, int doRaw) ;
 EDTAPI unsigned char  *pdv_wait_images_raw(PdvDev *pdv_p, int count) ;
+EDTAPI double          pdv_decode_timestamp(PdvDev *edt_p, u_int timestamp[]);
 
 EDTAPI char *pdv_get_cameratype(PdvDev *pdv_p);
 
@@ -90,12 +92,14 @@ EDTAPI int  pdv_set_depth(PdvDev *pdv_p, int value);
 EDTAPI int  pdv_set_extdepth(PdvDev *pdv_p, int value);
 EDTAPI int  pdv_set_depth_extdepth(PdvDev * pdv_p, int depth, int extdepth);
 EDTAPI int  pdv_set_depth_extdepth_dpath(PdvDev * pdv_p, int depth, int extdepth, u_int dpath);
+EDTAPI void pdv_cl_set_base_channels(PdvDev *pdv_p, int htaps, int vtaps);
 EDTAPI int  pdv_get_imagesize(PdvDev *pdv_p);
 EDTAPI int  pdv_image_size(PdvDev * pdv_p);
 EDTAPI int  pdv_get_dmasize(PdvDev *pdv_p);
 EDTAPI int  pdv_get_rawio_size(PdvDev *pdv_p);
 EDTAPI int  pdv_get_allocated_size(PdvDev *pdv_p);
 EDTAPI int  pdv_get_fulldma_size(PdvDev *pdv_p, int *extrasizep);
+EDTAPI int  pdv_set_shutter_method(PdvDev *pdv_p, int method, unsigned int mcl);
 EDTAPI int  pdv_set_exposure(PdvDev *pdv_p, int value);
 EDTAPI int  pdv_set_exposure_mcl(PdvDev *pdv_p, int value);
 EDTAPI int  pdv_set_gain(PdvDev *pdv_p, int value);
@@ -120,6 +124,7 @@ EDTAPI int  pdv_serial_write(PdvDev *ed, const char *buf, int size) ;
 EDTAPI int  pdv_serial_read(PdvDev *fd, char *buf, int size) ;
 EDTAPI int  pdv_serial_read_blocking(PdvDev *fd, char *buf, int size) ;
 EDTAPI int  pdv_serial_read_nullterm(PdvDev *fd, char *buf, int size, int nullterm) ;
+EDTAPI void pdv_do_xregwrites(EdtDev *edt_p, Dependent *dd_p);
 
 EDTAPI int  pdv_serial_read_enable(PdvDev *pdv_p);
 EDTAPI int  pdv_is_serial_enabled(PdvDev *pdv_p);
@@ -174,6 +179,7 @@ EDTAPI int little_endian(void);
 EDTAPI int pdv_set_serial_parity(EdtDev  *edt_p, char polarity);
 EDTAPI int pdv_set_baud(EdtDev  *edt_p, int  baud);
 EDTAPI int pdv_get_baud(EdtDev  *edt_p);
+EDTAPI void pdv_check_fpga_rev(PdvDev *pdv_p);
 EDTAPI void pdv_check(EdtDev *edt_p) ;
 EDTAPI void pdv_checkfrm(EdtDev *edt_p, u_short *image, u_int imagesize, int verbose) ;
 EDTAPI int pdv_set_roi(PdvDev *pdv_p, int hskip, int hactv, int vskip, int vactv) ;
@@ -204,6 +210,9 @@ EDTAPI int pdv_get_max_gain(EdtDev *edt_p);
 EDTAPI int pdv_get_min_offset(EdtDev *edt_p);
 EDTAPI int pdv_get_max_offset(EdtDev *edt_p);
 EDTAPI void pdv_invert(PdvDev *pd, int val);
+EDTAPI int pdv_get_invert(PdvDev * pdv_p);
+EDTAPI void pdv_set_firstpixel_counter(PdvDev * pdv_p, int ena);
+EDTAPI int pdv_get_firstpixel_counter(PdvDev * pdv_p);
 EDTAPI void pdv_send_break(EdtDev *edt_p);
 
 EDTAPI int pdv_set_header_type(PdvDev *pdv_p, int header_type, int irig_slave, int irig_offset, int irig_raw);
@@ -232,6 +241,7 @@ EDTAPI int pdv_get_cam_height(PdvDev *pdv_p);
 EDTAPI int pdv_force_single(PdvDev *pdv_p);
 EDTAPI int pdv_variable_size(PdvDev *pdv_p);
 EDTAPI int pdv_pause_for_serial(PdvDev *pdv_p);
+EDTAPI int pdv_get_shutter_method(PdvDev *pdv_p, u_int *mcl);
 EDTAPI int pdv_shutter_method(PdvDev *pdv_p);
 
 EDTAPI int pdv_get_serial_timeout(PdvDev *pdv_p);

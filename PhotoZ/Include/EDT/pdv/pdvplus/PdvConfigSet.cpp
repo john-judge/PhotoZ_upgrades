@@ -139,7 +139,11 @@ PdvCameraClass *PdvConfigSet::FirstCameraClass()
 
 {
     curgroup = cfg_groups.begin();
+    if (curgroup == cfg_groups.end())
+        return NULL;
+
     current_class = *curgroup;
+
     return &current_class;
 }
 

@@ -5,7 +5,9 @@
 #if !defined(_ZOOMDATA_H)
 #define _ZOOMDATA_H
 
+#ifndef M_PI
 #include <math.h>
+#endif
 
 class ZoomData  
 {

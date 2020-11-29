@@ -19,7 +19,7 @@ void    print_ascii_string(char *buf);
 long    PdvDispatch(int argc, char *argv[], char *edt_devname);
 long
 PdvSerialWriteRead(int argc, char *argv[], int unit, int hexin,
-           int do_wait, int inter, int timeout, int verbose,
+           int do_wait, int do_printflush, int inter, int timeout, int verbose,
            int baud, int readonly, int channel);
 long    isascii_str(u_char *buf, int n);
 long    ack_nak_str(u_char *buf, int n);
@@ -100,7 +100,7 @@ int     duncan_framing = 0;
 void
 usage(char *err)
 {
-    printf(err);
+    printf("%s", err);
     printf("Usage: \n");
     printf(
        "    -?, /?, -h      - Help message\n"
@@ -112,6 +112,7 @@ usage(char *err)
        "    -v              - Verbose\n"
        "    -w              - Wait before read\n"
        "    -r              - Read only\n"
+       "    -p              - Print what's in the buffer on start\n"
        "    -t              - Serial timeout override value\n"
        "    -B              - Basler framing mode -- cmd should be hex cmd (bytes separated by\n"
        "    -D              - Duncan framing mode -- cmd should be hex cmd (bytes separated by\n"
@@ -123,6 +124,12 @@ usage(char *err)
 
 
 
+/*
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
+ */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -140,6 +147,7 @@ main(int argc, char **argv)
     int     inter = 0;
     int     verbose = 0;
     int     do_wait = 0;
+    int     do_printflush = 0;
     int     timeout = 0;
     int     channel = 0;
     int     readonly = 0;
@@ -181,6 +189,10 @@ main(int argc, char **argv)
 
             case 'w':
                 do_wait = 1;  /* asks user before proceeding with read */
+                break;
+
+            case 'p':
+                do_printflush = 1;  /* just print the flush buffer and exit */
                 break;
 
             case 't':
@@ -257,13 +269,13 @@ main(int argc, char **argv)
         argv++;
     }
 
-    if ((argc < 1) && !readonly)
+    if ((argc < 1) && !readonly && !do_printflush)
     inter = 1;
 
     if (readonly && (timeout == 0))
     timeout = 60000;
 
-    status = PdvSerialWriteRead(argc, argv, unit, hexin, do_wait, inter,
+    status = PdvSerialWriteRead(argc, argv, unit, hexin, do_wait, do_printflush, inter,
             timeout, verbose,  baud, readonly, channel);
 #ifndef NO_MAIN
     exit(status);
@@ -274,7 +286,7 @@ main(int argc, char **argv)
 
 long
 PdvSerialWriteRead(int argc, char *argv[], int unit, int hexin,
-          int do_wait, int inter, int timeout, int verbose, 
+          int do_wait, int do_printflush,  int inter, int timeout, int verbose, 
            int baud, int readonly, int channel)
 {
     int     i;
@@ -319,9 +331,11 @@ PdvSerialWriteRead(int argc, char *argv[], int unit, int hexin,
         pdv_set_baud(ed, baud);
     }
 
-
-    /* flush any junk */
-    (void) pdv_serial_read(ed, buf, SERBUFSIZE);
+    if ((pdv_serial_read(ed, buf, SERBUFSIZE) > 0) && do_printflush)
+    {
+        printf("%s\n", buf);
+        exit (0);
+    }
 
     do
     {
@@ -435,7 +449,7 @@ PdvSerialWriteRead(int argc, char *argv[], int unit, int hexin,
             ret = pdv_read_duncan_frame(ed, (u_char *)buf);
             printf("resp <");
             for (i = 0; i < ret; i++)
-            printf("%02x%s", (u_char)buf[i], (i == ret-1)? ">\n" : " ");
+                printf("%02x%s", (u_char)buf[i], (i == ret-1)? ">\n" : " ");
         }
         else
         {

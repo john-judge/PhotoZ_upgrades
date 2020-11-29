@@ -29,10 +29,10 @@ struct _EdtPostProc {
 	int func_type; 
 
 	/* types are limited to
-	   TYPE_BYTE
-	   TYPE_USHORT
-	   TYPE_BGR
-	   TYPE_BGRA
+	   EDT_TYPE_BYTE
+	   EDT_TYPE_USHORT
+	   EDT_TYPE_BGR
+	   EDT_TYPE_BGRA
 	   */
 	int src_type;
 	int dest_type;

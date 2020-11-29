@@ -245,7 +245,7 @@ main(int argc, char **argv)
      */
     if (timeouts)
     {
-	printf("Warning: got %d timeouts (incomplete images)\n");
+	printf("Warning: got %d timeouts (incomplete images)\n", timeouts);
 	printf("check camera and connections\n");
     }
     pdv_close(pdv_p);

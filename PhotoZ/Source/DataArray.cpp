@@ -20,7 +20,8 @@
 #include "Diode.h"
 #include "UserInterface.h"
 
-#include "windows.h" 
+#define _WINSOCKAPI_    // stops windows.h including winsock.h
+#include <windows.h>
 #include "psapi.h"   //add these to the beginning of file
 
 

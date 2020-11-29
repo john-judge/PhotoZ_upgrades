@@ -52,6 +52,12 @@ usage(char *progname)
     printf("--verbose - prints more information");
 }
 
+/*
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
+ */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -162,7 +168,7 @@ main(argc, argv)
 
     if (!pdv_is_simulator(pdv_p))
     {
-        fprintf(stderr, "Not a simulator board\n");
+        fprintf(stderr, "\nclsiminit is for simulators. To initialize an EDT framegrabber board, use initcam.\n");
         pdv_close(pdv_p);
         exit(1);
     }
@@ -173,11 +179,13 @@ main(argc, argv)
     if (reset)
         memset(dd_p, 0, sizeof(PdvDependent));
 
+
     /* Read this here so arguments can override values in config file */
 
     if (camera)
     {
         int retval = pdv_readcfg(camera, dd_p, &ei);
+
         if (retval == -1)
         {
             fprintf(stderr, "Error reading config file '%s'\n",
@@ -186,7 +194,6 @@ main(argc, argv)
             exit(1);
         }
     }
-
 
     --argc;
     ++argv;
@@ -224,6 +231,7 @@ main(argc, argv)
                 }
                 setup=1;
                 dd_p->cls.pixel_clock = (float)atof(argv[0]);    /* Convert arg to float */
+                dd_p->pclock_speed = (int)(dd_p->cls.pixel_clock + 0.5); /* redundant dd_p var */
                 break;
 
             case 'v':
@@ -381,8 +389,8 @@ main(argc, argv)
 
 
     /* pci express dv clsim doesn't have interface xilinx to load */
-    if ((pdv_p->devid == PE4DVCL_ID)
-            || (pdv_p->devid == PE8DVCLS_ID)) {
+    if (pdv_p->devid != PDVCLS_ID)
+    {
         no_bitload = 1; 
     }
 
@@ -396,8 +404,11 @@ main(argc, argv)
 #endif
             edt_bitload(pdv_p, "camera_config" /* basedir */,  bitfile_name, flags, 0 /* skip_load */);
         }
+
         if (pdv_cls_dep_sanity_check(pdv_p) == 0)
+        {
             pdv_cls_set_dep(pdv_p);
+        }
     }
 
     if (!quiet)

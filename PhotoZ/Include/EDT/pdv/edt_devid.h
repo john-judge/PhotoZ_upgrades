@@ -2,9 +2,9 @@
  * @file    edt_devid.h
  *
  * @brief   Defines constants for the device id defined in the PCI/PCIe firmware
- * 			and for the stored mezzanine id values for mezzanine cards.
- * 			
- * 			Extracted from edtreg.h 2/1/2012 for clarity
+ *          and for the stored mezzanine id values for mezzanine cards.
+ *
+ *          Extracted from edtreg.h 2/1/2012 for clarity
  *===============================================================================================**/
 
 #ifndef _EDT_DEV_ID_H_
@@ -57,20 +57,19 @@
 #define PDVA_ID                 0x0048
 #define PDVA16_ID               0x0049
 #define PDVCL2_ID               0x004a
-#define PDVCLS_ID               0x004a /* dup */
+#define PDVCLS_ID               0x004a /* alias */
+
+#define PE4CDA16_ID             0x004b
+
 #define PDVFOX_ID               0x004c
 #define PCDFOX_ID               0x004e
 #define PCDHSS_ID               PCDFOX_ID /* backwards compat: PCDHSS name is obsolete */
 #define PDVHSS_ID               PDVFOX_ID /* backwards compat: PDVHSS name is obsolete */
 
+#define PE4CDALL_ID             0x004f
+
 #define PGS4_ID                 0x0050
 #define PGS16_ID                0x0051
-
-#define USB_ID                  0x0060
-#define EDTUSB_VENDOR_ID        0x04b4  /*    Current test vendor id          */
-#define UCD1_ID                 0x8612  /* TODO */
-#define UCD4_ID                 0x8613  /* TODO */
-#define UCD16_ID                0x8614  /* TODO */
 
 #define DMY_ID                  0x0080
 #define DMYK_ID                 0x0081
@@ -78,10 +77,10 @@
 #define DMY44_ID                0x0081
 
 #define PE8DVFOX_ID             0x0090
-#define PE8DVAFOX_ID            0x0090 /* dup */
+#define PE8DVAFOX_ID            0x0090 /* alias */
 #define PE4DVCL_ID              0x0091
 #define PE4DVFOX_ID             0x0092
-#define PE4DVAFOX_ID            0x0092 /* dup */
+#define PE4DVAFOX_ID            0x0092 /* alias */
 #define PE8DVCL_ID              0x0093
 
 #define PE4DVFCI_ID             0x0094
@@ -96,19 +95,53 @@
 #define PE4AMC16_ID             0x009a
 
 #define PE8DVCL2_ID             0x009b
-#define PE8DVCLS_ID             0x009b   /* dup */
+#define PE8DVCLS_ID             0x009b   /* alias */
 
 #define PE8LX32_ID              0x009c
 
-#define PE1DVACL_ID  	    	0x009d
-#define PE1DVAFOX_ID	    	0x009e
+#define PE1DVVL_ID               0x009d
 
-#define PC104ICB_ID		        0x009f
+#define PE4DVVLFOX_ID            0x009e
+
+#define PC104ICB_ID             0x009f
 
 #define PE8G3S5_ID              0x00a0
-#define PE84P_ID                0x00a0 /* dup */
+#define PE84P_ID                0x00a0 /* alias */
 #define WSU1_ID                 0x00a1
 #define SNAP1_ID                0x00a2
+
+#define PE4DVVL_ID               0x00a3
+
+#define PE16G3_OCTEON3_ID        0x00b3
+
+/*
+ * LCR group IDs
+ */
+#define PE4BL_RADIO_ID          0x00a4
+#define PE1BL_TIMING_ID         0x00a5
+#define PE8BL_NIC_ID            0x00a6 /* 2x10G, 2x12.5G */
+#define PE8BL_2X10G_ID          0x00a6 /* aliases (DO NOT DELETE THESE) */ 
+#define PE8BL_10GNI_ID          0x00a6
+#define PE8BL_10GNIC_ID         0x00a6
+#define LCRBOOT_ID              0x00a7
+#define PE8G2V7_ID              0x00a8
+#define PE8VLCLS_ID             0x00a9
+#define PE8G3KU_ID              0x00aa
+#define PE8G3A5_ID              0x00ab
+#define RESERVED_AC_ID          0x00ac /* was 2x12.5G now reserved, could re-use */
+#define PE4BL_RXLFRADIO_ID      0x00ad
+#define PE4BL_LFRADIO_ID        0x00ad /* old (compat) */
+#define RESERVED_AE_ID          0x00ae /* was E3NIC_ID now reserved, could re-use */
+#define PE4BL_TXLFRADIO_ID      0x00af
+#define PE4BL_TXRADIO_ID        0x00af /* old (compat) */
+#define PE1BL_WBADC_ID          0x00b1
+#define PE8BL_WBDSP_ID          0x00b2
+
+#define PE8G2CML_ID             0x00b0
+
+/*
+ * reserved -- change here and everywhere else when assigned
+ */
 
 /*************************************
  * Mezzanine ID values 

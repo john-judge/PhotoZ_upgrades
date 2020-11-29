@@ -392,12 +392,13 @@ pdv_cl_logic_sample(PdvDev *pdv_p,
     int unit = 0;
     char oldname[MAX_STRING+1];
     char *trunc;
-    u_char stat;
+    u_short stat;
     int vb = 0;
     int promcode;
 
     int last_width = 1;
     int last_hblank = 0;
+    int ret = 0;
     
 
     if (pdv_p)
@@ -646,7 +647,7 @@ pdv_cl_logic_sample(PdvDev *pdv_p,
 		printf("Loading PCI firmware %s - this takes about 20 sec\n", oldname);
 	    }
 	    sprintf(cmd, "pciload -u %d -q %s < pciload.y > pciload.out", unit, oldname);
-	    system(cmd);
+	    ret = system(cmd);
 
 	    edt_reboot_pci(pdv_p, verbose);
 	    edt_reboot_pci(pdv_p, verbose);

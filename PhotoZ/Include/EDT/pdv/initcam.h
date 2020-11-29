@@ -4,6 +4,20 @@
 
 #include "edtinc.h"
 
+enum serial_tag
+{
+    serial_tag_binary,
+    serial_tag_ascii,
+    serial_tag_baslerf,
+    serial_tag_duncanf
+};
+
+typedef struct serial_init_node {
+   enum serial_tag tag;
+   char *data;
+   struct serial_init_node *next;
+} SerialInitNode;
+
 /*
  * struct used by readcfg.c and initcam.c, for stuff
  * other than what's in depdendent
@@ -13,8 +27,7 @@ typedef struct {
 	u_int enddma ;
 	u_int flushdma ;
 	u_int timeout ;
-    char serial_init[1024];
-    u_char *serial_binit;
+    SerialInitNode *serial_init;
     int serial_init_delay;
     u_int cl_mgtspeed;
 } Edtinfo;

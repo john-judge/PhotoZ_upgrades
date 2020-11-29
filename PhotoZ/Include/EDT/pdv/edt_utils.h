@@ -132,7 +132,9 @@ EDTAPI uint64_t edt_file_seek(HANDLE f, uint64_t pos);
 
 EDTAPI void edt_free_aligned(void *p);
 	
-char * edt_strrchr(const char *cp, int ch);
+EDTAPI int edt_mkdir_p(const char *name, int access);
+
+EDTAPI char * edt_strrchr(const char *cp, int ch);
 
 /* To avoid the possibility of problems with
    the min and max macros

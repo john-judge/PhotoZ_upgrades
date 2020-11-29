@@ -284,7 +284,7 @@ pdv_dmy_data(void *buf, int width, int height, int depth)
 	int     col;
 	static int cnt = 0;
 	char   *tmpp = buf;
-	int oldcolor = (int) getenv("OLDCOLOR") ;
+	char *oldcolor = getenv("OLDCOLOR") ;
 
 	if (oldcolor)
 	{

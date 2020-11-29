@@ -4,7 +4,7 @@
 #ifndef _DapController_h
 #define _DapController_h
 //=============================================================================
-#include "dapio32.h"
+//#include "dapio32.h"
 #include "edtinc.h"
 #include <fstream>
 #include "NIDAQmx.h"
@@ -18,8 +18,8 @@ class DapController
 private:
 	TaskHandle taskHandleLed = 0;
 	TaskHandle taskHandlePut = 0;
-	HDAP dap820Put;
-	HDAP dap820Get;
+	//HDAP dap820Put;
+	//HDAP dap820Get;
 
 	int32_t error =0;
 	char errBuff[2048];

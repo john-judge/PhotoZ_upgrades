@@ -3,3 +3,4 @@
 
 copy bin\x86\*.* .
 copy lib\x86\*.* .
+copy wbin\x86\*.* .

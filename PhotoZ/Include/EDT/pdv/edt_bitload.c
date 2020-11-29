@@ -2,16 +2,16 @@
 
 /**
 * @file
-* edt_bitload.c - functions to load the EDT PCI interface Xilinx .bit file
+* edt_bitload.c - functions to load the EDT PCI interface FPGA .bit file
 * 
 * HISTORY
 *   1997 creation
 *   1998-1999 various mods, including incrementally add 4010, 4013, etc.
 *      capability
 *   2000 rewritten from standalone to library routine
-*   8/2001 rewrote xilinx header code to be smarter, now actually
+*   8/2001 rewrote FPGA header code to be smarter, now actually
 *       decodes header and finds data size and start of data reliably and
-*       independent of the xilinx size. Also rewrote to look at and get
+*       independent of the FPGA size. Also rewrote to look at and get
 *       sizes of and create a list of files found, then sort by size and
 *       try in order smallest to largest, since can SMOKE a 600 part
 *       trying to load a larger file in it.
@@ -37,14 +37,17 @@ static int xb_get_magic(u_char *buf);
 #define DEBUG1 EDTLIB_MSG_INFO_1
 #define DEBUG2 EDTLIB_MSG_INFO_2
 
-/* Xilinx magic number (first 13 bytes) is always the same ( so far... ) */
+/* FPGA magic number (first 13 bytes) is always the same ( so far... ) */
 #define MGK_SIZE 13
 
 
-u_char Xmh[MGK_SIZE] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01 };
+u_char XilinxMagicArray[MGK_SIZE] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01 };
 
-/* EDT magic number used for Alterra parts, different number but same size as Xilinx, for compatability */
-u_char Emh[MGK_SIZE] = {0x00, 0x0e, 0x0d, 0x0f, 0x0a, 0x0l, 0x0f, 0x0e, 0x08, 0x08, 0x0a, 0x00, 0x01 };
+/* EDT magic number used for Altera converted from .rbt, different num. but same size as Xilinx, for compat. */
+u_char AlteraMagicArray[MGK_SIZE] = {0x00, 0x0e, 0x0d, 0x0f, 0x0a, 0x00, 0x0f, 0x0e, 0x08, 0x08, 0x0a, 0x00, 0x01 };
+
+/* EDT magic number used for Altera converted from .rpd, different num. but same size as Xilinx, for compat. */
+u_char Altera2MagicArray[MGK_SIZE] = {0x00, 0x0e, 0x0d, 0x0f, 0x0a, 0x02, 0x0f, 0x0e, 0x08, 0x08, 0x0a, 0x00, 0x01 };
 
 
 #ifdef NO_FS
@@ -163,10 +166,10 @@ int edt_bitfile_seek(EdtBitfile *bfd, int offset)
 
 {
     if (bfd->is_file)
-        return edt_file_seek(bfd->f, offset);
+        return (int) edt_file_seek(bfd->f, offset);
     else
     {
-        if (offset >= 0 && offset <= bfd->full_buffer_size)
+        if (offset >= 0 && offset <= (int) bfd->full_buffer_size)
             bfd->cur_index = offset;
 
         return bfd->cur_index;
@@ -194,7 +197,7 @@ int edt_bitfile_size(EdtBitfile *bfd)
 }
 
 
-int edt_bitfile_allocate(EdtBitfile *bfd, int size)
+int edt_bitfile_allocate(EdtBitfile *bfd, u_int size)
 
 {
     
@@ -234,7 +237,7 @@ int edt_bitfile_load_file(EdtBitfile *bfd, const char *name)
 {
 
     int rc;
-    int size;
+    u_int size;
 
     /* get file size */
 
@@ -247,7 +250,7 @@ int edt_bitfile_load_file(EdtBitfile *bfd, const char *name)
     }
 
     /* allocate */
-    size = (int) edt_get_file_size(bfd->f);
+    size = (u_int) edt_get_file_size(bfd->f);
 
     if (edt_bitfile_allocate(bfd, size) != 0)
     {
@@ -281,7 +284,7 @@ int edt_bitfile_load_file(EdtBitfile *bfd, const char *name)
 }
 
 int
-edt_bitfile_load_array(EdtBitfile *bfd, u_char *data, int size)
+edt_bitfile_load_array(EdtBitfile *bfd, u_char *data, u_int size)
 
 {
     int rc = -1;
@@ -308,7 +311,7 @@ edt_bitfile_load_array(EdtBitfile *bfd, u_char *data, int size)
 
 
 /*
-* get magic number, return 1 if Xilinx, 2 if EDT-Alterra
+* get magic number, return magic number enum (XilinxMagic, AlteraMagic, AlteraMagic2), or -1
 */
 static int
 edt_bitfile_get_magic(EdtBitfile *bp)
@@ -332,25 +335,19 @@ edt_bitfile_get_magic(EdtBitfile *bp)
  * or array 
  * buf has been read in)
  */
+
 static int
 xb_get_magic(u_char *buf)
 {
-    int i;
-    int is_xmh = 1;
-    int is_emh = 1;
 
-    for (i=0; i<MGK_SIZE; i++)
-    {
-	if (buf[i] != Xmh[i])
-	    is_xmh = 0;
-	if (buf[i] != Emh[i])
-	    is_emh = 0;
-    }
+    if (memcmp(buf, XilinxMagicArray, MGK_SIZE) == 0)
+        return XilinxMagic;
 
-    if (is_xmh)
-    	return XilinxMagic;
-    if (is_emh)
-	return AlteraMagic;
+    if (memcmp(buf, AlteraMagicArray, MGK_SIZE) == 0)
+        return AlteraMagic;
+
+    if (memcmp(buf, Altera2MagicArray, MGK_SIZE) == 0)
+        return Altera2Magic;
 
     return -1;
 }
@@ -374,7 +371,7 @@ edt_bitfile_get_string(EdtBitfile *bp, u_char *str, u_int maxcount)
     count = tmpcount[0] << 8 | tmpcount[1];
     if (count > maxcount)
     {
-	edt_msg(DEBUG1, "invalid xilinx header string (count %d)\n", count);
+	edt_msg(DEBUG1, "invalid FPGA header string (count %d)\n", count);
 	return -1;
     }
 
@@ -397,12 +394,14 @@ edt_bitfile_get_long_size(EdtBitfile *bp,  u_int *size)
 
 
 /*
- * get the xilinx header 
+ * Get the FPGA file header.
  *
- * extract the xilinx header (OR faked one for alterra, etc.)
- * takes as an argument an array pointer. for this reason, not to be
- * called directly by an application, ony from within the library. application 
- * programs should instead use edt_get_x_file_header.
+ * Extract the FPGA header (Xilinx, OR faked one for Alterra, etc.)
+ *
+ * @param bp pointer to an EdtBitfile struct that will be populated with the FPGA file information.
+ * @param bfh pointer to the EdtBitfileHeader struct that will be populated with the FPGA file header information.
+ *
+ * @return -1 on error, otherwise the address of the beginning of the FPGA data (after the header).
  */
 
 int
@@ -413,6 +412,7 @@ edt_get_bitfile_header(EdtBitfile *bp,
     int remaining;
     char *p;
     u_char tmpname[MAXPATH];
+    u_char dmy[2];
 
     edt_msg(DEBUG2, "edt_get_bitfile_header:\n");
 
@@ -421,13 +421,15 @@ edt_get_bitfile_header(EdtBitfile *bp,
 
     if ((bfh->magic = edt_bitfile_get_magic(bp)) < 0)
     {
-	edt_msg(EDT_MSG_FATAL, "invalid FPGA magic bytes in array\n");
-	return  -1;
+        edt_msg(DEBUG1, "Invalid FPGA magic bytes in header array\n");
+        return  -1;
     }
     else 
         edt_msg(DEBUG2, "magic=%s (%d)\n", 
         (bfh->magic == XilinxMagic)?"XILINX":
-        (bfh->magic == AlteraMagic)?"ALTERRA":"UNKNOWN (WTF?)", bfh->magic);
+        (bfh->magic == AlteraMagic)?"ALTERA":
+        (bfh->magic == Altera2Magic)?"ALTERA2":
+        "UNKNOWN (huh?)", bfh->magic);
 
     if ((edt_bitfile_get_field_id(bp, &bfh->fi[0]) != 0)
 	|| (edt_bitfile_get_string(bp, tmpname, sizeof(tmpname)) != 0)
@@ -440,7 +442,7 @@ edt_get_bitfile_header(EdtBitfile *bp,
 	|| (edt_bitfile_get_field_id(bp, &bfh->fi[4]) != 0)
 	|| (edt_bitfile_get_long_size(bp, &bfh->dsize) != 0))
     {
-	edt_msg(EDT_MSG_FATAL, "Error: bad xilinx header\n");
+	edt_msg(EDT_MSG_FATAL, "Error: bad FPGA header\n");
         return -1;
     }
 
@@ -449,7 +451,7 @@ edt_get_bitfile_header(EdtBitfile *bp,
     {
 	edt_back_to_fwd((char *)tmpname); /* just so we can find last one with strrchr */
     	strcpy((char *)bfh->ncdname, strrchr((char *)tmpname, '/')+1);
-	edt_msg(DEBUG2, "stripping off xilinx header path\n");
+	edt_msg(DEBUG2, "stripping off FPGA header path\n");
     }
     else strcpy((char *)bfh->ncdname, (char *)tmpname);
 
@@ -474,7 +476,7 @@ edt_get_bitfile_header(EdtBitfile *bp,
     {
 	if (bfh->fi[i] != 'a' + i)
 	{
-	    edt_msg(EDT_MSG_FATAL, "invalid xilinx field id: '%c' (0x%02x) s/b '%c' (0x%02x)\n", bfh->fi[i], bfh->fi[i], 'a'+i, 'a'+i);
+	    edt_msg(EDT_MSG_FATAL, "invalid fpga field id: '%c' (0x%02x) s/b '%c' (0x%02x)\n", bfh->fi[i], bfh->fi[i], 'a'+i, 'a'+i);
 	    return -1;
 	}
     }
@@ -491,13 +493,15 @@ edt_get_bitfile_header(EdtBitfile *bp,
     * pointer back to start of data 
     */
 
+
+    /* if header is odd length and Altera, the data will be even */ 
+    if ((edt_bitfile_tell(bp) % 2) && ((bfh->magic == AlteraMagic) || (bfh->magic == Altera2Magic)))
+        edt_bitfile_read(bp, dmy, 1);
+
     /* find preamble */
-
-
     bfh->data_start = edt_bitfile_tell(bp);
 
     edt_bitfile_read(bp, bfh->extra, BFH_EXTRASIZE);
-
 
     remaining = edt_bitfile_size(bp) - bfh->data_start;
     bfh->filesize = edt_bitfile_size(bp);
@@ -521,19 +525,17 @@ edt_get_bitfile_header(EdtBitfile *bp,
 }
 
 /*
- * get the xilinx header from a FILE -- backwards compat (no magic #)
+ * get the FPGA header from a FILE -- backwards compat (no magic #).
  *
- * takes as an argument an already open file pointer. for this reason, not to be
- * called directly by an application, ony from within the library. application 
- * programs should instead use edt_get_x_file_header.
+ * Takes as an argument an already open file pointer. for this reason, not to be
+ * called directly by an application, ony from within the library. Application 
+ * programs should instead use edt_get_bitfile_header.
  *
  * At the end of this function, the file position will be set to the
  * beginning of the file.
  *
- * Returns 0 on success, -1 on failure.
+ * @return 0 on success, -1 on failure.
  */
-
-
 int
 edt_bitfile_read_header(const char *bitpath, EdtBitfileHeader *bfh, char *header)
 
@@ -560,6 +562,18 @@ edt_bitfile_read_header(const char *bitpath, EdtBitfileHeader *bfh, char *header
     return ret;
 }
 
+/*
+ * Get the FPGA header from a FILE.
+ *
+ * takes as an argument an already open file pointer. for this reason, not to be
+ * called directly by an application, ony from within the library.
+ *
+ * At the end of this function, the file position will be set to the
+ * beginning of the file.
+ *
+ * Returns 0 on success, -1 on failure.
+ */
+
 int
 edt_get_x_file_header(const char *bitname, char *header, int *size)
 
@@ -573,6 +587,15 @@ edt_get_x_file_header(const char *bitname, char *header, int *size)
    return offset;
 }
 
+/*
+ * Get the FPGA header from an array (typically as read out from a hardware FPGA).
+ *
+ * @param ba Array containing data bytes presumably read from the FPGA.
+ * @param header string that will be populated with the header info in a printable format.
+ * @param size size of the formatted string (header)
+ *
+ * @returns 0 on success, -1 on failure.
+ */
 int
 edt_get_x_array_header(u_char *ba, 
                        char *header, 
@@ -702,17 +725,25 @@ EdtBoardFpgas board_chips[] =
     {
         PE8LX16_ID,
         {"XC5VLX110T",  "XC5VLX220T", "XC5VLX330T", "XC5VFX100T",
-	"XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
+         "XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
     },
     {
-	PE8LX32_ID,
-	{"XC5VLX110T",	"XC5VLX220T", "XC5VLX330T", "XC5VFX100T",
-	"XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
+        PE16G3_OCTEON3_ID,
+        {"PE16G3_OCTEON3_ID_SOMETHING"} /* ALERT: placeholder */
+    },
+    {
+        PE8LX32_ID,
+        {"XC5VLX110T",	"XC5VLX220T", "XC5VLX330T", "XC5VFX100T",
+         "XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
+    },
+    {
+        PE8G2V7_ID,
+        {"XVIRTEX7_SOMETHING"} /* ALERT: placeholder */
     },
     {
         PE8LX16_LS_ID,
         {"XC5VLX110T",  "XC5VLX220T", "XC5VLX330T", "XC5VFX100T",
-	"XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
+         "XC5VFX130T", "XC5VFX200T","XC5VSX240T"}
     },
     {
         PE4AMC16_ID,
@@ -795,7 +826,7 @@ EdtBoardFpgas mezz_chips[] = { /* in the order of the board_t enum */
     }, /* OCM2P7G */ /* TEMP: SB: */
     {
         MEZZ_THREEP, 
-        {"XC6VLX240T","XC6VLX365T","XC6VSX475T",0}
+        {"XC6VLX240T","XC6VLX365T","XC6VSX475T", "XC6VSX315T", 0}
     }, /* DRX16 (16 channel) */
     {
         MEZZ_V4ACL, 
@@ -1220,8 +1251,8 @@ edt_bitload_select_fox_file(EdtDev *edt_p,
 }
 
 
-/*
-* returns 0 if bitfile available, including uncompressing
+/**
+* @return 0 if bitfile available, including uncompressing
 * analogous to edt_access
 */
 
@@ -1412,7 +1443,7 @@ edt_bitload_devid_to_bitdir(int id, char *devdir)
     }
 }
 /**
-* Searches for and loads a Xilinx gate array bit file into an EDT
+* Searches for and loads a gate array bit file into an EDT
 * PCI board.  Searches under \<basedir\>/bitfiles/xxx, or if a PCI DV, in the
 * appropriate sub-directory (\<basedir\>/bitfiles/dv/.../\<file\>.bit or
 * \<basedir\>/bitfiles/dvk/.../\<file\>.bit. '...' stands for all the subdirs
@@ -1459,6 +1490,12 @@ edt_bitload(EdtDev *edt_p,
     char fpga[32];
 
     u_char *ba;
+
+
+    if ( ID_HAS_COMBINED_FPGA(edt_p->devid) )
+
+	return 0;	// Nothing to do and no error.
+
 
     if (flags & BITLOAD_FLAGS_NOFS)
         nofs = 1;
@@ -1642,7 +1679,6 @@ edt_bitload(EdtDev *edt_p,
     }
     else 
     {
-        char tmppath[256];
         edt_correct_slashes(bitpath);
         edt_msg(EDTAPP_MSG_WARNING,"Loaded: %s %s\n", bitpath, boardfiles.bitfiles[i].promstr);
     }
@@ -1765,3 +1801,5 @@ edt_bitload_from_prom(EdtDev *edt_p, u_int addr1, int size1, u_int addr2, int si
 
     return 0;
 }
+
+

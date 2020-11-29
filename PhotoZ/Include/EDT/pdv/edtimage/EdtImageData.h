@@ -16,14 +16,10 @@
 
 
 #include "edt_utils.h"
-
 #include "edt_types.h"
-
 #include "EdtBufferSize.h"
-
 #include "EdtDataHeader.h"
-
-
+#include "dispatch/ParmObject.h"
 #include <iostream>
 
 using namespace std;
@@ -37,64 +33,13 @@ using namespace std;
  *
  */
 
-class EdtImageData
+class EdtImageData : public ParmObject
 {
-protected:
-    EdtBufferSize bsize; ///< encapsulates basic buffer size issues
-                         // including data
-
-    int	m_nWidth;		///< Width in pixels
-    int	m_nHeight;		///< Height in pixels
-    int	m_nX;			///< Origin in parent
-    int	m_nY;			///< (0,0) if no parent
-
-    int m_nHBlank;		///< blanking for capture/simulator
-    int m_nVBlank;
-
-
-    int	m_nPitch;		///< Distance from row to row in bytes;
-    // negative for origin at lower left
-
-    int	m_nMaxPixel;	///< user-defined max
-    int	m_nMinPixel;	///< user-defined min
-
-    float	m_nPixelSize;	///< pixel size in bytes
-    EdtDataType	m_nType;		///< one of defined simple pixel types
-
-    bool	m_bMinMaxSet;	///< user has defined values
-    byte	m_nColors;		///< how many colors in image
-    byte	m_nColorTag;	///< Storage format of planes - RGB, BGR, YUV...
-    byte	m_nDepth;
-
-
-    void SetPixelSize()
-    {
-
-	if (m_nType != TYPE_MONO)
-	{
-	    m_nPixelSize = (float) (TypeSize(m_nType));
-	    m_nPixelSize *= GetNColors();
-	    m_nDepth = (byte)(m_nPixelSize * 8);
-	}
-	else
-	{
-	    m_nPixelSize = 1;
-	    m_nDepth = 1;
-	}
-    }
-
-    EdtDataHeader *m_header;
-
-protected:
-
-    double  m_timestamp;
 
 public:
 
     EdtImageData(const char *nm = NULL);
-
     EdtImageData(const EdtImageData &from, const char *nm = NULL);
-
     virtual ~EdtImageData();
 
     virtual void InitValues();
@@ -119,28 +64,23 @@ public:
     virtual void SetPitch(const int nPitch);
 
     virtual int GetPitchPixels() const;
-
     virtual void SetPitchPixels(const int nPitchPixels);
+    virtual float GetPixelSize() const;
    
     virtual int GetLineWidth(int nWidth = 0) const;
- 
-    virtual float GetPixelSize() const;
 
     virtual unsigned int GetMaxValue();
     virtual int GetMinValue();
 
     static int GetTypeBytes(EdtDataType nType);
-    static void GetTypeSizeAndColors(const EdtDataType nType, 
-	int &pixelsize, int &ncolors);
+    static void GetTypeSizeAndColors(const EdtDataType nType, int &pixelsize, int &ncolors);
 
     virtual int GetNPixels();
-
     virtual int GetNColors() const;
 
-    int GetDepth();
-    /// Depth in bits
-    
+    // Depth in bits
     void SetDepth(int nDepth);
+    int GetDepth();
 
     //////////////////////////////////////
 
@@ -157,23 +97,17 @@ public:
     virtual void SetHeaderValues(EdtDataHeader *phdr);
     virtual void SetHeaderValues(EdtImageData *other);
 
-    void SetupHeader(const HdrPosition header_pos, 
-                const u_int header_size, 
-                const int offset = 0);
+    void SetupHeader(const HdrPosition header_pos, const u_int header_size, const int offset = 0);
 
     //////////////////////////////////////
 
     virtual void SetMinMax(const int nMin, const int nMax);
 
-    virtual void SetBufferValues(const EdtDataType nType, 
-	const int nWidth, const int nHeight = 1);
-
+    virtual void SetBufferValues(const EdtDataType nType, const int nWidth, const int nHeight = 1);
     virtual void SetBufferValues(const EdtImageData &from);
-
     virtual void GetBufferValues(EdtDataType &nType, int &nWidth, int &nHeight) const;
 
     virtual void SetTimeStamp(const double dTimestamp);
- 
     double GetTimeStamp() const;
   
     //////////////////////////////////////
@@ -208,14 +142,57 @@ public:
 
 
     virtual void AlignSizes();
- 
     virtual void Header(EdtDataHeader *phdr);
-
     virtual EdtDataHeader * Header();
-
     virtual void BufferSizePrint(const char *tag, ostream &out);
-
     virtual void PrintState(ostream &out);
+
+protected:
+    EdtBufferSize bsize; ///< encapsulates basic buffer size issues
+                         // including data
+
+    int	m_nWidth;		///< Width in pixels
+    int	m_nHeight;		///< Height in pixels
+    int	m_nX;			///< Origin in parent
+    int	m_nY;			///< (0,0) if no parent
+
+    int m_nHBlank;		///< blanking for capture/simulator
+    int m_nVBlank;
+
+    int	m_nPitch;		///< Distance from row to row in bytes;
+    // negative for origin at lower left
+
+    int	m_nMaxPixel;	///< user-defined max
+    int	m_nMinPixel;	///< user-defined min
+
+    float	m_nPixelSize;	///< pixel size in bytes
+    EdtDataType	m_nType;		///< one of defined simple pixel types
+
+    bool	m_bMinMaxSet;	///< user has defined values
+    byte	m_nColors;		///< how many colors in image
+    byte	m_nColorTag;	///< Storage format of planes - RGB, BGR, YUV...
+    byte	m_nDepth;
+    byte	m_nTaps;
+
+    void SetPixelSize()
+    {
+        if (m_nType != EDT_TYPE_MONO)
+        {
+            m_nPixelSize = (float) (TypeSize(m_nType));
+            m_nPixelSize *= GetNColors();
+            m_nDepth = (byte)(m_nPixelSize * 8);
+        }
+        else
+        {
+            m_nPixelSize = 1;
+            m_nDepth = 1;
+        }
+    }
+
+    EdtDataHeader *m_header;
+
+    double  m_timestamp;
+
 
 };
 

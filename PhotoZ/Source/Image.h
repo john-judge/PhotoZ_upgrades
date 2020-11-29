@@ -7,10 +7,10 @@
 class Image  
 {
 private:
-	//
-	class PLAnyPicDecoder *decoder;
-	class PLWinBmp *winBmp;
-	class Fl_RGB_Image *rgbImage;
+	//class PLAnyPicDecoder *decoder;
+	//class PLWinBmp *winBmp;
+
+	class Fl_BMP_Image *img;
 
 	int ws;	// width of source image
 	int hs;	// height of source image

@@ -1,1 +1,1 @@
-nmake /C /f makefile.nt %*%
+@nmake %*% 

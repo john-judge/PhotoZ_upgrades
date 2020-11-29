@@ -101,7 +101,6 @@ print_irig_header(Irig2Record *rec)
     else
     {
         printf("%8d.%06d",
-        rec->clocks, rec->tickspps, 
         rec->t.seconds, 
         (int) (((double) rec->clocks/(double) rec->tickspps) * 1000000.0));
     }

@@ -329,7 +329,7 @@ int EdtImageData::GetPitchPixels() const
 
 void EdtImageData::SetPitchPixels(const int nPitchPixels)
 {
-    if (m_nType == TYPE_MONO)
+    if (m_nType == EDT_TYPE_MONO)
         SetPitch( GetPitch() >> 3);
     else 
         SetPitch((int) (nPitchPixels * GetPixelSize()));

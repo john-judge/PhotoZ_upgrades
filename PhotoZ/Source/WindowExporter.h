@@ -4,20 +4,18 @@
 #ifndef _WindowExporter_h
 #define _WindowExporter_h
 
-//=============================================================================
-#include <windows.h>
-
+#include <Windows.h>
 //=============================================================================
 class WindowExporter  
 {
 private:
 	char imageType;
-
+	/*
 	class PLJPEGEncoder* jpegEncoder;
 	class PLPNGEncoder* pngEncoder;
 	class PLBmpEncoder* bmpEncoder;
 	class PLTIFFEncoder* tiffEncoder;
-
+	*/
 	HDC hdcMonitor;
 	HDC hdcWindow;
 	BITMAPINFO bitMapInfo;

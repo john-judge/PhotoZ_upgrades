@@ -14,6 +14,7 @@
 #ifndef INCL_BITMAP
 #include "plbitmap.h"
 #endif
+#include <Windows.h>
 
 //! This is the windows version of PLBmp. The internal storage format
 //! is a windows DIB. It supports all color depths allowed by

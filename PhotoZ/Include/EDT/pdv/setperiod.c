@@ -4,7 +4,10 @@
 static void usage(char *progname);
 
 /*
- * main
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
  */
 #ifdef NO_MAIN
 #include "opt_util.h"

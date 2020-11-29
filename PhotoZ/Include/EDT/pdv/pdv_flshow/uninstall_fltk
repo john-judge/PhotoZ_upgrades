@@ -1,8 +1,0 @@
-#! /bin/bash
-
-cd /usr/src/fltk-1.1.9
-make uninstall
-cd /usr/src
-rm -fr fltk-1.1.9
-
-
