@@ -8,7 +8,8 @@
 #include <string>
 #include <iostream>
 
-#include <FL/Fl.H>
+#include <atlstr.h>
+#include <atlimage.h>
 
 // This class replaces the following Paintlib dependencies, which are no longer maintained
 // and do not support 64-bit versions
@@ -37,27 +38,41 @@ ImageEncoder::~ImageEncoder() {
 }
 
 // Export BMP from a bitmap handle
-void ImageEncoder::saveBmp(const char* fileName, HBITMAP hbm, HDC hdc) {
+void ImageEncoder::saveBmp(char* fileName, HBITMAP hbm, HDC hdc) {
 	PBITMAPINFO pbi = CreateBitmapInfoStruct(hbm);
 	CreateBMPFile((LPTSTR)fileName, pbi, hbm, hdc);
 }
 
 // Export bitmap handle to JPEG
-void ImageEncoder::saveJpegFromBmp(const char* fileName, HBITMAP hbm) {
-
+void ImageEncoder::saveJpegFromBmp(char* fileName, HBITMAP hbm) {
+	checkExtension(fileName, ".jpg");
+	saveImage(fileName, hbm);
 }
 
 // Export bitmap handle to PNG
-void ImageEncoder::savePngFromBmp(const char* fileName, HBITMAP hbm) {
-
+void ImageEncoder::savePngFromBmp(char* fileName, HBITMAP hbm) {
+	checkExtension(fileName, ".png");
+	saveImage(fileName, hbm);
 }
 
 // Export bitmap handle to TIFF
-void ImageEncoder::saveTiffFromBmp(const char* fileName, HBITMAP hbm) {
-
+void ImageEncoder::saveTiffFromBmp(char* fileName, HBITMAP hbm) {
+	checkExtension(fileName, ".tif");
+	saveImage(fileName, hbm);
 }
 
+void ImageEncoder::checkExtension(char* fileName, const char* ext) {
+	int n = strlen(fileName);
+	if (n < 4 || std::strncmp(fileName + n - 4, ext, 4) != 0 ) {
+		strcat_s(fileName, strlen(fileName) + 5, ext);
+	}
+}
 
+void ImageEncoder::saveImage(const char* fileName, HBITMAP hbm) {
+	CImage image;
+	image.Attach(hbm);
+	image.Save(fileName);
+}
 
 
 

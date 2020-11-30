@@ -14,14 +14,17 @@ private:
 	PBITMAPINFO CreateBitmapInfoStruct(HBITMAP hBmp);
 	void CreateBMPFile(LPTSTR pszFile, PBITMAPINFO pbi,
 		HBITMAP hBMP, HDC hDC);
+	void checkExtension(char* fileName, const char* ext);
+
+	void saveImage(const char* fileName, HBITMAP hbm);
 
 public:
 	ImageEncoder();
 	~ImageEncoder();
-	void saveJpegFromBmp(const char* fileName, HBITMAP hbm);
-	void savePngFromBmp(const char* fileName, HBITMAP hbm);
-	void saveTiffFromBmp(const char* fileName, HBITMAP hbm);
-	void saveBmp(const char* fileName, HBITMAP hbm, HDC hdc);
+	void saveJpegFromBmp(char* fileName, HBITMAP hbm);
+	void savePngFromBmp(char* fileName, HBITMAP hbm);
+	void saveTiffFromBmp(char* fileName, HBITMAP hbm);
+	void saveBmp(char* fileName, HBITMAP hbm, HDC hdc);
 };
 
 //=============================================================================

@@ -69,5 +69,3 @@ x64 is selected as active/target platform, and use Build > Rebuild Solution to e
 In the case of missing DLLs when running the executable:
 Again Property Pages, set your Debugging > Environment to:
 	PATH=%PATH%;$(ProjectDir)Lib;$(LibraryPath);$(ProjectDir)Include\EDT\pdv
-
-
