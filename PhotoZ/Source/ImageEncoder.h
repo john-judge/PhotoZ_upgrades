@@ -9,22 +9,19 @@
 class ImageEncoder
 {
 private:
+	HBITMAP *hbm;
 
-	/*
-	class PLJPEGEncoder* jpegEncoder;
-	class PLPNGEncoder* pngEncoder;
-	class PLBmpEncoder* bmpEncoder;
-	class PLTIFFEncoder* tiffEncoder;
-	*/
-
+	PBITMAPINFO CreateBitmapInfoStruct(HBITMAP hBmp);
+	void CreateBMPFile(LPTSTR pszFile, PBITMAPINFO pbi,
+		HBITMAP hBMP, HDC hDC);
 
 public:
 	ImageEncoder();
 	~ImageEncoder();
-	void saveJpegFromBmp(const char* fileName, HBITMAP *hbm);
-	void savePngFromBmp(const char* fileName, HBITMAP *hbm);
-	void saveTiffFromBmp(const char* fileName, HBITMAP *hbm);
-	void saveBmp(const char* fileName, HBITMAP *hbm);
+	void saveJpegFromBmp(const char* fileName, HBITMAP hbm);
+	void savePngFromBmp(const char* fileName, HBITMAP hbm);
+	void saveTiffFromBmp(const char* fileName, HBITMAP hbm);
+	void saveBmp(const char* fileName, HBITMAP hbm, HDC hdc);
 };
 
 //=============================================================================

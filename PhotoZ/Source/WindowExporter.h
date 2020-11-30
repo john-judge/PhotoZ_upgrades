@@ -5,17 +5,15 @@
 #define _WindowExporter_h
 
 #include <Windows.h>
+#include "ImageEncoder.h"
 //=============================================================================
 class WindowExporter  
 {
 private:
 	char imageType;
-	/*
-	class PLJPEGEncoder* jpegEncoder;
-	class PLPNGEncoder* pngEncoder;
-	class PLBmpEncoder* bmpEncoder;
-	class PLTIFFEncoder* tiffEncoder;
-	*/
+
+	ImageEncoder* encoder; // 11/29/20 - replace Paintlib encoders
+
 	HDC hdcMonitor;
 	HDC hdcWindow;
 	BITMAPINFO bitMapInfo;
