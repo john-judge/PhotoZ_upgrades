@@ -21,6 +21,7 @@
 */
 #include "WindowExporter.h"
 #include "MainController.h"
+#include "ImageEncoder.h"
 
 using namespace std;
 

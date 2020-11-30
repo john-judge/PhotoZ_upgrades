@@ -72,7 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include\EDT\pdv</IncludePath>
-    <LibraryPath>$(ProjectDir)Lib;$(LibraryPath);$(ProjectDir)Include\EDT\pdv</LibraryPath>
+    <LibraryPath>$(ProjectDir)Lib;$(LibraryPath);$(ProjectDir)Include\EDT\pdv;$(ProjectDir)Source</LibraryPath>
+    <SourcePath>$(VC_SourcePath);$(ProjectDir)Source</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -143,6 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\ImageEncoder.cpp" />
     <ClCompile Include="Source\ArrayWindow.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\Color.cpp" />
@@ -177,6 +179,7 @@
     <ClCompile Include="Source\WindowExporter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\ImageEncoder.h" />
     <ClInclude Include="Include\NIDAQmx.h">
       <DeploymentContent>true</DeploymentContent>
     </ClInclude>
