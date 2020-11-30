@@ -99,9 +99,9 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 			pLine[x].SetA(buf[4*(width*y+x)+3]);
 		}
 	}
-	delete [] buf;
+	
 	*/
-		
+	imageType = 'T';
 	char *fileName;
 	if(imageType=='B')
 	{
@@ -132,8 +132,8 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 		}
 	}
 
-	//
 	DeleteObject(hbm);
+	delete[] buf;
 }
 
 //=============================================================================
@@ -156,39 +156,10 @@ void WindowExporter::export2(int x0, int y0, int w, int h, const char* fileName)
 	  DIB_RGB_COLORS			// RGB
 	);
 
-	//
-	int     x, y;
-	/*
-	PLWinBmp *winBmp=new PLWinBmp;
-	winBmp->CreateFromHBitmap(hbm);
+	encoder->savePngFromBmp((char*)fileName, hbm); // Deprecate Paintlib MakeFileFromBmp
 
-	//
-	
-	PLPixel32 ** pLineArray = winBmp->GetLineArray32();
-	PLPixel32  * pLine;
-	int width=winBmp->GetWidth();
-	int height=winBmp->GetHeight();
-
-	for (y=0;y<height;y++)
-	{
-		pLine=pLineArray[height-y-1];
-		for(x=0;x<width;x++)
-		{
-			pLine[x].SetR(buf[4*(width*y+x)+2]);
-			pLine[x].SetG(buf[4*(width*y+x)+1]);
-			pLine[x].SetB(buf[4*(width*y+x)]);
-			pLine[x].SetA(buf[4*(width*y+x)+3]);
-		}
-	}*/
-
-	//
-	delete [] buf;
-
-	//pngEncoder->MakeFileFromBmp(fileName,winBmp);
-
-	//
-	//delete winBmp;
 	DeleteObject(hbm);
+	delete[] buf;
 }
 
 //=============================================================================
@@ -212,38 +183,16 @@ void WindowExporter::snapshot(int x0, int y0, int w, int h, int num)
 	  DIB_RGB_COLORS			// RGB
 	);
 
-	//
-	int     x, y;
-	/*
-	PLWinBmp *winBmp=new PLWinBmp;
-	winBmp->CreateFromHBitmap(hbm);
-
-	//
-	
-	PLPixel32 ** pLineArray = winBmp->GetLineArray32();
-	PLPixel32  * pLine;
-	
-	int width=winBmp->GetWidth();
-	int height=winBmp->GetHeight();
-
-	for (y=0;y<height;y++)
-	{
-		pLine=pLineArray[height-y-1];
-		for(x=0;x<width;x++)
-		{
-			pLine[x].SetR(buf[4*(width*y+x)+2]);
-			pLine[x].SetG(buf[4*(width*y+x)+1]);
-			pLine[x].SetB(buf[4*(width*y+x)]);
-			pLine[x].SetA(buf[4*(width*y+x)+3]);
-		}
-	}
-	*/
-
-	//
 	delete [] buf;
 
-	std::string fileName = std::to_string(num) + ".jpg";
-	//jpegEncoder->MakeFileFromBmp(fileName.c_str(), winBmp);
+	std::string fileStr = std::to_string(num) + ".jpg";
+	char fileName[50];
+	int i;
+	for (i = 0; i < fileStr.size(); i++) {
+		fileName[i] = fileStr[i];
+	}
+	fileName[i] = '\0';
+	encoder->saveJpegFromBmp(fileName, hbm); // Deprecate Paintlib MakeFileFromBmp
 
 	// delete winBmp;
 	DeleteObject(hbm);

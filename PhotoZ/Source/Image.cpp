@@ -27,11 +27,8 @@ Image::Image()
 
 	//decoder=new PLAnyPicDecoder;
 	//winBmp=new PLWinBmp;
-
+	rgbImage = NULL;
 	
-
-	img = 0;
-
 	fileLoaded=0;
 
 	x0=0;
@@ -47,7 +44,7 @@ Image::~Image()
 {
 	//delete decoder;
 	//delete bmp;
-	delete img;
+	delete rgbImage;
 }
 
 //=============================================================================
@@ -56,7 +53,7 @@ void Image::draw()
 	if(!fileLoaded)
 		return;
 
-	img->draw(x0,y0);
+	rgbImage->draw(x0,y0);
 }
 
 //=============================================================================
@@ -114,25 +111,31 @@ void Image::openImageFile(const char *fileName)
 		fileLoaded=0;
 		return;
 	}
-
+	if (rgbImage) delete rgbImage;
 	// Tell the decoder to fill the bitmap object with data.
-	img = new Fl_BMP_Image(fileName);
-	fileLoaded=1;
-	if (img->fail()) {
+	//imageBuf = new uchar[xSize*ySize];
+	rgbImage = new Fl_BMP_Image(fileName);//new Fl_RGB_Image(imageBuf, xSize, ySize, 1, 0);
+	fileLoaded = true;
+	if (rgbImage->fail()) {
 		fl_alert(fileName);
-		fileLoaded = 0;
+		fileLoaded = false;
 		return;
 	}
 
-	ws= img->w();
-	hs= img->h();
+	ws= rgbImage->w();
+	hs= rgbImage->h();
+	
+	if (fileLoaded)
+	{
+		draw();
+	}
 
-	reAllocMem();
+	//reAllocMem();
 }
 
 //=============================================================================
 void Image::reAllocMem()
-{
+{/*
 	if(!fileLoaded)
 	{
 		return;
@@ -141,10 +144,7 @@ void Image::reAllocMem()
 	int xSize = this->xSize;
 	int ySize = this->ySize;
 
-	if(img !=0)
-	{
-		delete img;
-	}
+	if(rgbImage) delete rgbImage;
 
 	imageBuf=new uchar[xSize*ySize];
 	//rgbImage=new Fl_RGB_Image(imageBuf,xSize,ySize,1,0);
@@ -152,18 +152,19 @@ void Image::reAllocMem()
 
 
 	// 32 bpp version
-	int bpp = img->ld() * 8 / (ws * hs); // formerly paintlib's GetBitsPerPixel();
-	/*
+	int bpp = rgbImage->ld() * 8 / (ws * hs); // formerly paintlib's GetBitsPerPixel();
+	
 	if(bpp!=8)
 	{
 		PLFilterGrayscale filter;
 		filter.ApplyInPlace(winBmp);
 	}
-	*/
-	const char *const* pLineArray = img->data();
+
+	const char *const* data = rgbImage->data();
 
 	double xRatio=double(ws-1)/double(xSize-1);
 	double yRatio=double(hs-1)/double(ySize-1);
+
 
 	int x,y;			// Destination
 	double xs,ys;		// Source
@@ -186,26 +187,26 @@ void Image::reAllocMem()
 			if(distY < 1.0e-10) distY = 0;
 
 			if(distX == 0 && distY == 0) {
-				imageBuf[y*xSize+x]=pLineArray[ys1][xs1];
+				imageBuf[y*xSize+x]= data[ys1][xs1];
 			}
 			else if(distX == 0)
 			{
-				d1 = pLineArray[ys1][xs1];
-				d4 = pLineArray[ys1+1][xs1];
+				d1 = data[ys1][xs1];
+				d4 = data[ys1+1][xs1];
 				imageBuf[y*xSize+x]=uchar((1.0 - distY) * d1 + distY * d4);
 			}
 			else if(distY == 0)
 			{
-				d1 = pLineArray[ys1][xs1];
-				d2 = pLineArray[ys1][xs1+1];
+				d1 = data[ys1][xs1];
+				d2 = data[ys1][xs1+1];
 				imageBuf[y*xSize+x] = uchar((1.0 - distX) * d1 + distX * d2);
 			}
 			else
 			{
-				d1 = pLineArray[ys1][xs1];
-				d2 = pLineArray[ys1][xs1+1];
-				d3 = pLineArray[ys1+1][xs1+1];
-				d4 = pLineArray[ys1+1][xs1];
+				d1 = data[ys1][xs1];
+				d2 = data[ys1][xs1+1];
+				d3 = data[ys1+1][xs1+1];
+				d4 = data[ys1+1][xs1];
 
 				imageBuf[y*xSize+x]=uchar(
 					d1 * (1.0 - distX) * (1.0 - distY)
@@ -214,7 +215,7 @@ void Image::reAllocMem()
 					+ (1.0 - distX) * distY * d4);
 			}
 		}
-	}
+	}*/
 }
 
 //=============================================================================

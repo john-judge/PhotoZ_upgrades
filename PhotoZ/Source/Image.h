@@ -10,7 +10,7 @@ private:
 	//class PLAnyPicDecoder *decoder;
 	//class PLWinBmp *winBmp;
 
-	class Fl_BMP_Image *img;
+	class Fl_BMP_Image *rgbImage;
 
 	int ws;	// width of source image
 	int hs;	// height of source image
@@ -23,7 +23,7 @@ private:
 
 	uchar *imageBuf;
 	char imageFormat[8];
-	char fileLoaded;
+	bool fileLoaded;
 
 	//
 	void reAllocMem();
