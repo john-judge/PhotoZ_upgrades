@@ -27,7 +27,7 @@ using namespace std;
  * was found
  */
 #define CAM_INPUT_OFFSET 10
-//#define DAQmxErrChk(functionCall)  if( DAQmxFailed(error=(functionCall)) ) NiErrorDump(); else
+#define DAQmxErrChk(functionCall)  if( DAQmxFailed(error=(functionCall)) ) NiErrorDump(); else
 
 //=============================================================================
 DapController::DapController()
@@ -241,8 +241,8 @@ void DapController::resetDAPs()
 	//don't need to do anything for NI since different tasks
 	//might run stop or setDaps again to confirm clean tasks
 	//maybe just ensure stopped
-	//DAQmxErrChk(DAQmxStopTask(taskHandleGet));
-	//DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
+	DAQmxErrChk(DAQmxStopTask(taskHandleAcqui));
+	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
 }
 
 void DapController::resetCamera()
@@ -284,8 +284,8 @@ int DapController::stop()
 {
 	stopFlag=1;
 	//resetDAPs();
-	//DAQmxErrChk(DAQmxStopTask(taskHandleGet));
-	//DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
+	DAQmxErrChk(DAQmxStopTask(taskHandleAcqui));
+	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
 	return  0;
 }
 
@@ -856,11 +856,10 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 //	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcquiIn));
 	//1, 4, 7, and 10
 	//int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
-	//DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai0", "acquiInput0", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
-	/*
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai1", "acquiInput1", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai2", "acquiInput2", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleACqui, "Dev1/ai3", "acquiInput3", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));	*/
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcqui, "Dev1/ai0", "acquiInput0", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcqui, "Dev1/ai1", "acquiInput1", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcqui, "Dev1/ai2", "acquiInput2", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
+	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcqui, "Dev1/ai3", "acquiInput3", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
 	//TO DO: configure elsewhere
 	cout << "line 815  " << SamplingRate<< "\n";
 	return 0;
@@ -869,8 +868,8 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 //=============================================================================
 void DapController::releaseDAPs()
 {
-	//DAQmxClearTask(taskHandleGet);//	DapHandleClose(dap820Get); 
-	//DAQmxClearTask(taskHandleRLI);//	DapHandleClose(dap820Put); 
+	DAQmxClearTask(taskHandleAcqui);//	DapHandleClose(dap820Get); 
+	DAQmxClearTask(taskHandleRLI);//	DapHandleClose(dap820Put); 
 }
 
 //=============================================================================

@@ -4,7 +4,7 @@
 #ifndef _DapController_h
 #define _DapController_h
 //=============================================================================
-//#include "dapio32.h"
+//#include "dapio32.h"  //Removed DAPIO32 JMJ 12/3
 #include "edtinc.h"
 #include <fstream>
 #include "NIDAQmx.h"
@@ -18,6 +18,11 @@ class DapController
 private:
 	TaskHandle taskHandleLed = 0;
 	TaskHandle taskHandlePut = 0;
+
+	TaskHandle taskHandleRLI;
+	TaskHandle taskHandleAcqui;
+
+	// Removed along with DAPIO32 JMJ 12/3
 	//HDAP dap820Put;
 	//HDAP dap820Get;
 
