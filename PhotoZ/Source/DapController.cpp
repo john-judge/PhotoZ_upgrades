@@ -10,8 +10,6 @@
 #include <exception>
 #include <stdint.h>
 #include <FL/fl_ask.H>
-
-#include "dapio32.h"
 #include "NIDAQmx.h"
 #include "DapController.h"
 #include "UserInterface.h"

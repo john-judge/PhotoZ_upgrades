@@ -4,7 +4,6 @@
 #ifndef _DapController_h
 #define _DapController_h
 //=============================================================================
-#include "dapio32.h"
 #include "edtinc.h"
 #include <fstream>
 #include "NIDAQmx.h"
