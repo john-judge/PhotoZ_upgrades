@@ -16,8 +16,8 @@ class Camera;
 class DapController  
 {
 private:
-	TaskHandle taskHandleLed = 0;
-	TaskHandle taskHandlePut = 0;
+	TaskHandle taskHandleRLI;
+	TaskHandle taskHandleAcqui;
 	HDAP dap820Put;
 	HDAP dap820Get;
 
