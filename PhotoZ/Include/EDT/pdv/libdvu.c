@@ -18,6 +18,13 @@
 /* shorthand debug level */
 #define DVUFATAL PDVLIB_MSG_FATAL
 
+#ifndef WIN32
+#define DWORD unsigned int
+#define LONG int
+#define WORD unsigned short
+#define BYTE unsigned char
+#endif
+
 #ifndef _rasterfile_h
 /* from 4.1.x rasterfile.h */
 struct rasterfile
@@ -43,8 +50,8 @@ static u_short	*slookup = NULL ;
 static u_char	*blookup = NULL ;
 static int	*hist = NULL ;
 
-static void
-free_cast_tbl();
+static void free_cast_tbl();
+void dvu_perror(char *str);
 
 extern int Pdv_debug;
 
@@ -195,14 +202,11 @@ dvu_write_rasfile(char *fname, u_char *addr, int x_size, int y_size)
     int             i;
     int		    rowsize ;
 
-    if ((fp = fopen(fname, "wb")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open destination data file '%s' for writing", 
-		fname);
-	return -1;
-    }
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
 
     rowsize = x_size ;
     if(rowsize & 1)
@@ -275,12 +279,10 @@ dvu_write_rasfile16(char *fname, u_char *addr, int x_size, int y_size, int depth
 	for (i=0; i<depth_bits; i++)
 		mask |= 1 << i;
 
-	if ((fp = fopen(fname, "wb")) == NULL) {
-		edt_msg_printf_perror(
-				DVUFATAL, 
-				"Can't open destination data file '%s' for writing", 
-				fname);
-		return -1;
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
 	}
 
 	if (Cast_tbl == NULL)
@@ -353,13 +355,12 @@ dvu_write_window(char *fname, dvu_window *w)
     int 	    bytes ;
     dvu_window	    *tmpi = 0 ;
 
-    if ((fp = fopen(fname, "wb")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open destination data file '%s' for writing", 
-		fname);
-    }
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
+
     bytes = (w->depth + 7) / 8 ;
     x_size = w->right - w->left + 1 ;
     y_size = w->bottom - w->top + 1 ;
@@ -425,16 +426,14 @@ dvu_read_window(char *fname)
     int	            y_size ;
     int		    depth ;
     int		    bytes ;
+    size_t          ret;
     dvu_window	    *s ;
 
-    if ((fp = fopen(fname, "r")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open source window file '%s' for reading", 
-		fname);
-	return(0) ;
-    }
+	if ((fp = fopen(fname,"r")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(0) ;
+	}
 
     fread_sun_long(&ras, sizeof(ras), 1, fp);
     if (ras.ras_magic != RAS_MAGIC)
@@ -462,7 +461,7 @@ dvu_read_window(char *fname)
 
     for(i = 0; i < y_size ; i++)
     {
-	fread(s->mat[i], rowsize, 1, fp) ;
+	ret = fread(s->mat[i], rowsize, 1, fp) ;
     }
     fclose(fp);
     return(s) ;
@@ -500,14 +499,11 @@ dvu_write_image(char *fname, u_char *addr, int x_size, int y_size,int istride)
     int             i;
     int		    rowsize ;
 
-    if ((fp = fopen(fname, "wb")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open destination data file '%s' for writing", 
-		fname);
-	return (-1);
-    }
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
 
     rowsize = x_size ;
     if(rowsize & 1)
@@ -561,14 +557,11 @@ dvu_write_rasfile24(char *fname, u_char *addr, int x_size, int y_size)
     int		    rowsize ;
     int 	    ret ;
 
-    if ((fp = fopen(fname, "wb")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open destination data file '%s' for writing", 
-		fname);
-	return (-1);
-    }
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
 
     rowsize = x_size ;
     if(rowsize & 1)
@@ -629,14 +622,11 @@ dvu_write_image24(char *fname, u_char *addr, int x_size, int y_size, int istride
     FILE           *fp;
     int		     y ;
 
-    if ((fp = fopen(fname, "wb")) == NULL)
-    {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open destination data file '%s' for writing", 
-		fname);
-	return (-1);
-    }
+	if ((fp = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
 
     ras.ras_magic = RAS_MAGIC;
     ras.ras_width = x_size;
@@ -863,21 +853,23 @@ dvu_load_lookup(char *filename,int depth)
     if ((ret = init_lookup(depth))) return(ret) ;
 
     if (Pdv_debug)
-	printf("loading lookup from %s\n",filename) ;
-    if (!(ltab = fopen(filename,"r")))
+        printf("loading lookup from %s\n",filename) ;
+
+    if ((ltab = fopen(filename,"r")) == NULL)
     {
-	printf("can't open %s for lookup table\n",filename) ;
-	return(-1) ;
+        fprintf(stderr, "can't open %s for lookup table\n",filename) ;
+        return(-1) ;
     }
     index = 0 ;
     while(index < ncolors && (fscanf(ltab,"%d",&val)))
     {
-	if (depth > 8)
-	    slookup[index++] = val ;
-	else
-	    blookup[index++] = val ;
+        if (depth > 8)
+            slookup[index++] = val ;
+        else
+            blookup[index++] = val ;
     }
-    if (Pdv_debug) printf("read %d values\n",index) ;
+    if (Pdv_debug)
+        printf("read %d values\n",index) ;
     fclose(ltab) ;
     return(0) ;
 }
@@ -893,24 +885,26 @@ dvu_save_lookup(char *filename,int depth)
 	printf("saving lookup to %s\n",filename) ;
 
     if (!blookup && !slookup)
-	if ((ret = init_lookup(depth))) return(ret) ;
+        if ((ret = init_lookup(depth)))
+            return(ret) ;
 
     if (!(ltab = fopen(filename,"wb")))
     {
-	edt_msg_printf_perror(
-		DVUFATAL, 
-		"Can't open '%s' for lookup table", 
-		filename);
-	return(-1) ;
+        edt_msg_printf_perror(
+            DVUFATAL, 
+            "Can't open '%s' for lookup table", 
+            filename);
+        return(-1) ;
     }
+
     if (Pdv_debug > 1)
     {
-	if (depth > 8)
-	    for(i = 0 ; i < ncolors ; i++) printf(" %d (%d)\n",
-		    slookup[i],hist[i]) ;
-	else
-	    for(i = 0 ; i < ncolors ; i++) printf(" %d (%d)\n",
-		    blookup[i],hist[i]) ;
+        if (depth > 8)
+            for(i = 0 ; i < ncolors ; i++) printf(" %d (%d)\n",
+                slookup[i],hist[i]) ;
+        else
+            for(i = 0 ; i < ncolors ; i++) printf(" %d (%d)\n",
+                blookup[i],hist[i]) ;
     }
     if (depth > 8)
 	for(i = 0 ; i < ncolors ; i++) fprintf(ltab," %d\n",
@@ -1274,77 +1268,76 @@ static void putint(FILE *fp, int i)
 int 
 dvu_write_bmp(char *fname, u_char *buffer, int width, int height)
 {
-  int w = width, h = height; /* shortcut names */
-  FILE *fp ;
-  int bperlin ;
-  int nc = 256 ;
-  int nbits = 8 ;
-  int   i,j,padw;
-  u_char *pp;
+    int w = width, h = height; /* shortcut names */
+    FILE *fp ;
+    int bperlin ;
+    int nc = 256 ;
+    int nbits = 8 ;
+    int   i,j,padw;
+    u_char *pp;
 
-  fp = fopen(fname,"wb") ;
-  if (!fp) return(-1) ;
-  
-  bperlin = ((w * nbits + 31) / 32) * 4;   /* # bytes written per line */
+    if ((fp = fopen(fname,"wb")) == NULL)
+    {
+        dvu_perror(fname) ;
+        return(-1) ;
+    }
 
-  putc('B', fp);  putc('M', fp);           /* BMP file magic number */
+    bperlin = ((w * nbits + 31) / 32) * 4;   /* # bytes written per line */
 
-  /* compute filesize and write it */
-  i = 14 +                /* size of bitmap file header */
+    putc('B', fp);  putc('M', fp);           /* BMP file magic number */
+
+    /* compute filesize and write it */
+    i = 14 +                /* size of bitmap file header */
       40 +                /* size of bitmap info header */
       (nc * 4) +          /* size of colormap */
       bperlin * h;        /* size of image data */
 
-  putint(fp, i);
-  putshort(fp, 0);        /* reserved1 */
-  putshort(fp, 0);        /* reserved2 */
-  putint(fp, 14 + 40 + (nc * 4));  /* offset from BOfile to BObitmap */
+    putint(fp, i);
+    putshort(fp, 0);        /* reserved1 */
+    putshort(fp, 0);        /* reserved2 */
+    putint(fp, 14 + 40 + (nc * 4));  /* offset from BOfile to BObitmap */
 
-  putint(fp, 40);         /* biSize: size of bitmap info header */
-  putint(fp, w);          /* biWidth */
-  putint(fp, h);          /* biHeight */
-  putshort(fp, 1);        /* biPlanes:  must be '1' */
-  putshort(fp, nbits);    /* biBitCount: 1,4,8, or 24 */
-  putint(fp, BI_RGB);     /* biCompression:  BI_RGB, BI_RLE8 or BI_RLE4 */
-  putint(fp, bperlin*h);  /* biSizeImage:  size of raw image data */
-  putint(fp, 75 * 39);    /* biXPelsPerMeter: (75dpi * 39" per meter) */
-  putint(fp, 75 * 39);    /* biYPelsPerMeter: (75dpi * 39" per meter) */
-  putint(fp, nc);         /* biClrUsed: # of colors used in cmap */
-  putint(fp, nc);         /* biClrImportant: same as above */
+    putint(fp, 40);         /* biSize: size of bitmap info header */
+    putint(fp, w);          /* biWidth */
+    putint(fp, h);          /* biHeight */
+    putshort(fp, 1);        /* biPlanes:  must be '1' */
+    putshort(fp, nbits);    /* biBitCount: 1,4,8, or 24 */
+    putint(fp, BI_RGB);     /* biCompression:  BI_RGB, BI_RLE8 or BI_RLE4 */
+    putint(fp, bperlin*h);  /* biSizeImage:  size of raw image data */
+    putint(fp, 75 * 39);    /* biXPelsPerMeter: (75dpi * 39" per meter) */
+    putint(fp, 75 * 39);    /* biYPelsPerMeter: (75dpi * 39" per meter) */
+    putint(fp, nc);         /* biClrUsed: # of colors used in cmap */
+    putint(fp, nc);         /* biClrImportant: same as above */
 
 
-  /* write out the colormap */
-  for (i=0; i<nc; i++) {
-      putc(i,fp);
-      putc(i,fp);
-      putc(i,fp);
-      putc(0,fp);
+    /* write out the colormap */
+    for (i=0; i<nc; i++) {
+        putc(i,fp);
+        putc(i,fp);
+        putc(i,fp);
+        putc(0,fp);
     }
 
-  /* write out the image */
+    /* write out the image */
 
 
-  padw = ((w + 3)/4) * 4; /* 'w' padded to a multiple of 4pix (32 bits) */
+    padw = ((w + 3)/4) * 4; /* 'w' padded to a multiple of 4pix (32 bits) */
 
-  for (i=h-1; i>=0; i--) {
-    pp = buffer + (i * w);
+    for (i=h-1; i>=0; i--)
+    {
+        pp = buffer + (i * w);
 
-    for (j=0; j<w; j++) putc(*pp++, fp);
-    for ( ; j<padw; j++) putc(0, fp);
-  }
+        for (j=0; j<w; j++) putc(*pp++, fp);
+            for ( ; j<padw; j++) putc(0, fp);
+    }
 
-  fclose(fp) ;
-  return(0) ;
+    fclose(fp) ;
+    return(0) ;
 }
 
 #define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
 
 #ifndef WIN32
-
-#define DWORD unsigned long
-#define LONG long
-#define WORD unsigned short
-#define BYTE unsigned char
 
 
 typedef struct tagBITMAPFILEHEADER {
@@ -1353,7 +1346,7 @@ typedef struct tagBITMAPFILEHEADER {
         WORD    bfReserved1;
         WORD    bfReserved2;
         DWORD   bfOffBits;
-} BITMAPFILEHEADER;
+}__attribute__((packed)) BITMAPFILEHEADER;
 
 /* structures for defining DIBs */
 typedef struct tagBITMAPCOREHEADER {
@@ -1362,7 +1355,7 @@ typedef struct tagBITMAPCOREHEADER {
         WORD    bcHeight;
         WORD    bcPlanes;
         WORD    bcBitCount;
-} BITMAPCOREHEADER ;
+}__attribute__((packed)) BITMAPCOREHEADER ;
 
 
 typedef struct tagBITMAPINFOHEADER{
@@ -1377,7 +1370,7 @@ typedef struct tagBITMAPINFOHEADER{
         LONG       biYPelsPerMeter;
         DWORD      biClrUsed;
         DWORD      biClrImportant;
-} BITMAPINFOHEADER;
+}__attribute__((packed)) BITMAPINFOHEADER;
 
 /* constants for the biCompression field */
 /* #define BI_RGB        0L */ /* already defined above */
@@ -1390,12 +1383,12 @@ typedef struct tagRGBQUAD {
         BYTE    rgbGreen;
         BYTE    rgbRed;
         BYTE    rgbReserved;
-} RGBQUAD, *LPRGBQUAD;
+}__attribute__((packed)) RGBQUAD, *LPRGBQUAD;
 
 typedef struct tagBITMAPINFO {
     BITMAPINFOHEADER    bmiHeader;
     RGBQUAD             bmiColors[1];
-} BITMAPINFO;
+}__attribute__((packed)) BITMAPINFO;
 
 #else
 
@@ -1497,8 +1490,11 @@ dvu_write_bmp_24(char *fname, u_char *buffer, int width, int height)
 		pBMI->bmiHeader.biSize;
 
 	/* Open  */
-	f = fopen(fname, "wb");
-
+	if ((f = fopen(fname,"wb")) == NULL)
+	{
+		dvu_perror(fname) ;
+		return(-1) ;
+	}
 
 	/* Write Header  */
 	fwrite(&bmfHdr,1, sizeof(bmfHdr),f);
@@ -1544,6 +1540,7 @@ dvu_write_raw(int imagesize, u_char *imagebuf, char *fname)
 		dvu_perror(fname) ;
 		return(-1) ;
 	}
+
 	fwrite(imagebuf,imagesize,1,fd) ;
 	fclose(fd) ;
     return(0) ;

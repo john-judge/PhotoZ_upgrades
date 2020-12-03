@@ -902,7 +902,7 @@ unpackrgb(u_char *buf, int size)
     tmpp = buf + ((size * 4) / 3) - 1 ;
     from_p = buf + size - 1 ;
     /* we need to copy from end to do inplace  */
-	printf("size %x from %x buf %x tmpp %x\n",
+	printf("size %x from %p buf %p tmpp %p\n",
 		size, from_p, buf, tmpp) ;
     /* DEBUG */
     while (from_p >= buf)

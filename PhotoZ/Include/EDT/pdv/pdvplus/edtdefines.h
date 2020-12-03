@@ -60,7 +60,7 @@
 #ifdef TRACE
 #undef TRACE
 #endif
-#include "edtimage/ErrorHandler.h"
+#include "dispatch/ErrorHandler.h"
 #ifdef _DEBUG
 
 
@@ -135,21 +135,11 @@ typedef unsigned long ULONG;
 
 typedef off_t EdtFileOffset;
 
-#ifndef max
-
-#define max(a,b) ((a > b) ? (a):(b))
-
-#endif
-
-#ifndef min
-#define min(a,b) ((a < b) ? (a):(b))
-#endif
-
 #define INFINITE 0
 
 #define SECTOR_SIZE PAGE_SIZE
 
-#define _MAX_PATH _POSIX_PATH_MAX
+#define _edtmax _POSIX_PATH_MAX
 
 
 #define THREAD_RETURN void *
@@ -189,14 +179,10 @@ struct EdtLine {
 
 #endif
 
-#ifndef max
+#ifndef edtmax
 
-#define max(a,b) ((a > b) ? (a):(b))
+#define edtmax(a,b) ((a > b) ? (a):(b))
 
-#endif
-
-#ifndef min
-#define min(a,b) ((a < b) ? (a):(b))
 #endif
 
 #include "edtinc.h"

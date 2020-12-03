@@ -1677,15 +1677,19 @@ void edt_dump_registers(EdtDev *edt_p, int debug)
 
     case PDVCL_ID:
     case PDVCL2_ID:
+    case PE1DVVL_ID:
+    case PE4DVVL_ID:
     case PE4DVCL_ID:
     case PE8DVCL_ID:
     case PE8DVCLS_ID:
+    case PE8VLCLS_ID:
     case PDV_ID:
     case PDVA_ID:
     case PDVA16_ID:
     case PDVFOX_ID:
     case PE4DVFOX_ID:
     case PE8DVFOX_ID:
+    case PE4DVVLFOX_ID:
     case PDVFCI_AIAG_ID:
     case PDVFCI_USPS_ID:
     case PC104ICB_ID:
@@ -1754,7 +1758,7 @@ void edt_dump_registers(EdtDev *edt_p, int debug)
 	    PrintRegister(edt_p, "PDV_LHS_COUNT_LOW", PDV_LHS_COUNT_LOW, NULL);
 	    PrintRegister(edt_p, "PDV_LHS_COUNT_HI", PDV_LHS_COUNT_HI, NULL);
 	}
-	if (edt_is_dvcl(edt_p) || edt_is_dvfox(edt_p) | edt_is_dvcl2(edt_p))
+	if (edt_is_dvcl(edt_p) || edt_is_dvfox(edt_p) | edt_is_simulator(edt_p))
 	{
 
 	    PrintRegister(edt_p, "PDV_CL_DATA_PATH", PDV_CL_DATA_PATH, NULL);
@@ -1765,7 +1769,7 @@ void edt_dump_registers(EdtDev *edt_p, int debug)
 	    PrintRegister(edt_p, "PDV_VSKIP", PDV_VSKIP, NULL);
 	    PrintRegister(edt_p, "PDV_VACTV", PDV_VACTV, NULL);
 	    PrintRegister(edt_p, "LINESPERFRAME", PDV_CL_LINESPERFRAME, NULL);
-	    PrintRegister(edt_p, "CLOCKSSPERLINE", PDV_CL_PIXELSPERLINE, NULL);
+	    PrintRegister(edt_p, "CLOCKSPERLINE", PDV_CL_PIXELSPERLINE, NULL);
 	}
 
 	if (edt_is_simulator(edt_p))
@@ -1821,23 +1825,33 @@ void edt_dump_registers(EdtDev *edt_p, int debug)
     case PCDA_ID:
     case PCDCL_ID:
     case PCDA16_ID:
+    case PE4CDA16_ID:
     case PGP20_ID:
     case PGP40_ID:
     case PGP60_ID:
     case PGP_THARAS_ID:
-    case PSS4_ID:	/* verify that this is right for this dev */
-    case PSS16_ID:	/* verify that this is right for this dev */
-    case PGS4_ID:	/* verify that this is right for this dev */
-    case PGS16_ID:	/* verify that this is right for this dev */
-    case PE8LX16_LS_ID:	/* verify that this is right for this dev */
-    case PE8LX16_ID:	/* verify that this is right for this dev */
-    case WSU1_ID:	/* verify that this is right for this dev */
+    case PSS4_ID:
+    case PSS16_ID:
+    case PGS4_ID:
+    case PGS16_ID:
+    case PE8LX16_LS_ID:
+    case PE8LX16_ID:
+    case PE16G3_OCTEON3_ID:
+    case WSU1_ID:
     case SNAP1_ID:
-    case PE8G3S5_ID:	/* verify that this is right for this dev */
-    case PE4CDA_ID:	/* verify that this is right for this dev */
-    case PE8LX32_ID:	/* verify that this is right for this dev */
-    case PE4AMC16_ID:	/* verify that this is right for this dev */
+    case PE8G3S5_ID:
+    case PE8G3A5_ID:
+    case PE8G3KU_ID:
+    case PE8LX32_ID:
+    case PE8G2V7_ID:
+    case PE4BL_RADIO_ID:
+    case PE4BL_TXLFRADIO_ID:
+    case PE4BL_RXLFRADIO_ID:
+    case PE8BL_NIC_ID:
+    case PE4AMC16_ID:
     case PCD_16_ID:
+    case PE8BL_WBDSP_ID:
+    case PE1BL_WBADC_ID:
 
 	PrintRegister(edt_p, "DMA_CFG", EDT_DMA_CFG, NULL);
 	cfg = edt_reg_read(edt_p, EDT_DMA_CFG);

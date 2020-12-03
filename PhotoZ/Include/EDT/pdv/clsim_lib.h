@@ -78,11 +78,12 @@ EDTAPI void pdv_cls_sim_stop(PdvDev *pdv_p);
 EDTAPI void pdv_cls_init_serial(PdvDev *pdv_p);
 EDTAPI void pdv_cls_set_height(PdvDev *pdv_p, int rasterlines, int vblank);
 EDTAPI void pdv_cls_set_width(PdvDev *pdv_p, int width, int hblank);
+EDTAPI void pdv_cls_set_width_lval_rval(PdvDev *pdv_p, int width, int hblank, int hlvstart, int hlvend, int hrvstart, int hrvend);
 EDTAPI void pdv_cls_set_depth(PdvDev * pdv_p, int value);
 EDTAPI void pdv_cls_set_clock(EdtDev *edt_p, double freq) ;
 EDTAPI void pdv_cls_set_fill(PdvDev *pdv_p, u_char left, u_char right);
-EDTAPI void pdv_cls_set_readvalid(PdvDev *pdv_p, 
-		u_short HrvStart, u_short HrvEnd);
+EDTAPI void pdv_cls_set_readvalid(PdvDev *pdv_p, u_short HrvStart, u_short HrvEnd);
+EDTAPI void pdv_cls_set_dvalid(PdvDev *pdv_p, u_char skip, u_char mode);
 EDTAPI void pdv_cls_set_rven(PdvDev *pdv_p, int enable);
 EDTAPI void pdv_cls_set_intlven(PdvDev *pdv_p, int enable);
 EDTAPI void pdv_cls_set_led(PdvDev *pdv_p, int power_state);

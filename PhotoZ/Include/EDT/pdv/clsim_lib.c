@@ -5,6 +5,12 @@
  */
 #include "edtinc.h"
 #include "clsim_lib.h"
+#include "edt_si570.h"
+#include "edt_si5338.h"
+
+void pdv_cls_set_clock(PdvDev *pdv_p, double freq);
+void pe8dvcls_set_clock(PdvDev *pdv_p, double target);
+void pe8vlcls_set_clock(PdvDev *pdv_p, double freqMHz);
 
 /**
  * Set the width and height of the simulator frame.
@@ -73,6 +79,7 @@ void pdv_cls_set_size(PdvDev *pdv_p,
     dd_p->height = height;
     dd_p->depth = depth;
     dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
+    dd_p->cls.taps = taps;
 }
 
 /**
@@ -104,6 +111,7 @@ pdv_cls_set_line_timing(PdvDev *pdv_p,
         int Hrvend)
 
 {
+    ClSimControl *cls = &pdv_p->dd_p->cls;
     int clocks;
 
     if (taps == 0)
@@ -111,16 +119,26 @@ pdv_cls_set_line_timing(PdvDev *pdv_p,
 
     clocks = width / taps;
 
-    edt_reg_write(pdv_p, PDV_CLSIM_HFVSTART, Hfvstart);
-    edt_reg_write(pdv_p, PDV_CLSIM_HFVEND, (Hfvend)?Hfvend:Hfvstart+clocks);
+    cls->Hfvstart = Hfvstart;
+    cls->Hfvend = (Hfvend)?Hfvend:Hfvstart+clocks;
 
-    edt_reg_write(pdv_p, PDV_CLSIM_HLVSTART, Hlvstart);
-    edt_reg_write(pdv_p, PDV_CLSIM_HLVEND, (Hlvend)?Hlvend:Hlvstart+clocks);
+    cls->Hlvstart = Hlvstart;
+    cls->Hlvend = (Hlvend)?Hlvend:Hlvstart+clocks;
 
-    edt_reg_write(pdv_p, PDV_CLSIM_HRVSTART, Hrvstart);
-    edt_reg_write(pdv_p, PDV_CLSIM_HRVEND, (Hrvend)?Hrvend:Hrvstart+clocks);
+    cls->Hrvstart = Hrvstart;
+    cls->Hrvend = (Hrvend)?Hrvend:Hrvstart+clocks;
+
+    edt_reg_write(pdv_p, PDV_CLSIM_HFVSTART, cls->Hfvstart);
+    edt_reg_write(pdv_p, PDV_CLSIM_HFVEND, cls->Hfvend);
+
+    edt_reg_write(pdv_p, PDV_CLSIM_HLVSTART, cls->Hlvstart);
+    edt_reg_write(pdv_p, PDV_CLSIM_HLVEND, cls->Hlvend);
+
+    edt_reg_write(pdv_p, PDV_CLSIM_HRVSTART, cls->Hrvstart);
+    edt_reg_write(pdv_p, PDV_CLSIM_HRVEND, cls->Hrvend);
 
     pdv_p->dd_p->width = width;
+    pdv_p->dd_p->cls.taps = taps;
 
 }
 
@@ -505,10 +523,16 @@ pdv_cls_sim_stop(PdvDev *pdv_p)
 }
 
 /** Set the width of outgoing lines, as well as the number of clocks (hgap) between lines.
+ * Make sure depth / taps are set correctly first by calling #pdv_set_depth (or use #pdv_cls_set_size
+ * instead of this routine), otherwise the registers won't be set correctly.
+ * Also note that this overwrites the horizontal line valid start values with new values
+ * based on the width  & blanking, and sets readvalid to the full width. Follow this with a call
+ * to /ref pdv_cls_set_line_timing if you want to set specific values for those.
  *
  * @param pdv_p	pointer to pdv device structure returned by #pdv_open
  * @param width number of pixels per line
  * @param hgap number of clocks between lines (horizontal gap)
+ * @see pdv_cls_set_height, pdv_cls_set_line_timing
  * @return void
  */
     void
@@ -517,20 +541,85 @@ pdv_cls_set_width(PdvDev *pdv_p, int width, int hblank)
 {
    Dependent *dd_p = pdv_p->dd_p;
    int totalwidth;
-    int taps = edt_reg_read(pdv_p, PDV_CL_DATA_PATH);
-    int rgb = pdv_p->dd_p->cl_cfg & PDV_CL_CFG_RGB;
+   int taps = edt_reg_read(pdv_p, PDV_CL_DATA_PATH);
+   int rgb = pdv_p->dd_p->cl_cfg & PDV_CL_CFG_RGB;
+   int clocks;
 
     taps =  (taps >> 4) + 1;
 
     if ((taps == 0) || rgb)
         taps = 1;
+        
+    clocks = width / taps;
 
     dd_p->width = width;
-
-    totalwidth = width / taps;
+    dd_p->cls.taps = taps;
 
     if (hblank)
-        totalwidth += hblank;
+    {
+        totalwidth = clocks + hblank;
+        pdv_p->dd_p->cls.hblank = hblank;
+    }
+    else totalwidth = width / taps;
+
+    dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
+
+    /* hold off sim start */
+
+    edt_reg_write(pdv_p, PDV_CLSIM_HCNTMAX, totalwidth-1);  
+
+    /* reset line timing; note that this overwrites hlvstart/hlvend and hrvstart/hrvend */
+    pdv_cls_set_line_timing(pdv_p,
+            width,
+            taps,
+            dd_p->cls.Hfvstart, dd_p->cls.Hfvend,
+            0,0,
+            0,0);
+
+    dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
+    edt_set_dependent(pdv_p, dd_p);
+}
+
+/** Set the width of outgoing lines, as well as the number of clocks (hgap) between lines and start and end of
+ * line valid and read valid.
+ * Same as pdv_cls_set_width but includes lval and readval start and end.
+ * Make sure depth / taps are set correctly first by calling #pdv_set_depth (or use #pdv_cls_set_size
+ * instead of this routine), otherwise the registers won't be set correctly.
+ *
+ * @param pdv_p	pointer to pdv device structure returned by #pdv_open
+ * @param width number of pixels per line
+ * @param hgap number of clocks between lines (horizontal gap)
+ * @param hlvstart number of clocks between lines (horizontal gap)
+ * @param hlvend number of clocks between lines (horizontal gap)
+ * @see pdv_cls_set_width
+ * @return void
+ */
+    void
+pdv_cls_set_width_lval_rval(PdvDev *pdv_p, int width, int hblank, int hlvstart, int hlvend, int hrvstart, int hrvend)
+
+{
+   Dependent *dd_p = pdv_p->dd_p;
+   int totalwidth;
+   int taps = edt_reg_read(pdv_p, PDV_CL_DATA_PATH);
+   int rgb = pdv_p->dd_p->cl_cfg & PDV_CL_CFG_RGB;
+   int clocks;
+
+    taps =  (taps >> 4) + 1;
+
+    if ((taps == 0) || rgb)
+        taps = 1;
+        
+    clocks = width / taps;
+
+    dd_p->width = width;
+    dd_p->cls.taps = taps;
+
+    if (hblank)
+    {
+        totalwidth = clocks + hblank;
+        pdv_p->dd_p->cls.hblank = hblank;
+    }
+    else totalwidth = width / taps;
 
     dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
 
@@ -540,37 +629,33 @@ pdv_cls_set_width(PdvDev *pdv_p, int width, int hblank)
 
     pdv_cls_set_line_timing(pdv_p,
             width,
-            taps,0,0,0,0,0,0);
+            taps,
+            dd_p->cls.Hfvstart, dd_p->cls.Hfvend,
+            hlvstart,hlvend,
+            hrvstart, hrvend);
 
     dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
     edt_set_dependent(pdv_p, dd_p);
-
-
 }
 
 
 /** Set the height of outgoing frames, as well as the number of lines (vgap) between lines.
  *
  * @param pdv_p	pointer to pdv device structure returned by #pdv_open
- * @param width number of pixels per line
- * @param hgap number of clocks between lines (horizontal gap)
+ * @param height number of pixels per line
+ * @param vgap number of clocks between lines (vertical gap)
  * @return void
  */
     void
 pdv_cls_set_height(PdvDev *pdv_p, int height, int vblank)
-
 {
    Dependent *dd_p = pdv_p->dd_p;
-   int totalheight = height;
 
     dd_p->height = height;
+    dd_p->cls.vblank = vblank;
 
-    if (vblank)
-        totalheight += vblank;
-
-    /* hold off sim start */
-
-    edt_reg_write(pdv_p, PDV_CLSIM_VCNTMAX, totalheight-1);  
+    edt_reg_write(pdv_p, PDV_CLSIM_VACTV, height-1);
+    edt_reg_write(pdv_p, PDV_CLSIM_VCNTMAX, (height + vblank) - 1);
 
     dd_p->imagesize = dd_p->height * pdv_get_pitch(pdv_p);
     edt_set_dependent(pdv_p, dd_p);
@@ -614,19 +699,18 @@ pdv_cls_set_depth(PdvDev * pdv_p, int value)
 
 }
 
-
-
 /**
  * Set the clock frequency (MHz).
  *
  * On PCI boards, this sets the MPC9230 PLL on PCI CD-CLSIM to 3.5 times the requested pixclk freq.
  * On PCIe DVa boards, sets the SI570 PLL to 1.25x the requeted freq. On  PCIe DV boards,
  * sets the SI570 PLL to 1x the  requested freq.
- * Valid range is 20.0-85.0. Frequencies outside of this range are ignored.
+ * Valid range is 19.9-85.1. A warning is produced for frequencies outside this range
  * @param freq pixel clock frequency (MHz)
  * @return void
  */
-void pdv_cls_set_clock(PdvDev *pdv_p, double freq) 
+    void
+pdv_cls_set_clock(PdvDev *pdv_p, double freq) 
 
 {	/* Pixel clock frequency in MHz */
     int hex, 
@@ -646,97 +730,104 @@ void pdv_cls_set_clock(PdvDev *pdv_p, double freq)
     int mmin = (int) (0.99 + 800*4/ref);    /* highest acceptable m value */
     int mmax = (int) (1800*4/ref);	/* lowest acceptable m value */
 
-    if ((freq >= 20) && (freq <= 85))
-        pdv_p->dd_p->cls.pixel_clock = (float)freq;
-
     /* zero is special case, reserved for testing/internal 40 */
     if (freq == 0.0)
     {
         edt_reg_write(pdv_p, EDT_SS_PLL_CTL, 0);
+        pdv_p->dd_p->cls.pixel_clock = (float)freq;
         return;
     }
+    else if (freq<19.9 || freq>85.1)
+        printf("WARNING: %3.4f is not in range of 20 to 85 MHz\n", freq);
+
+    pdv_p->dd_p->cls.pixel_clock = (float)freq;
+    pdv_p->dd_p->pclock_speed = (int)(pdv_p->dd_p->cls.pixel_clock + 0.5);
+       /* pclock_speed is redundant w.r.t. CLS but still they should both agree */
 
     if (pdv_p->devid == PE8DVCLS_ID)
     {
         if (pdv_p->channel_no == 0)
-            pe8dvcls_set_clock(pdv_p, pdv_p->dd_p->cls.pixel_clock);
-        return;
+            pe8dvcls_set_clock(pdv_p, (double)freq);
     }
-
-    if (freq<19.9 || freq>85.1) {
-        printf("Error, %3.4f is not in range of 20 to 85 MHz\n", freq);
-        return; 
-    }
-
-    if (mmax > 511)   
-        mmax=511;
-
-    targ35 = freq*3.5;
-    best35 = 0.0;  
-    m_best=0; 
-    n_best=0;  
-    err_best35=100.0;
-
-    for (m=mmin; m<=mmax; m++) 
+    else if (pdv_p->devid == PE8VLCLS_ID)
     {
-        for (n=1; n<=8; n*=2) 
-        {	/* for n values of 1,2,4,8 */
-            current35 = ref/8 * m / n;
-            err_current35 = targ35 - current35;	  /* abs() not for doubles */
-            if (err_current35 < 0)    
-                err_current35 = -err_current35;
-            if (err_current35 < err_best35) 
-            {
-                best35=current35; 
-                m_best=m; 
-                n_best=n;  
-                err_best35=err_current35;
-            }
-        }
-    }
-    if (n_best==1) 
-        n2=3;
-    else if (n_best==2) 
-        n2=0;
-    else if (n_best==4) 
-        n2=1;
-    else if (n_best==8) 
-        n2=2;
-    hex = n2<<9 | m_best;
+	// Take the board out of reset
+	edt_bar1_write(pdv_p, 0, 1);
 
-    err1x = (best35-targ35)/3.5;
-    if (err1x < 0.0)   
-        err1x = - err1x;
-    if (err1x > 0.00090) 
+	// Program the SI5338 clock chip
+	pe8vlcls_set_clock(pdv_p, (double)freq);
+    }
+    else
     {
-        printf("req:%3.4f got:%3.4f err:%3.4f ecl:%3.4f vco:%3.4f m:%d n:%d h:%04x\n",
-                freq,
-                best35/3.5,
-                (best35-targ35)/3.5,
-                best35,best35*2*n_best,
-                m_best,n_best,hex);
-    }
+	if (mmax > 511)   
+	    mmax=511;
 
-    edt_reg_write(pdv_p, EDT_SS_PLL_CTL, 0);
-    for (bit=13; bit>=0; bit--) 
-    {	/* send 14 data bits to ECL PLL */
-        b = hex & (1<<bit);	 /* rising edge of *CLK shifts data in*/
-        if (b)   
-            dbit=EDT_SS_PLL_DATA; 
-        else 
-            dbit=0; 
-        edt_reg_write(pdv_p, EDT_SS_PLL_CTL, dbit) ;    
-        edt_reg_write(pdv_p, EDT_SS_PLL_CTL, dbit | EDT_SS_PLL_CLK);
-    }	     /* latches to m,n transparent while *STROBE0 is high */
-    edt_reg_write(pdv_p, EDT_SS_PLL_CTL, EDT_SS_PLL_STROBE0);
-    edt_reg_write(pdv_p, EDT_SS_PLL_CTL, 0);
+	targ35 = freq*3.5;
+	best35 = 0.0;  
+	m_best=0; 
+	n_best=0;  
+	err_best35=100.0;
+
+	for (m=mmin; m<=mmax; m++) 
+	{
+	    for (n=1; n<=8; n*=2) 
+	    {	/* for n values of 1,2,4,8 */
+		current35 = ref/8 * m / n;
+		err_current35 = targ35 - current35;	  /* abs() not for doubles */
+		if (err_current35 < 0)    
+		    err_current35 = -err_current35;
+		if (err_current35 < err_best35) 
+		{
+		    best35=current35; 
+		    m_best=m; 
+		    n_best=n;  
+		    err_best35=err_current35;
+		}
+	    }
+	}
+	if (n_best==1) 
+	    n2=3;
+	else if (n_best==2) 
+	    n2=0;
+	else if (n_best==4) 
+	    n2=1;
+	else if (n_best==8) 
+	    n2=2;
+	hex = n2<<9 | m_best;
+
+	err1x = (best35-targ35)/3.5;
+	if (err1x < 0.0)   
+	    err1x = - err1x;
+	if (err1x > 0.00090) 
+	{
+	    printf("req:%3.4f got:%3.4f err:%3.4f ecl:%3.4f vco:%3.4f m:%d n:%d h:%04x\n",
+		    freq,
+		    best35/3.5,
+		    (best35-targ35)/3.5,
+		    best35,best35*2*n_best,
+		    m_best,n_best,hex);
+	}
+
+	edt_reg_write(pdv_p, EDT_SS_PLL_CTL, 0);
+	for (bit=13; bit>=0; bit--) 
+	{	/* send 14 data bits to ECL PLL */
+	    b = hex & (1<<bit);	 /* rising edge of *CLK shifts data in*/
+	    if (b)   
+		dbit=EDT_SS_PLL_DATA; 
+	    else 
+		dbit=0; 
+	    edt_reg_write(pdv_p, EDT_SS_PLL_CTL, dbit) ;    
+	    edt_reg_write(pdv_p, EDT_SS_PLL_CTL, dbit | EDT_SS_PLL_CLK);
+	}	     /* latches to m,n transparent while *STROBE0 is high */
+	edt_reg_write(pdv_p, EDT_SS_PLL_CTL, EDT_SS_PLL_STROBE0);
+	edt_reg_write(pdv_p, EDT_SS_PLL_CTL, 0);
+	edt_set_dependent(pdv_p, pdv_p->dd_p);
+    }
 }
-
-#include "edt_si570.h"
 
 /**
  * Set si570 clock speed in microseconds.
- * Not to be called directly -- 
+ * Not to be called directly -- use #pdv_cls_set_clock()
  * @param pdv_p	pointer to pdv device structure returned by #pdv_open
  * @param target clock speed in microseconds (ALERT CHECK THIS)
  * @return void
@@ -754,7 +845,7 @@ pe8dvcls_set_clock(PdvDev *pdv_p, double target)
 
     if (pdv_p->dd_p->cls.si570_nominal == 0)
     {
-        u_char stat;
+        u_short stat;
         if (edt_flash_prom_detect(pdv_p, &stat) == AMD_XC5VLX30T_A)
             pdv_p->dd_p->cls.si570_nominal = 125000000.0;
         else pdv_p->dd_p->cls.si570_nominal = 100000000.0;
@@ -762,10 +853,25 @@ pe8dvcls_set_clock(PdvDev *pdv_p, double target)
     else if (pdv_p->dd_p->cls.si570_nominal < 2000.0)
         pdv_p->dd_p->cls.si570_nominal *= 1000000.0;
 
-    printf("DEBUG target %lf nominal %lf\n", target, pdv_p->dd_p->cls.si570_nominal);
-
     edt_si570_set_clock(pdv_p, base_desc, device, pdv_p->dd_p->cls.si570_nominal, target, &clock_parms);
 
+    edt_set_dependent(pdv_p, pdv_p->dd_p);
+
+}
+
+/**
+ * Set si5338 clock speed in microseconds.
+ * Not to be called directly -- use #pdv_cls_set_clock()
+ * @param pdv_p	pointer to pdv device structure returned by #pdv_open
+ * @param target clock speed in microseconds (ALERT CHECK THIS)
+ * @return void
+ */
+void
+pe8vlcls_set_clock(PdvDev *pdv_p, double freqMHz)
+{
+  int clk = (pdv_p->channel_no == 0) ? 2 : 3;
+
+  edt_si5338_setFreq(pdv_p, clk, (uint32_t)(freqMHz*1000000.0), 0);
 }
 
 
@@ -810,6 +916,8 @@ void pdv_cls_set_readvalid(PdvDev *pdv_p,
 {
     edt_reg_write(pdv_p, PDV_CLSIM_HRVSTART, HrvStart);
     edt_reg_write(pdv_p, PDV_CLSIM_HRVEND, HrvEnd);
+    pdv_p->dd_p->cls.Hrvstart = HrvStart;
+    pdv_p->dd_p->cls.Hrvend = HrvEnd;
 }
 
 
@@ -870,19 +978,18 @@ pdv_cls_set_dep(PdvDev *pdv_p)
     pdv_cls_sim_stop(pdv_p);
 
     /* set clock  0 means use onboard clock*/
-    if (cls->pixel_clock == 0)
-        cls->pixel_clock = 20.0;
-
+    if ((cls->pixel_clock != 0) && ((cls->pixel_clock < 19.9) || (cls->pixel_clock > 85.1)))
+        printf("WARNING: %3.4f is not in range of 20 to 85 MHz\n", cls->pixel_clock);
 
     /* set size params */
-
-    pdv_cls_set_width(pdv_p, dd_p->width, cls->hblank);
-    pdv_cls_set_height(pdv_p, dd_p->height, cls->vblank);
     pdv_cls_set_depth(pdv_p, dd_p->depth);
-
+    pdv_cls_set_width_lval_rval(pdv_p, dd_p->width, cls->hblank, cls->Hlvstart, cls->Hlvend, cls->Hrvstart, cls->Hrvend);
+    pdv_cls_set_height(pdv_p, dd_p->height, cls->vblank);
+    
     pdv_set_cam_width(pdv_p, dd_p->width);
     pdv_set_cam_height(pdv_p, dd_p->height);
 
+    pdv_check_fpga_rev(pdv_p);
     pdv_set_baud(pdv_p, dd_p->serial_baud);
 
 /* MODIFIED 9/10/2012, set taps to 1 for RGB based on depth/extdepth now, as opposed to
@@ -924,9 +1031,16 @@ pdv_cls_set_dep(PdvDev *pdv_p)
 
     /* special case with rvstart/end superseding width */
 
-    if (cls->Hrvend)
+    if ((cls->Hrvend - cls->Hrvstart) > dd_p->width)
     {
-        pdv_cls_set_width(pdv_p,cls->Hrvend-cls->Hrvstart, 0);
+        int rvwidth = cls->Hrvend - cls->Hrvstart;
+
+        if (rvwidth > cls->Hlvend - cls->Hlvstart)
+        {
+            cls->Hlvstart = cls->Hrvstart;
+            cls->Hlvend = cls->Hrvend;
+        }
+        pdv_cls_set_width_lval_rval(pdv_p, rvwidth, cls->hblank, cls->Hlvstart, cls->Hlvend, cls->Hrvstart, cls->Hrvend);
     }
 
     /* set cfg values */
@@ -972,7 +1086,8 @@ pdv_cls_set_dep(PdvDev *pdv_p)
     pdv_cls_sim_start(pdv_p);
 
     pdv_cls_set_clock(pdv_p, cls->pixel_clock);
-    pdv_p->dd_p->pclock_speed = (int)cls->pixel_clock;
+
+    pdv_do_xregwrites(pdv_p, dd_p);
 
     return 0;
 
@@ -1105,21 +1220,21 @@ pdv_cls_dump_state(PdvDev *pdv_p)
         double msecs; /* msecs per clock */
         double frameclocks, lineclocks;
 
-        printf("\npixel_clock        : %10.4f MHz\n", pdv_p->dd_p->cls.pixel_clock);
+        printf("\nPixel clock       : %10.4f MHz\n", pdv_p->dd_p->cls.pixel_clock);
 
         msecs = 1.0 / (clock * 1000.0);
 
         lineclocks = edt_reg_read(pdv_p, PDV_CLSIM_HCNTMAX) * msecs;
-        printf("Line time          : %10.4f msecs\n", lineclocks);
+        printf("Line time         : %10.4f msecs\n", lineclocks);
 
         frameclocks = edt_reg_read(pdv_p, PDV_CLSIM_VACTV) * lineclocks;
-        printf("Active Frame time  : %10.4f msecs\n", frameclocks);
+        printf("Active frame time : %10.4f msecs\n", frameclocks);
 
         frameclocks = edt_reg_read(pdv_p, PDV_CLSIM_VCNTMAX) * lineclocks;
-        printf("Frame time         : %10.4f msecs\n", frameclocks);
+        printf("Frame time        : %10.4f msecs\n", frameclocks);
 
         if (frameclocks)
-            printf("Frame Rate         : %10.4f fps\n",1000.0 / frameclocks);
+            printf("Frame rate        : %10.4f fps\n",1000.0 / frameclocks);
 
     }
 }
@@ -1161,4 +1276,5 @@ pdv_cls_dump_geometry(PdvDev *pdv_p)
     printf("vblank    :  %d\n", pdv_cls_get_vgap(pdv_p));
 
 }
+
 

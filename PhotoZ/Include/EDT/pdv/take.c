@@ -8,18 +8,20 @@
  * and saving data, tuning the acquire in various ways, and testing and
  * diagnosing acquisition problems. Some of the methods used are quite
  * esoteric, some are obsolete for current hardware but remain for historic
- * purposes. As a result, \b take is a primary test/diagnostic application
+ * purposes. As a result, \b take is primarily a test/diagnostic application
  * and while the code can be referred to for examples of various methods,
  * it is not really the best example code for user applications. For more
  * useful sample code, see simple_take.c, simplest_take.c and the users
  * guide.
  * 
- * (C) 1997-2007 Engineering Design Team, Inc.
+ * (C) 1997-2013 Engineering Design Team, Inc.
  */
 
 #include "edtinc.h"
+#ifdef DO_JPEG
+#include "edt_jpeg.h"
+#endif
 
-#define FOURGB ((double) (0x1000000) * 16.0)
 
 /*
  * defines
@@ -48,7 +50,7 @@ crop_and_subsample(int subsample, int src_width, int src_height,
         int x0, int y0, int x1, int y1, u_char * src, u_char * dst);
 void
 resolve_fname(char *fname, char *newname, int loops, char *ext);
-static void usage(char *progname, char *errmsg);
+static void usage(char *progname, char *errmsg, int exitval);
 
 /*
  * globals
@@ -89,17 +91,18 @@ take_printf(char *format,...)
 
 }
 
+/* write a windows bitmap file */
     int
-write_image_file(char *tmpname, u_char * image_p,
+write_bmp_file(char *tmpname, u_char * image_p,
         int s_width, int s_height, int s_depth)
 {
     int     s_db = bits2bytes(s_depth);
     u_char *bbuf = NULL;
     int retval;
 
+
     /*
-     * write bmp file on Windows systems, or Sun Raster on Unux/Linux
-     * systems. Switch on number of bytes per pixel
+     * write bmp file. Switch on number of bytes per pixel
      */
     switch (s_db)
     {
@@ -159,7 +162,10 @@ gotit()
 char cmdstr[80] ;
 
 /*
- * main
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
  */
 #ifdef NO_MAIN
 #include "opt_util.h"
@@ -180,8 +186,8 @@ main(int argc, char *argv[])
     int     loops = 1;
     int     wait_for_enter = 0;
     int     user_delay = 0;
-    int     numbufs = 1;
-    int     do_ring = 0;
+    int     numbufs = 4;
+    int     do_ring = 1;
     int     verbose = 0;
     int     do_file = 0;
     int     rbtimeout = 0;
@@ -189,7 +195,8 @@ main(int argc, char *argv[])
     int     started;
     int     done;
     char    cfgfname[128];
-    char    outfname[128];
+    char    bmpfname[128];
+    char    jpgfname[128];
     char    rawfname[128];
     char    edt_devname[256];
     char   *progname = "take";
@@ -210,13 +217,10 @@ main(int argc, char *argv[])
     int     set_exposure = 0, set_gain = 0, set_offset = 0;
     int     set_timeout = 0;
     int     do_timestamp = 0;
-    int     do_timetype = 0;
     int     timetype = 0;
     int     do_lasttest = 0;
     int     timeout_val = 0;
     int     enable_burst_en = 1;
-    int     si = -1;
-    int     sc = -1;
     int     vskip, vactv, hskip, hactv;
     int     set_roi = 0;
     int     unset_roi = 0;
@@ -233,10 +237,9 @@ main(int argc, char *argv[])
     u_int   timestamp[2];
     u_int   freqbuf[2];
     double  dtime;
-    double  svtime = 0;
-    double  curtime = 0;
-    double  frequency = 0;
-    double  sumsize = 0;
+    double  svtime = 0.0;
+    double  curtime = 0.0;
+    double  sumsize = 0.0;
     int     checkfrm = 0;
     int     binning = 0;
     int     opto_trigger = 0;
@@ -269,7 +272,8 @@ main(int argc, char *argv[])
 
     cfgfname[0] = '\0';
     rawfname[0] = '\0';
-    outfname[0] = '\0';
+    bmpfname[0] = '\0';
+    jpgfname[0] = '\0';
     edt_devname[0] = '\0';
     dvcmode[0] = '\0';
     tmpname[0] = '\0';
@@ -293,7 +297,7 @@ main(int argc, char *argv[])
                 --argc;
                 if (argc < 1) 
                 {
-                    usage(progname, "Error: option 'u' requires a numeric argument\n");
+                    usage(progname, "Error: option 'u' requires a numeric argument\n", 1);
                 }
                 if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
                 {
@@ -301,7 +305,7 @@ main(int argc, char *argv[])
                 }
                 else 
                 {
-                    usage(progname, "Error: option 'u' requires a numeric argument\n");
+                    usage(progname, "Error: option 'u' requires a numeric argument\n", 1);
                 }
                 break;
 
@@ -336,13 +340,6 @@ main(int argc, char *argv[])
                 strcpy(dvcmode, argv[0]);
                 break;
 
-            case 'X':		/* use timer */
-                ++argv;
-                --argc;
-                timetype = atoi(argv[0]);
-                do_timetype = 1;
-                break;
-
             case 'y':
                 opto_trigger = 1;
                 break;
@@ -351,7 +348,7 @@ main(int argc, char *argv[])
                 fldid_trigger = 1;
                 break;
 
-            case 'j':
+            case 'J':
                 just_print_the_last_one = 1;
                 break;
 
@@ -364,7 +361,7 @@ main(int argc, char *argv[])
                 --argc;
                 if (argc < 1) 
                 {
-                    usage(progname, "Error: option 'm' requires a numeric argument\n");
+                    usage(progname, "Error: option 'm' requires a numeric argument\n", 1);
                 }
                 if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
                 {
@@ -372,7 +369,7 @@ main(int argc, char *argv[])
                 }
                 else 
                 {
-                    usage(progname, "Error: option 'm' requires a numeric argument\n");
+                    usage(progname, "Error: option 'm' requires a numeric argument\n", 1);
                 }
                 break;
 
@@ -381,16 +378,17 @@ main(int argc, char *argv[])
                 --argc;
                 if (argc < 1) 
                 {
-                    usage(progname, "Error: option 'N' requires a numeric argument\n");
+                    usage(progname, "Error: option 'N' requires a numeric argument\n", 1);
                 }
                 if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
                 {
-                    do_ring = 1;
                     numbufs = atoi(argv[0]);
+                    if (!numbufs)
+                        do_ring = 0; /* if 0 just use pdv_read not ring buffers */
                 }
                 else 
                 {
-                    usage(progname, "Error: option 'N' requires a numeric argument\n");
+                    usage(progname, "Error: option 'N' requires a numeric argument\n", 1);
                 }
                 break;
 
@@ -449,7 +447,7 @@ main(int argc, char *argv[])
                 --argc;
                 if (argc < 1) 
                 {
-                    usage(progname, "Error: option 'l' requires a numeric argument\n");
+                    usage(progname, "Error: option 'l' requires a numeric argument\n", 1);
                 }
                 if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
                 {
@@ -457,7 +455,7 @@ main(int argc, char *argv[])
                 }
                 else 
                 {
-                    usage(progname, "Error: option 'l' requires a numeric argument\n");
+                    usage(progname, "Error: option 'l' requires a numeric argument\n", 1);
                 }
                 break;
 
@@ -532,11 +530,19 @@ main(int argc, char *argv[])
                 ASinc = atoi(argv[0]);
                 break;
 
-            case 'b':		/* bitmap or sun raster save filename */
+#ifdef DO_JPEG
+            case 'j':
+                ++argv;
+                --argc;
+                strcpy(jpgfname, argv[0]);
+                break;
+#endif
+
+            case 'b':		/* bitmap save filename */
             case 'i':
                 ++argv;
                 --argc;
-                strcpy(outfname, argv[0]);
+                strcpy(bmpfname, argv[0]);
                 do_file = 1;
                 break;
 
@@ -545,7 +551,7 @@ main(int argc, char *argv[])
                 --argc;
                 if (argc < 1) 
                 {
-                    usage(progname, "Error: option 'c' requires a numeric argument\n");
+                    usage(progname, "Error: option 'c' requires a numeric argument\n", 1);
                 }
                 if ((argv[0][0] >= '0') && (argv[0][0] <= '9'))
                 {
@@ -553,14 +559,14 @@ main(int argc, char *argv[])
                 }
                 else 
                 {
-                    usage(progname, "Error: option 'c' requires a numeric argument\n");
+                    usage(progname, "Error: option 'c' requires a numeric argument\n", 1);
                 }
                 break;
 
             case 'r':		/* ROI */
                 if (argc < 5)
                 {
-                    usage(progname, "Error: option 'r' requires subsequent arguments");
+                    usage(progname, "Error: option 'r' requires subsequent arguments", 1);
                     exit(1);
                 }
                 ++argv;
@@ -586,15 +592,6 @@ main(int argc, char *argv[])
                 noreset = 1 ;
                 break;
 
-            case 'x':		/* experimental -- strobe testing */
-                ++argv;
-                --argc;
-                si = atoi(argv[0]);
-                ++argv;
-                --argc;
-                sc = atoi(argv[0]);
-                break;
-
             case 'M':		/* mosaic */
                 mosaic = 1;
                 break;
@@ -610,7 +607,7 @@ main(int argc, char *argv[])
                 fprintf(stderr, "unknown flag -'%c'\n", argv[0][1]);
             case '?':
             case 'h':
-                usage(progname, "");
+                usage(progname, "", 0);
                 exit(0);
         }
         argc--;
@@ -638,6 +635,13 @@ main(int argc, char *argv[])
         sprintf(errstr, "pdv_open(%s%d_%d)", edt_devname, unit, channel);
         pdv_perror(errstr);
         return (1);
+    }
+
+    if (pdv_is_simulator(pdv_p))
+    {
+        fprintf(stderr, "%s unit %d is a simulator board; take is only for use with framegrbbers\n", edt_devname, unit);
+        pdv_close(pdv_p);
+        exit(1);
     }
 
     pdv_flush_fifo(pdv_p);
@@ -687,14 +691,6 @@ main(int argc, char *argv[])
         take_printf("checking cl simulator signature\n");
     if (checkcount)
         take_printf("checking PCI CD Simulator count signature -- use simple_putframe -P\n");
-
-    if (do_timetype)
-    {
-        edt_set_timetype(pdv_p, EDT_TM_FREQ);
-        edt_get_reftime(pdv_p, freqbuf);
-        frequency = (double) freqbuf[0] * FOURGB + freqbuf[1];
-        edt_set_timetype(pdv_p, timetype);
-    }
 
     /*
      * set size variables for image and initial subimage
@@ -771,7 +767,7 @@ main(int argc, char *argv[])
                 || (subsample > width / 4))
         {
             printf("-S <subsample> arg out of range\n");
-            usage(progname, "");
+            usage(progname, "", 1);
             exit(1);
         }
 
@@ -951,27 +947,11 @@ main(int argc, char *argv[])
 
         if (do_ring)
         {
-
             if (do_timestamp)
             {
                 imagebuf = pdv_wait_image_timed(pdv_p, timestamp);
-                switch (timetype)
-                {
-                    case EDT_TM_SEC_NSEC:
-                        /* secs, nsec */
-                        curtime = (double) timestamp[0] * 1000000000L + timestamp[1];
-                        curtime /= 1000000000.0;
-                        break;
-                    case EDT_TM_CLICKS:
-                        /* cpu cycles high32/low32 */
-                        curtime = (double) timestamp[0] * FOURGB + timestamp[1];
-                        break;
-                    case EDT_TM_COUNTER:
-                        /* counter high32/low32 */
-                        curtime = (double) timestamp[0] * FOURGB + timestamp[1];
-                        curtime /= frequency;
-                        break;
-                }
+                curtime = pdv_decode_timestamp(pdv_p, timestamp);
+
                 take_printf("\ntime %3.9f ", curtime);
                 if (svtime > 0)
                 {
@@ -1007,7 +987,9 @@ main(int argc, char *argv[])
             pdv_checkfrm(pdv_p, (u_short *) imagebuf, width * height, verbose);
         timeouts = pdv_timeouts(pdv_p);
         if ((overrun = (edt_reg_read(pdv_p, PDV_STAT) & PDV_OVERRUN)))
+        {
             ++overruns;
+        }
 
         if (timeouts > last_timeouts)
         {
@@ -1330,15 +1312,30 @@ main(int argc, char *argv[])
             (void) dvu_write_raw(s_size, image_p, tmpname);
         }
 
+#if DO_JPEG
+        if (*jpgfname)
+        {
+            char filename[256];
+
+            if ((strcmp(&jpgfname[strlen(jpgfname) - 4], ".jpg") == 0)
+            || (strcmp(&jpgfname[strlen(jpgfname) - 4], ".JPG") == 0))
+                jpgfname[strlen(jpgfname)] = '\0';
+                sprintf(filename, "%s%02d.jpg", jpgfname, i);
+
+            edt_save_jpeg(filename, width, height, bits2bytes(depth), 0, image_p);
+        }
+#endif
+
         /*
-         * write the image to Windows bitmap or Sun raster format file and
+         * write the image to Windows bitmap format file and
          * fix up the filename extension
          */
-        if (*outfname && !mosaic)
+        if (*bmpfname && !mosaic)
         {
-            resolve_fname(outfname, tmpname, loops, ".bmp");
-            write_image_file(tmpname, image_p,
-                    s_width, s_height, s_depth);
+            resolve_fname(bmpfname, tmpname, loops, ".bmp");
+            if (write_bmp_file(tmpname, image_p,
+                    s_width, s_height, s_depth) != 0)
+                        printf("file write failed\n");
         }
         else if (mosaic)
         {
@@ -1373,12 +1370,13 @@ main(int argc, char *argv[])
     }
     take_printf("\n");
 
-    if (mosaic && *outfname)
+    if (mosaic && *bmpfname)
     {
-        write_image_file(outfname, mosaic_image,
-                s_width, mosaic_height, s_depth);
+        if (write_bmp_file(bmpfname, mosaic_image,
+                s_width, mosaic_height, s_depth) != 0)
+                        printf("file write failed\n");
     }
-
+   
     if (loops > 3)
     {
         dtime = edt_dtime();
@@ -1398,8 +1396,12 @@ main(int argc, char *argv[])
 
     pdv_close(pdv_p);
 #ifdef NO_MAIN
+    if (overruns || timeouts)
+        return (2);
     return (0);
 #else
+    if (overruns || timeouts)
+        exit(2);
     exit(0);
 #endif
 }
@@ -1465,10 +1467,10 @@ crop_and_subsample(int subsample, int src_width, int src_height,
 
 
     void
-usage(char *progname, char *errmsg)
+usage(char *progname, char *errmsg, int exitval)
 {
     printf("\n");
-    printf(errmsg);
+    printf("%s", errmsg);
     printf("\n%s: Image acquisition and optional save for EDT PCI DV family digital\n", progname);
     printf("DMA interface products. Many options make it useful for diagnostics and\n");
     printf("also as an example for various methods of doing acquisition with EDT PCI DV\n");
@@ -1480,31 +1482,29 @@ usage(char *progname, char *errmsg)
     printf("  -l loopcount      - loop for loopcount images\n");
     printf("  -m msecs          - delay msecs milliseconds between images\n");
     printf("  -f out_fname      - output to raw file(s)\n");
-#ifdef _NT_
     printf("  -b fname.bmp      - output to Microsoft bitmap file(s)\n");
-#else
-    printf("  -i fname.ras      output to Sun Raster file(s)\n");
+#ifdef DO_JPEG
+    printf("  -j fname.jpg      - output to jpeg format file(s)\n");
 #endif
     printf("  -C x0 y0 x1 y1    - crop the output image to the coordinates given\n");
-    printf("  -N n              - number of multiple buffers (forces multibuf mode)\n");
-    printf("  -S n              - subsample -- take every nth pixel\n");
+    printf("  -N n              - number of multiple buffers (default 4, 0 forces pdv_read()\n");
     printf("  -r [hs ha vs va]  - region of interest -- to disable use -r alone (no subargs)\n");
     printf("  -t [msecs]        - timeout # of msecs. if 0, disables timeouts, if no subarg,\n");
     printf("  -T                - if image times out, dump any recieved data to timeout.raw\n");
-    printf("                    re-enables auto timeouts\n");
+    printf("                        re-enables auto timeouts\n");
     printf("  -w                - wait for <CR> between images\n");
     printf("  -s start inc      - specify start and increment for auto-numbered file-\n");
-    printf("                    names (use with -l of 2 or more for auto-numbered filenames)\n");
+    printf("                        names (use with -l of 2 or more for auto-numbered filenames)\n");
     printf("  -I inc            - specify increment for auto-numbered file (see -s)\n");
     printf("  -v                - verbose output\n");
     printf("  -q binval         - set binning (applicable cameras only)\n");
     printf("  -p                - check pci dv simulator signature, exit if bad\n");
     printf("  -d                - get and print a driver timestamp with every image\n");
-    printf("  -j                - just output the last take line (for output to file)\n");
+    printf("  -J                - just output the last take line (for output to file)\n");
     printf("  -c channel        - channel # if multiple channels (2nd base Camera Link\n");
-    printf("                    connector or multiple RCI units on one FOI card (default 0)\n");
+    printf("                        connector or multiple RCI units on one FOI card (default 0)\n");
     printf("  -u unit           - pdv unit number (default 0)\n");
-    printf("                    A full device pathname can also be used\n");
+    printf("                        A full device pathname can also be used\n");
     printf("  -B                - turn off burst enable\n");
     printf("  -X                - use timer\n");
     printf("  -L                - freerun/bytecount with wait for next frame\n");
@@ -1522,5 +1522,5 @@ usage(char *progname, char *errmsg)
     printf("  -y                - turns on triggering through the optical coupler\n");
     printf("  -Y                - turns on triggering via the field id\n");
     printf("  -h                - this help message\n");
-    exit(1);
+    exit(exitval);
 }

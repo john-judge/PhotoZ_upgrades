@@ -24,6 +24,8 @@
  * 
  * (C) 1997-2007 Engineering Design Team, Inc.
  */
+
+
 #include "edtinc.h"
 
 static void usage(char *progname, char *errmsg);
@@ -32,13 +34,10 @@ save_image(u_char * image_p, int width, int height, int depth,
         char *basename, int count);
 
 /*
- *  NO_MAIN isn't that simple, but is for VXWORKS so we can type
- * name of subroutine instead of executable and not have multiple mains
- * (all in one namespace)
- */
-
-/*
- * main
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
  */
 #ifdef NO_MAIN
 #include "opt_util.h"
@@ -77,7 +76,6 @@ main(argc, argv)
 #endif
 
     progname = argv[0];
-
 
     edt_devname[0] = '\0';
     *bmpfname = '\0';
@@ -140,6 +138,7 @@ main(argc, argv)
                 --argc;
                 strcpy(bmpfname, argv[0]);
                 break;
+
 
             case 'l':
                 ++argv;
@@ -288,7 +287,8 @@ main(argc, argv)
             printf("\nrestarted....\n");
         }
         if (*bmpfname)
-            save_image(image_p, width, height, depth, bmpfname, i);
+            save_image(image_p, width, height, depth, bmpfname, (loops > 1?i:-1));
+
     }
     puts("");
 
@@ -301,6 +301,8 @@ main(argc, argv)
         printf("check camera and connections\n");
     pdv_close(pdv_p);
 
+    if (overruns || timeouts)
+        exit(2);
     exit(0);
 }
 
@@ -314,13 +316,16 @@ save_image(u_char * image_p, int s_width, int s_height, int s_depth, char *tmpna
     if ((strcmp(&tmpname[strlen(tmpname) - 4], ".bmp") == 0)
             || (strcmp(&tmpname[strlen(tmpname) - 4], ".BMP") == 0))
         tmpname[strlen(tmpname) - 4] = '\0';
-    sprintf(fname, "%s%02d.bmp", tmpname, count);
+
+    if (count >= 0)
+        sprintf(fname, "%s_%03d.bmp", tmpname, count);
+    else sprintf(fname, "%s.bmp", tmpname);
 
     switch (s_db)
     {
         case 1:
             dvu_write_bmp(fname, image_p, s_width, s_height);
-            printf("writing %dx%dx%d raster file to %s\n",
+            printf("writing %dx%dx%d bitmap file to %s\n",
                     s_width, s_height, s_depth, fname);
             break;
 
@@ -363,11 +368,7 @@ usage(char *progname, char *errmsg)
     printf("EDT digital imaging interface board (PCI DV, PCI DVK, etc.)\n");
     puts("");
     printf("usage: %s [-b fname] [-l loops] [-N numbufs] [-u unit] [-c channel]\n", progname);
-#ifdef _NT_
     printf("  -b fname        output to MS bitmap file\n");
-#else
-    printf("  -b fname        output to Sun Raster file\n");
-#endif
     printf("  -l loops        number of loops (images to take)\n");
     printf("  -N numbufs      number of ring buffers (see users guide) (default 4)\n");
     printf("  -u unit         %s unit number (default 0)\n", EDT_INTERFACE);

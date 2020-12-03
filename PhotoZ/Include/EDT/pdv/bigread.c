@@ -37,7 +37,7 @@ char **argv)
 		{
 			while (!(buf_p = edt_check_for_buffers(edt_p, 1)))
 				;
-			printf("%d done:  buf_p 0x%x ", i, buf_p) ;
+			printf("%d done:  buf_p 0x%p ", i, buf_p) ;
 			first = buf_p[0] | (buf_p[1] << 8) ;
 			last = buf_p[bufsize - 2] |	(buf_p[bufsize - 1] << 8) ;
 			printf("first 0x%x last 0x%x\n", first, last) ;

@@ -2,11 +2,11 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "edtimage/edtimage.h"
+#include "edtimage/EdtImage.h"
 
 #include "imagefilemgr.h"
 
-#include "edtimage/ErrorHandler.h"
+#include "dispatch/ErrorHandler.h"
 
 
 #define MAX_IMAGE_FILE_TYPES 32
@@ -45,6 +45,10 @@ extern CImageFileType *pRawFileType;
 extern CImageFileType *pTiffFileType;
 #endif
 
+#ifndef NO_JPEG
+extern CImageFileType *pJPEGFileType;
+#endif
+
 CImageFileMgr::CImageFileMgr()
 {
 	static BOOL First = TRUE;
@@ -56,6 +60,10 @@ CImageFileMgr::CImageFileMgr()
 
 #ifndef NO_TIFF
 		theFileTypeList.AddFileType(pTiffFileType);
+#endif
+
+#ifndef NO_JPEG
+		theFileTypeList.AddFileType(pJPEGFileType);
 #endif
 
 		First = FALSE;
@@ -84,7 +92,6 @@ CImageFileType *CImageFileMgr::LookupImageType(const char *szTypeName)
 	return NULL;
 }
 
-
 CImageFileType *CImageFileMgr::CanSave(const char * szFileName, EdtImage *pImage, const char *szTypeName)
 
 {
@@ -94,6 +101,7 @@ CImageFileType *CImageFileMgr::CanSave(const char * szFileName, EdtImage *pImage
 	{
 		return pFT;
 	}
+#if 0 // fallback save (but not really worthwhile)
 	else
 	{
 
@@ -108,9 +116,19 @@ CImageFileType *CImageFileMgr::CanSave(const char * szFileName, EdtImage *pImage
 
 		}
 	}
+#endif
 
 	return NULL;
 }
+
+bool CImageFileMgr::CanSave(const char *szTypeName)
+
+{
+	if (LookupImageType(szTypeName))
+        return true;
+	return false;
+}
+
 
 int CImageFileMgr::SaveImage(const char *szFileName, EdtImage *pImage, const char *szTypeName)
 
@@ -129,8 +147,9 @@ int CImageFileMgr::SaveImage(const char *szFileName, EdtImage *pImage, const cha
 
 	}
 
-	SysError.SysErrorMessage("Unable to save image %s (%d x %d x %d) of file type <%s>", szFileName, 
-		pImage->GetWidth(),pImage->GetHeight(),pImage->GetPixelSize() * 8, szTypeName);
+
+//	SysError.SysErrorMessage("Unable to save image %s (%d x %d x %d) of file type <%s>", szFileName, 
+//		pImage->GetWidth(),pImage->GetHeight(),pImage->GetPixelSize() * 8, szTypeName);
 
 
 	return -1;

@@ -4,6 +4,9 @@
 #ifndef _DapController_h
 #define _DapController_h
 //=============================================================================
+
+//#include "dapio32.h"  //Removed DAPIO32 JMJ 12/3
+
 #include "edtinc.h"
 #include <fstream>
 #include "NIDAQmx.h"
@@ -15,10 +18,16 @@ class Camera;
 class DapController  
 {
 private:
+
+	TaskHandle taskHandleLed = 0;
+	TaskHandle taskHandlePut = 0;
+
 	TaskHandle taskHandleRLI;
 	TaskHandle taskHandleAcqui;
-	HDAP dap820Put;
-	HDAP dap820Get;
+
+	// Removed along with DAPIO32 JMJ 12/3
+	//HDAP dap820Put;
+	//HDAP dap820Get;
 
 	int32_t error =0;
 	char errBuff[2048];

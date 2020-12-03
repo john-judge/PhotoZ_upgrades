@@ -29,7 +29,7 @@ extern "C" {
 #include "edt_utils.h"
 }
 
-#include "ErrorHandler.h"
+#include "dispatch/ErrorHandler.h"
 #include "EdtRowOps.h"
 
 // global value for 
@@ -259,10 +259,10 @@ EdtImage::Destroy(bool clearrows)
     {
         // Clear Data
         edt_free((byte *) m_base_data);
-        m_base_data = NULL;
-        SetOwnData(false);
-        AllocatedSize(0);
     }
+    m_base_data = NULL;
+    SetOwnData(false);
+    AllocatedSize(0);
 
     SetAllocated(false);
 

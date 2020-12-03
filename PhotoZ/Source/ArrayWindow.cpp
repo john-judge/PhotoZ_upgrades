@@ -6,13 +6,14 @@
 #include <math.h>
 #include <fstream>
 
+#include <windows.h>
+
 #include <FL/Fl.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/fl_draw.h>
 #include <FL/fl_ask.h>
 #include <FL/fl_file_chooser.h>
 #include <FL/Fl_Output.H>
-
 
 #include "ArrayWindow.h"
 #include "UserInterface.h"

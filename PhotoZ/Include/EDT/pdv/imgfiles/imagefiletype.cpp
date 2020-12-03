@@ -2,7 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "edtimage/edtimage.h"
+#include "edtimage/EdtImage.h"
 #include "imagefiletype.h"
 
 #include <sys/stat.h>
@@ -13,7 +13,7 @@
 
 #include <fcntl.h>
 
-#include "edtimage/ErrorHandler.h"
+#include "dispatch/ErrorHandler.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -211,7 +211,7 @@ int CImageFileType::OpenImageFile(const char *szFileName,
 	else if (nFileMode == 'w')
 		rwmode |= O_CREAT;
  
-	m_pFile = open(szFileName,rwmode);
+	m_pFile = open(szFileName,rwmode, S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
 
 	ok = (m_pFile > 0);
 

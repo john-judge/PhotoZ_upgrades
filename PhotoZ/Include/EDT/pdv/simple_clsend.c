@@ -23,7 +23,6 @@
 #include "edtinc.h"
 #include "clsim_lib.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -144,6 +143,7 @@ int main(int argc, char *argv[])
     int buffer_size;		/* size of each buffer.  width * height. */
     int current_image;
     int current_buffer;
+    int exitval = 0;
     int cam_width = 0, cam_height = 0, cam_depth = 0;
     PdvDev *pdv_p;		/* pointer to simulator device structure */
     u_char **buffers;		/* array of buffers used for ring buffer */
@@ -165,6 +165,7 @@ int main(int argc, char *argv[])
     int started = 0;
     int usemem = 0;
     char *progname = argv[0];
+
 
     /* parse user arguments. */
     --argc;
@@ -306,13 +307,14 @@ int main(int argc, char *argv[])
     else if (imagelist)
         num_images = get_images_info_list(imagelist, &image_details);
 
+
     if (num_images < 1)
         error_exit("Error: no valid images found -- check list or directory pathnames");
 
     if ((pdv_p = pdv_open_channel("pdv", unit, channel)) == NULL)
     {
         char errmsg[256];
-        sprintf(errmsg, "ERROR: Could not open EDT unit %d channel %d", unit, channel);
+        sprintf(errmsg, "Error: Could not open EDT unit %d channel %d", unit, channel);
         pdv_perror(errmsg);
         exit(1);
     }
@@ -336,9 +338,9 @@ int main(int argc, char *argv[])
 
     /* create ring buffers */
 
-    if ((buffer_size = cam_width * pdv_bytes_per_line(cam_height, cam_depth)) == 0)
+    if ((buffer_size = cam_height * pdv_bytes_per_line(cam_width, cam_depth)) == 0)
     {
-        printf("ERROR: Simulator not initialized. Use clsiminit or equivalent\n");
+        printf("Error: Simulator not initialized. Use clsiminit or equivalent\n");
         printf("to initialize the simulator before running %s.\n", progname);
         exit(1);
     }
@@ -394,17 +396,19 @@ int main(int argc, char *argv[])
     }
 
 
-    /* config clsim for first image */
-    setup_clsim(pdv_p, image_details);
+    /* to keep things simple (or at least less complicated), best to just skip this and count on clsiminit */
+    /* having set things up for the same size as the images being read in. Leaving the call (and the */
+    /* subroutine) in however as example code for programmers who might want to reset the size to the */
+    /* incoming image size, or for any other reason */
+    /* setup_clsim(pdv_p, image_details); */
 
-    assert(current_image == edt_min(num_buffers - 1, total_images));
-    /* assert(current_image == num_buffers - 1 || current_image == total_images); */
+    if (current_image != edt_min(num_buffers - 1, total_images))
+    {
+        printf("Error: current_image != first buffer!\n");
+        exitval = 1;
+    }
 
     edt_start_buffers(pdv_p, current_image);
-
-    /* Why? Needed for now to avoid some race condition between start_buffers & first wait */
-    edt_msleep(1);
-
 
     started = current_image;
 
@@ -455,7 +459,7 @@ int main(int argc, char *argv[])
 
     edt_free((unsigned char *)image_details);
     pdv_close(pdv_p);
-    return 0;
+    exit(exitval);
 }
 
 
@@ -536,7 +540,7 @@ get_image_info_file(char *fname, image_info_t **imagelist)
     {
         strcpy(fullpath, fname);
         edt_correct_slashes(fullpath);
-        image_p->pathname = malloc(strlen(fullpath));
+        image_p->pathname = malloc(strlen(fullpath) + 1);
         strcpy(image_p->pathname, fullpath);
         image_p->format = fmt;
 
@@ -592,7 +596,7 @@ get_images_info_dir(char *dirpath, image_info_t **imagelist)
         {
             sprintf(fullpath, "%s/%s", dirpath, d_name);
             edt_correct_slashes(fullpath);
-            image_p->pathname = malloc(strlen(fullpath));
+            image_p->pathname = malloc(strlen(fullpath) + 1);
             strcpy(image_p->pathname, fullpath);
             image_p->format = fmt;
 
@@ -618,11 +622,18 @@ get_images_info_list(char *listpath, image_info_t **imagelist)
     char f_name[256];
     FILE *fp;
 
+
+
     /*
      * read the list entries once and check for valid image filename
      * extensions and file existence, then alloc that many entries
      */
-    assert((fp = fopen(listpath, "r")) != NULL);
+    if ((fp = fopen(listpath, "r")) == NULL)
+    {
+        edt_perror(listpath);
+        exit(1);
+    }
+
 
     while (fgets(f_name, 255, fp))
     {
@@ -650,7 +661,7 @@ get_images_info_list(char *listpath, image_info_t **imagelist)
         if ((!comment_or_blank(f_name)) && ((fmt = check_extension(f_name)) != fmt_unk) && (edt_access(f_name, 0) == 0))
         {
             edt_correct_slashes(f_name);
-            image_p->pathname = malloc(strlen(f_name));
+            image_p->pathname = malloc(strlen(f_name) + 1);
             strcpy(image_p->pathname, f_name);
             image_p->format = fmt;
 
@@ -740,7 +751,7 @@ get_tif_info(image_info_t *img_details)
     /* Open the TIFF image */
     if((image = TIFFOpen(img_details->pathname, "r")) == NULL)
     {
-        printf("ERROR: Could not open image %s\n", img_details->pathname);
+        printf("Error: Could not open image %s\n", img_details->pathname);
         exit(42);
     }
 
@@ -843,7 +854,7 @@ load_next_image(PdvDev *pdv_p,
             image_size = fill_buffer_ras(&image_details[current_image], buf_p, buffer_size);
             break;
         default:
-            return NULL;
+            return 0;
 
     }
 
@@ -885,19 +896,19 @@ int is_valid_tiff(TIFF *image)
 
     if(TIFFGetField(image, TIFFTAG_BITSPERSAMPLE, &value) == 0) 
     {
-        printf("ERROR: undefined number of bits per sample\n");
+        printf("Error: undefined number of bits per sample\n");
         return 0;
 
     }
     else if (value > 16)
     {  
-        printf("ERROR: unsupported number of bits per sample: %d\n", value);
+        printf("Error: unsupported number of bits per sample: %d\n", value);
         return 0;
     }
 
     if(TIFFGetField(image, TIFFTAG_SAMPLESPERPIXEL, &value) == 0) 
     {
-        printf("ERROR: undefined number of samples per pixel\n");
+        printf("Error: undefined number of samples per pixel\n");
         return 0;
 
     }
@@ -905,19 +916,19 @@ int is_valid_tiff(TIFF *image)
     else if ((value != 1)  && (value != 3))
     {
         /* TODO: support 3 sample images (rgb) as long as depth isn't > 8  */
-        printf("ERROR: unsupported number of samples per pixel: %d\n", value);
+        printf("Error: unsupported number of samples per pixel: %d\n", value);
         return 0;
     }
 
     if(TIFFGetField(image, TIFFTAG_IMAGEWIDTH, &value) == 0) 
     {
-        printf("ERROR: Image does not define its width\n");
+        printf("Error: Image does not define its width\n");
         return 0;
     }
 
     if(TIFFGetField(image, TIFFTAG_IMAGELENGTH, &value) == 0) 
     {
-        printf("ERROR: Image does not define its height\n");
+        printf("Error: Image does not define its height\n");
         return 0;
     }
 
@@ -955,14 +966,14 @@ int fill_buffer_tif(image_info_t *img_details, u_char *buffer, int max_size)
     /* Open the TIFF image */
     if((image = TIFFOpen(img_details->pathname, "r")) == NULL)
     {
-        printf("ERROR: Could not open image %s\n", img_details->pathname);
+        printf("Error: Could not open image %s\n", img_details->pathname);
         exit(42);
     }
 
     /* Check that it is of a type that we support */
     if (!is_valid_tiff(image)) 
     {
-        printf("ERROR: Invalid image; exiting.\n");
+        printf("Error: Invalid image; exiting.\n");
         exit(42);
     } 
 
@@ -988,13 +999,12 @@ int fill_buffer_tif(image_info_t *img_details, u_char *buffer, int max_size)
     stripMax = TIFFNumberOfStrips (image);
     stripSize = TIFFStripSize(image);
 
-    /* assert(image_size == TIFFNumberOfStrips(image) * TIFFStripSize(image)); */
 
     imageOffset = 0;
 
     if (image_size > (uint32)max_size) 
     {
-        printf("ERROR: Image size (0x%x bytes) is larger " 
+        printf("Error: Image size (0x%lx bytes) is larger " 
                 "than buffer size (0x%x bytes)\n",
                 image_size, max_size); 
         exit(42);
@@ -1015,7 +1025,7 @@ int fill_buffer_tif(image_info_t *img_details, u_char *buffer, int max_size)
             if((result = TIFFReadEncodedStrip (image, stripCount,
                             stripbuf, (tsize_t) -1)) == -1) 
             {
-                printf("ERROR: Read error on input strip number %d\n", 
+                printf("Error: Read error on input strip number %d\n", 
                         stripCount);
                 exit(42);
             } 
@@ -1037,7 +1047,7 @@ int fill_buffer_tif(image_info_t *img_details, u_char *buffer, int max_size)
             if((result = TIFFReadEncodedStrip (image, stripCount,
                             buffer + imageOffset, (tsize_t) -1)) == -1) 
             {
-                printf("ERROR: Read error on input strip number %d\n", 
+                printf("Error: Read error on input strip number %d\n", 
                         stripCount);
                 exit(42);
             } 

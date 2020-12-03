@@ -8,12 +8,15 @@
  * time stamp (not applicable if no IRIG signal present)
  * 
  * Note that the IRIG2 functionality is only available on PCIe4 & 8 DVa C-Link
- * boards and newer PCIe8 DV C-Link, and possibly newer, but not older boards
- * such as the PCI DV CV-Link and PCIe4 (no 'a') DV C-Link.
+ * and VisionLink boards, and likely newer but not older boards such as the
+ * PCIe 4/8 DV (no 'a') C-Link and PCIe4 C-Link and PCI boards.
  *
  * As of library versions 5.3.9.3 and later, IRIG2 frame validataion
  * functionality is embedded in the libary and activated via config file
- * directive, making this explicitly-coded example more or less obsolete.
+ * directive, making this explicitly-coded example less useful if all you
+ * are using it for is as a check for frame synchronization (see
+ *  method_framesync in the Camera Configuration guide, and
+ * pdv_enable_framesync in the API.)
  * 
  * (C) 2010-2012 Engineering Design Team, Inc.
  */
@@ -26,13 +29,10 @@ save_image(u_char * image_p, int width, int height, int depth,
         char *basename, int count);
 
 /*
- *  NO_MAIN isn't that simple, but is for VXWORKS so we can type
- * name of subroutine instead of executable and not have multiple mains
- * (all in one namespace)
- */
-
-/*
- * main
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
  */
 #ifdef NO_MAIN
 #include "opt_util.h"

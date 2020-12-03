@@ -399,7 +399,12 @@ void    usage();
 
 /* GapHistory gaps;*/
 
-/* main program starts */
+/*
+ * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
+ * want to use this code outside of a main module in any other OS, just copy the code
+ * and modify it to work as a standalone subroutine, including adding parameters in
+ * place of the command line arguments
+ */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -552,7 +557,7 @@ main(int argc, char **argv)
 	fseek(f, 0, SEEK_END);
 	size = ftell(f)  ;
 	fseek(f, 0, SEEK_SET);
-	printf("size %x %d recs\n",size,size/sizeof(Count));
+	printf("size %x %d recs\n",size, (int)(size/sizeof(Count)));
 	rawbuf = (Count *)malloc(size) ;
         fread (rawbuf, size, 1, f);
 
@@ -659,7 +664,7 @@ main(int argc, char **argv)
 void
 usage(char *err)
 {
-    printf(err);
+    printf("%s", err);
     printf ("usage: \n");
     printf ("	-u <unit>           - specifies edt board unit number\n");
     printf ("	-F <clock speed>    - specifies the clock's speed\n");

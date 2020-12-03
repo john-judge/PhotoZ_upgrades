@@ -2,8 +2,23 @@
 
 #include "edt_utils.h"
 
+#include  <sys/stat.h>
+
+#include <direct.h>
+
 static LARGE_INTEGER frequency = {0,0};
 
+/**
+ * Return the time in seconds since the last call to edt_dtime.
+ *
+ * Each time edt_dtime is called, it returns the time delta since the last time it was called. Therefore the first time
+ * edt_dtime is called in a process the delta may be meaningless. Time is in seconds and fractions of a second.
+ *
+ * This call uses system time, which is system dependent and may be too coarse for some applications. For more accurate
+ * time stamping consider the IRIG option and an external IRIG timestamp source, available with some EDT boards.
+ *
+ * @RETURN delta time, as a double floating point 
+ */
 double
 edt_dtime()
 {
@@ -25,6 +40,12 @@ edt_dtime()
 }
 
 
+/**
+* Gets the seconds + fractional seconds since the Epoch, OS independent.
+* Uses system time; accuracy is OS dependent.
+*
+* @return the timestamp in seconds; a double value with tenths/hundredths/etc on the right of the decimal point.
+*/
 double
 edt_timestamp()
 {
@@ -127,7 +148,7 @@ HANDLE edt_open_datafile(const char *path,
     }
     else
     {
-        rwmode = GENERIC_READ;
+        rwmode = GENERIC_WRITE | GENERIC_READ;
         createmode = OPEN_EXISTING;
     }
 
@@ -591,5 +612,26 @@ int edt_file_exists(const char *name, int rdonly)
 int edt_mkdir(const char *name, int access)
 
 {
-    return mkdir(name);
+    return _mkdir(name);
+}
+
+
+int edt_mkdir_p(const char *name, int access)
+
+{
+
+    if (edt_file_exists(name, access))
+    {
+        return 0;
+    }
+    else
+        return _mkdir(name);
+
+#if 0
+    stat(snapshotDir.c_str(), &st);
+        if (!S_ISDIR(st.st_mode))
+            mkdir(snapshotDir.c_str(), S_IRWXU);
+#endif
+
+    
 }

@@ -1,4 +1,4 @@
-/* #pragma ident "@(#)libedt.c	1.462 12/08/10 EDT" */
+/* #pragma ident "@(#)libedt.c  1.462 12/08/10 EDT" */
 
 #include "edtinc.h"
 
@@ -73,16 +73,13 @@ extern int sysGetVmPageSize();
 *
 * Copyright (c) 1998, 2005 by Engineering Design Team, Inc.
 *
-* DESCRIPTION Provides a 'C' language	interface to the EDT PCI DMA cards
-* to simplify the	ring buffer method of reading data.
+* DESCRIPTION Provides a 'C' language   interface to the EDT PCI DMA cards
+* to simplify the       ring buffer method of reading data.
 *
 * All routines access a specific device, whose handle is created and returned
-* by	the edt_open() routine.
+* by    the edt_open() routine.
 *
 */
-
-/* support for dmy device */
-static u_int dmy_started = 0 ;
 
 
 int dump_reg_access = 0;
@@ -91,6 +88,9 @@ int dump_reg_access = 0;
 static u_char *intfc_dump = 0;
 static u_char *base_dump = 0;
 static u_char *dma_reg_dump = 0;
+
+static int get_xref_info_params(char *str, char *fpga, char *sn, char *mtype, char *moffs, char *mnum, char *desc, char *rsvd1, char *rsvd2);
+static int isdigit_str(char *s);
 
 int dump_ir_access = 0;
 
@@ -119,7 +119,7 @@ void edt_set_dump_ir_access(u_int on)
 {
     dump_ir_access = on;
     if (on)
-	edt_set_dump_reg_access(on);
+        edt_set_dump_reg_access(on);
 
 }
 
@@ -180,7 +180,7 @@ is_reg_dumpable(u_int regvalue)
     int class = EDT_REG_CLASS(regvalue);
 
     if (class == 1)
-	return dump_ir_access;
+        return dump_ir_access;
 
     switch(type)
     {
@@ -196,6 +196,79 @@ is_reg_dumpable(u_int regvalue)
     return 0;
 }
 
+void
+edt_setenv_reg_dump(const char *s)
+
+{
+char test[128];
+int low;
+ int high;
+size_t index;
+int range=0;
+int in_number=0;
+int tindex=0;
+
+for (index=0;index<strlen(s)+1;index++)
+{
+    switch(s[index]) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case 'A':
+        case 'B':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+        case 'a':
+        case 'b':
+        case 'c':
+        case 'd':
+        case 'e':
+        case 'f':
+            in_number=1;
+            test[tindex++]=s[index];
+        break;
+
+        case ':':
+        case ' ':
+        case 0:
+
+        if (in_number)
+        {
+            test[tindex] = 0;
+            if (range)
+                high=strtol(test,NULL,16);
+            else
+                low=strtol(test,NULL,16);
+            if (range)
+                edt_set_dump_reg_address(low | INTFC_BYTE,(high-low+1),1);
+             else
+                edt_set_dump_reg_address(low | INTFC_BYTE,1,1);
+            range=0;
+            in_number=0;
+            tindex=0;
+        }
+        break;
+        case '-':
+        if (in_number)
+        {
+                test[tindex] = 0;
+                low=strtol(test,NULL,16);
+                range=1;
+                in_number=0;
+                tindex=0;
+        }
+        break;
+    }
+}
+}
 
 #ifndef _NT_
 
@@ -283,148 +356,8 @@ static char *BaseEventNames[] =
 };
 #endif
 
-#ifdef USB
 
-/**
-* Perform an FPGA register read operation on the USB device
-* Arguments:
-*	USB device handle
-* 	address of the register
-*/
-
-u_int
-usb_reg_read (EdtDev *edt_p, u_int desc)
-{
-    int i, addr;
-    u_int retval = 0 ;
-    unsigned char setup[3];
-    unsigned char buf[5];
-    int bytes;
-
-    if (usb_claim_interface(edt_p->usb_p, 0) < 0)
-    {
-        edt_set_errno(EBUSY); ;
-        return 0 ;
-    }
-
-    addr = EDT_REG_ADDR(desc) ;
-
-    for (i = 0; i < EDT_REG_SIZE(desc); i++)
-    {
-        setup[0] = 0x03 ;
-        setup[1] = addr ;
-
-        /* Send setup bytes */
-        if ((usb_bulk_write(edt_p->usb_p, 0x01, setup, 2,
-            edt_p->usb_rtimeout)) < 0)
-        {
-            usb_release_interface(edt_p->usb_p, 0);
-            edt_set_errno(EINVAL); ;
-            return 0 ;
-        }
-
-        /* Read back setup bytes to verify */
-        bytes = usb_bulk_read(edt_p->usb_p, 0x81, buf, 1, edt_p->usb_rtimeout);
-
-        if (bytes < 1)
-        {
-            extern int errno ;
-            usb_release_interface(edt_p->usb_p, 0);
-            edt_set_errno(EINVAL); ;
-            return 0 ;
-        }
-
-        ++addr ;
-        retval |= ((u_int) buf[0] << (i * 8)) ;
-    }
-
-    usb_release_interface(edt_p->usb_p, 0);
-
-    return retval ;
-}
-
-/**
-* Perform an FPGA register write operation on the USB device
-* Arguments:
-*	USB device handle
-* 	address of the register
-* 	value to store
-*/
-void
-usb_reg_write(EdtDev *edt_p, u_int desc, u_int value)
-{
-    int i, addr, size;
-    unsigned char setup[4];
-    unsigned char buf[4];
-
-    if (usb_claim_interface(edt_p->usb_p, 0) < 0)
-    {
-        edt_set_errno(EBUSY); ;
-        return ;
-    }
-
-    addr = EDT_REG_ADDR(desc) ;
-
-    for (i = 0; i < EDT_REG_SIZE(desc); i++)
-    {
-        if (EDT_REG_TYPE(desc) == REMOTE_USB_TYPE)
-        {
-            setup[0] = 0x04;
-            setup[1] = addr ;
-            setup[2] = value & 0xff ;
-            size = 3 ;
-        }
-        else if (EDT_REG_TYPE(desc) == LOCAL_USB_TYPE)
-        {
-            setup[0] = 0x01;
-            setup[1] = value & 0xff ;
-            size = 2 ;
-        }
-
-        /* Send setup bytes */
-        if ((usb_bulk_write(edt_p->usb_p, 0x01, setup, size,
-            edt_p->usb_wtimeout)) < 0)
-        {
-            usb_release_interface(edt_p->usb_p, 0);
-            edt_set_errno(EINVAL); ;
-            return ;
-        }
-
-        addr++ ;
-        value >>= 8 ;
-    }
-
-    usb_release_interface(edt_p->usb_p, 0);
-}
-
-
-/*
-* find the EDT USB board attached
-*/
-struct usb_device *edt_find_usb_board(int unit)
-{
-    struct usb_bus *p;
-    struct usb_device *q;
-
-    for (p = usb_busses; p; p = p->next)
-    {
-        q = p->devices;
-        while(q)
-        {
-            if ((q->descriptor.idVendor==0x04b4) &&
-                (q->descriptor.idProduct=0x8613))
-                return q;
-            else
-                q = q->next;
-        }
-    }
-
-    return NULL;
-}
-#endif /* USB */
-
-
-static int edt_parse_devname(EdtDev *edt_p, char *edt_devname, int unit, int channel);
+int edt_parse_devname(EdtDev *edt_p, char *edt_devname, int unit, int channel);
 
 EdtDev * edt_open_device_struct(EdtDev *edt_p,
                            const char *device_name,
@@ -467,10 +400,6 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
 
     if ((strncmp(device_name, "dmy", 3) == 0) || (strncmp(device_name, "DMY", 3) == 0))
         edt_p->devid = DMY_ID;
-#ifdef USB
-    else if (strncasecmp(device_name, "usb", 3) == 0)
-        edt_p->devtype = USB_ID; /* Set until true ID retrieved from device */
-#endif
 
 
     if (edt_parse_devname(edt_p, (char *) device_name, unit, channel) != 0)
@@ -482,37 +411,6 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
     edt_p->unit_no = unit;
     edt_p->channel_no = channel;
 
-#ifdef USB
-    if (edt_p->devtype == USB_ID)
-    {
-        struct usb_device *current_device = NULL;
-
-        usb_init();
-        usb_find_busses();
-        usb_find_devices();
-
-        current_device = edt_find_usb_board(unit);
-
-        if(current_device==NULL)
-        {
-            edt_set_errno(ENODEV); ;
-            return NULL;
-        }
-
-        edt_p->usb_p = usb_open(current_device);
-
-        /*
-        * The following assume that large buffer reads occur
-        * on endpoints 82, 84, 86, and 88.  82 is channel 2,
-        * 84 channel 1, etc.  Large buffer writes occur on
-        * endpoints 2, 4, 6, and 8.
-        */
-        edt_p->usb_bulk_read_endpoint = 0x80 + (channel * 2) + 2 ;
-        edt_p->usb_bulk_write_endpoint = (channel * 2) + 2 ;
-
-    }
-    else
-#endif
     {
 
 #ifdef _NT_
@@ -539,13 +437,28 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
             edt_msg(EDTWARN, "edt_devname %s unit %d channel %d\n",edt_p->edt_devname,unit,channel) ;
         if (edt_p->devid != DMY_ID)
         {
-            if ((edt_p->fd = edt_mac_open(edt_p->edt_devname, unit, channel)) <= 0 )
+            int nchannels = 0;
+            int dummy = 0;
+
+            /* open channel zero so we can check max channel val before
+             * attempting to open the actual channel.
+             */
+            if ((edt_p->fd = edt_mac_open(edt_p->edt_devname, unit, 0)) <= 0)
+                return NULL;
+
+            edt_p->channel_no = 0;
+            nchannels = edt_ioctl(edt_p, EDTG_MAXCHAN, &dummy);
+            if (channel < nchannels)
             {
-                if (verbose)
-                    edt_msg(EDTWARN, "EDT %s open failed.\nCheck board installation and unit number, and try restarting the computer\n", edt_p->edt_devname);
-                return (NULL);
-            }
-            {
+                edt_mac_close(edt_p->fd);
+                edt_p->channel_no = channel;
+                if ((edt_p->fd = edt_mac_open(edt_p->edt_devname, unit, channel)) <= 0 )
+                {
+                    if (verbose)
+                        edt_msg(EDTWARN, "EDT %s open failed.\nCheck board installation and unit number, and try restarting the computer\n", edt_p->edt_devname);
+                    return (NULL);
+                }
+
                 edt_ioctl(edt_p, EDTG_DEVID, &edt_p->devid);
                 if (edt_is_pdv(edt_p))
                 {
@@ -564,9 +477,14 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
                         if (verbose)
                             printf("%s not match for pcd\n",edt_p->edt_devname) ;
                         close(edt_p->fd) ;
-                        return(NULL);
+                       return(NULL);
                     }
                 }
+            }
+            else
+            {
+                edt_msg(EDTWARN, "EDT %s open failed. Channel number %d is larger than max allowed %d\n", edt_p->edt_devname, channel, nchannels-1);
+                return NULL;
             }
         }
         else
@@ -584,12 +502,19 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
         }
 #else
 
-        if ((edt_p->fd = open(edt_p->edt_devname, O_RDWR, 0666)) < 0 )
+        if (edt_p->devid == DMY_ID)
+          close(creat(edt_p->edt_devname, 0666));
+
+        if ((edt_p->fd = open(edt_p->edt_devname, (O_RDWR | O_NONBLOCK), 0666)) < 0 )
         {
             if (verbose)
                 edt_msg(EDTWARN, "EDT %s open failed.\nCheck board installation and unit number, and try restarting the computer\n", edt_p->edt_devname);
             return (NULL);
         }
+
+        if (edt_p->devid == DMY_ID)
+          unlink(edt_p->edt_devname);
+
         /* make sure fd not carried across exec */
 #if defined( __linux__) || defined(__sun)
         fcntl(edt_p->fd, F_SETFD, FD_CLOEXEC);
@@ -608,7 +533,7 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
         edt_ioctl(edt_p, EDTG_DEVID, &edt_p->devid);
         edt_ioctl(edt_p, EDTS_RESETCOUNT, &dmy);
         dmy = edt_p->channel_no ;
-	/* edt_ioctl(edt_p, EDTS_RESETSERIAL, &dmy); */
+        /* edt_ioctl(edt_p, EDTS_RESETSERIAL, &dmy); */
         edt_p->DMA_channels = edtdev_channels_from_type(edt_p);
 
 #ifdef _NT_
@@ -629,6 +554,12 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
     edt_p->tmpbuf = 0;
     edt_p->dd_p = 0;
     edt_p->b_count = 0;
+
+    edt_p->dmy_started = 0;
+    edt_p->dmy_wait_for_buffers_callback = NULL;
+    edt_p->dmy_reg_read_callback = NULL;
+    edt_p->dmy_reg_write_callback = NULL;
+
     edt_p->buffer_granularity = DEFAULT_BUFFER_GRANULARITY;
     edt_p->mezz.id = MEZZ_ID_UNKNOWN;
     edt_p->reg_fifo_io    = NULL;
@@ -637,14 +568,33 @@ EdtDev * edt_open_device_struct(EdtDev *edt_p,
     edt_p->reg_intfc_off  = NULL;
     edt_p->reg_intfc_dat  = NULL;
 
+
     return edt_p;
 }
 
 
+/**
+ *  Opens an EDT device. This call underlies the other edt_open* calls, which
+ *  basically just map to different variations on calls to this one. For example,
+ *  edt_open_quiet calls edt_open_device with <b>verbose</b> set to 0 (false).
+ *  User applications should typically use the higher-level calls rather than
+ *  calling this directly, although there's no real harm in doing so either.
+ * @param device_name a string with the name of the EDT Product board;
+ * for example, "pcd".  \c EDT_INTERFACE can also be used; it is defined as
+ * the name of the board type in \c edtdef.h.
+ * @param unit Unit number of the device (if multiple devices). The
+ * first unit is always 0.
+ * @param channel specifies DMA channel number (counting from zero).
+ *  @param verbose when 0, produce no console output. When nonzero, outputs a message on successful open, or an error-specific message on failure
+ *  @see edt_open, edt_open_channel, edt_open_quiet
+ *
+* @return A pointer to the EdtDev structure if successful. This data
+ */
 EdtDev *edt_open_device(const char *device_name, int unit, int channel, int verbose)
 
 {
     EdtDev *edt_p;
+    EdtDev *save_p;
 
     if ((edt_p = (EdtDev *) calloc(1, sizeof(EdtDev))) == NULL)
     {
@@ -654,10 +604,19 @@ EdtDev *edt_open_device(const char *device_name, int unit, int channel, int verb
         return (NULL);
     }
 
-    return edt_open_device_struct(
+    save_p = edt_p;
+    edt_p = edt_open_device_struct(
         edt_p,
         device_name,
         unit, channel, verbose);
+
+    if (edt_p == NULL)
+    {
+        free(save_p);
+    }
+
+    return edt_p;
+
 }
 
 /**
@@ -673,6 +632,7 @@ EdtDev *edt_open_device(const char *device_name, int unit, int channel, int verb
 * the name of the board type in \c edtdef.h.
 * @param unit Unit number of the device (if multiple devices). The
 * first unit is always 0.
+* @see edt_open_channel, edt_open_quiet, edt_close
 *
 * @return A pointer to the EdtDev structure if successful. This data
 * structure holds information about the device which is needed by
@@ -686,7 +646,6 @@ EdtDev *edt_open_device(const char *device_name, int unit, int channel, int verb
 EdtDev *
 edt_open(const char *device_name, int unit)
 {
-
     return edt_open_device(device_name, unit, 0, 1);
 }
 
@@ -700,6 +659,7 @@ edt_open(const char *device_name, int unit)
 * the name of the board type in \c edtdef.h.
 * @param unit Unit number of the device (if multiple devices). The
 * first unit is always 0.
+* @see edt_open, edt_open_channel, edt_close
 *
 * @return Pointer to EdtDev struct, or NULL if error.
 */
@@ -735,6 +695,7 @@ edt_open_quiet(const char *device_name, int unit)
 * structure elements directly.
 * NULL is returned if unsuccessful, and the global variable errno is
 * set.  Use #edt_perror to print an error message.
+* @see edt_open, edt_open_quiet, edt_close
 */
 
 EdtDev *
@@ -749,9 +710,10 @@ edt_open_channel(const char *device_name, int unit, int channel)
 * parse the EDT device name
 *
 * @return 0 on success, -1 on failure
+* @see edt_open
 */
 
-static int
+int
 edt_parse_devname(EdtDev *edt_p, char *device_name, int unit, int channel)
 {
 
@@ -833,7 +795,7 @@ edt_parse_devname(EdtDev *edt_p, char *device_name, int unit, int channel)
 #endif
 
     }
-    edt_msg(EDTDEBUG, "parse open to %s\n",edt_p->edt_devname) ;
+    /* edt_msg(EDTDEBUG, "parse open to %s\n",edt_p->edt_devname) ; */
 
     return 0;
 }
@@ -846,6 +808,7 @@ edt_parse_devname(EdtDev *edt_p, char *device_name, int unit, int channel)
 *
 * @return 0 on success, -1 on failure. If an  error occurs, call
 * #edt_perror to get the system error message.
+* @see edt_open_device
 */
 
 int
@@ -906,7 +869,6 @@ edt_close(EdtDev *edt_p)
 
 {
     edt_close_device(edt_p);
-
     free(edt_p);
 
     return 0;
@@ -1064,14 +1026,16 @@ edt_sun_lock_mem(EdtDev *edt_p, int index, int write_flag, EdtRingBuffer *pring)
 /*
 * edt_configure_ring_buffer
 *
-* configures PCI Bus Configurable DMA Interface ring buffers
+* configures a single PCI Bus Configurable DMA Interface ring buffer.
 *
-* @param edt_p:	device handle returned from edt_open
-*      bufsize:	size of each buffer
-*        nbufs:	number of buffers
-*   data_direction:	indicates whether this connection is to
-*                      be used for output or input
-*     bufarray:	array of pointers to application-allocated buffers
+* @ref edt_configure_ring_buffers
+*
+* @param edt_p: device handle returned from edt_open
+* @param index: index of the buffer which buffer
+* @param bufsize: size of each buffer
+* @param nbufs: number of buffers
+* @param data_direction: indicates whether this connection is to be used for output or input
+*  @param  bufarray: array of pointers to application-allocated buffers (<b>deprecated</b> -- see note in /ref edt_configure_ring_buffers.
 *
 * @return 0 on success; -1 on error
 */
@@ -1256,24 +1220,27 @@ int edt_check_ring_buf_parms(EdtDev *edt_p, int numbufs, int bufsize,
         return -1 ;
     }
 
-    edt_p->mmap_buffers = edt_get_mmap_buffers(edt_p);
-
-    if (edt_p->mmap_buffers)
+    if (edt_p->devid != DMY_ID)
     {
-        if (edt_p->buffer_granularity < PAGE_SIZE)
-            edt_p->buffer_granularity = PAGE_SIZE;
+      edt_p->mmap_buffers = edt_get_mmap_buffers(edt_p);
 
-    }
+      if (edt_p->mmap_buffers)
+      {
+          if (edt_p->buffer_granularity < PAGE_SIZE)
+              edt_p->buffer_granularity = PAGE_SIZE;
 
-    if (edt_p->mmap_buffers && ((pdata != NULL) || (bufarray != NULL)))
-    {
+      }
 
-        edt_set_errno(EINVAL); ;
+      if (edt_p->mmap_buffers && ((pdata != NULL) || (bufarray != NULL)))
+      {
 
-        edt_msg_perror(EDTFATAL,
-            "edt_configure_ring_buffers: can't pass in user pointer when using mmap kernel buffers\n") ;
+          edt_set_errno(EINVAL); ;
 
-        return -1;
+          edt_msg_perror(EDTFATAL,
+              "edt_configure_ring_buffers: can't pass in user pointer when using mmap kernel buffers\n") ;
+
+          return -1;
+      }
     }
 
     return 0;
@@ -1430,12 +1397,58 @@ edt_allocate_ring_buffer_memory(EdtDev *edt_p, int bufsize, int numbufs, u_char 
 }
 
 
+/**
+* Sets up the EDT device ring buffers.
+*
+* Any previous configuration is replaced, and previously allocated buffers are released.
+* Buffers are normally allocated and maintained within the EDT device library (bufarray = NULL).
+*
+* @note bufarray can alternately point to an array of user buffers which will be
+* used instead of the internally allocated ones, however <b>it will fail</b>
+* (possibly with a system crash) if the system has more than 4 GBytes of
+* memory. Since > 4 GBytes is becoming ubiquitous,
+* providing user buffers has effectively been deprecated. The argument remains in
+* order to maintain code constency, nevertheless <b>EDT can not provide support
+* for any applications that provide a non-NULL argument in bufarray.</b>
+*
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+*
+* @param bufsize size of each buffer, in bytes. For optimal efficiency,
+* allocate a value approximating throughput divided by 20: that is, if
+* transfer occurs at 20 MB per second, allocate 1 MB per buffer. Buffers
+* significantly larger or smaller can overuse memory or lock the system
+* up in processing interrupts at this speed.
+*
+* @param numbufs   number of buffers. Must be 1 or greater. Four is
+* recommended for most applications.
+*
+* @param write_flag  Indicates whether this connection is to be used
+* for input or output. Only one direction is possible per device or
+* subdevice at any given time:
+* - EDT_READ = 0
+* - EDT_WRITE = 1
+*
+* @param bufarray If NULL, the library will allocate a set of
+* page-aligned ring buffers. If not null <b>(Deprecated -- see note above)</b>
+* this argument is an array of pointers to application-allocated
+* and page aligned buffers (use #edt_alloc to allocate page alligned buffers);
+* these buffers must match the size and number of buffers specified in this
+* call and will be used as the ring buffers.
+*
+* @param pdata normally NULL
+*
+* @return 0 on success, -1 on error. If all buffers cannot be
+* allocated, none are allocated and an error is returned.  Call
+* #edt_perror to get the system error message.
+*
+*/
 static int
 edt_setup_ring_buffers(EdtDev *edt_p, int bufsize, int numbufs,
                        int write_flag, unsigned char *pdata, unsigned char **bufarray)
 {
     int     i;
-    int	rc;
+    int rc;
 
     u_char *localbuf[MAX_DMA_BUFFERS];
     u_char ** buffers;
@@ -1547,13 +1560,53 @@ edt_get_total_bufsize(EdtDev *edt_p,
     return fullbufsize;
 }
 
+// Internal subroutine to support DMY_ID ring buffer operations.
+static int
+edt_alloc_dmy_buffers(EdtDev *edt_p, int bufsize, int numbufs, unsigned char **bufarray)
+{
+  int i;
+
+  if (bufarray != NULL)
+  {
+    edt_perror("edt_configure_ring_buffers:  DMA_ID - Can not use preallocated user ring buffers");
+    return -1;
+  }
+
+  bufarray = (u_char **) edt_alloc(sizeof(u_char *) * numbufs);
+  if (bufarray == NULL)
+  {
+    edt_perror("edt_configure_ring_buffers:  DMA_ID - edt_alloc bufptrs failed");
+    return -1;
+  }
+
+
+  for (i = 0; i < numbufs; ++i)
+  {
+    bufarray[i] = edt_alloc(bufsize);
+    if (bufarray[i] == NULL)
+    {
+      edt_perror("edt_configure_ring_buffers:  DMA_ID - edt_alloc buffers failed!");
+      return -1 ;
+    }
+    memset(bufarray[i], i, bufsize);
+  }
+
+  return 0;
+}
 
 /**
 * Configures the EDT device ring buffers.
 *
-* Any previous configuration is replaced, and previously allocated
-* buffers are released. Buffers can be allocated and maintained within
-* the EDT device library or within the user application itself.
+* Any previous configuration is replaced, and previously allocated buffers are released.
+* Buffers are normally allocated and maintained within the EDT device library (bufarray = NULL).
+*
+* @note bufarray can alternately point to an array of user buffers which will be
+* used instead of the internally allocated ones, however <b>it will fail</b>
+* (possibly with a system crash) if the system has more than 4 GBytes of
+* memory. Since > 4 GBytes is becoming ubiquitous,
+* providing user buffers has effectively been deprecated. The argument remains in
+* order to maintain code constency, nevertheless <b>EDT can not provide support
+* for any applications that provide a non-NULL argument in bufarray.</b>
 *
 * @param edt_p pointer to edt device structure returned by #edt_open or
 * #edt_open_channel
@@ -1574,11 +1627,11 @@ edt_get_total_bufsize(EdtDev *edt_p,
 * - EDT_WRITE = 1
 *
 * @param bufarray If NULL, the library will allocate a set of
-* page-aligned ring buffers. If not NULL, this argument is an array of
-* pointers to application-allocated and page aligned buffers (use
-* #edt_alloc to allocate page alligned buffers); these buffers must
-* match the size and number of buffers specified in this call and will
-* be used as the ring buffers.
+* page-aligned ring buffers. If not null <b>(Deprecated -- see note above)</b>
+* this argument is an array of pointers to application-allocated
+* and page aligned buffers (use #edt_alloc to allocate page alligned buffers);
+* these buffers must match the size and number of buffers specified in this
+* call and will be used as the ring buffers.
 *
 * @return 0 on success, -1 on error. If all buffers cannot be
 * allocated, none are allocated and an error is returned.  Call
@@ -1590,7 +1643,15 @@ int
 edt_configure_ring_buffers(EdtDev *edt_p, int bufsize, int numbufs,
                            int write_flag, unsigned char **bufarray)
 {
-    return edt_setup_ring_buffers(edt_p, bufsize, numbufs, write_flag, NULL, bufarray);
+    int retval = 0;
+
+    if (edt_p->devid == DMY_ID)
+      retval = edt_alloc_dmy_buffers(edt_p, bufsize, numbufs, bufarray);
+
+    if (retval != 0)
+      return retval;
+    else
+      return edt_setup_ring_buffers(edt_p, bufsize, numbufs, write_flag, NULL, bufarray);
 
 }
 
@@ -1666,6 +1727,50 @@ edt_configure_block_buffers_mem(EdtDev *edt_p,
 * @see edt_configure_ring_buffers
 */
 
+/**
+* Configures the EDT device ring buffers.
+*
+* Any previous configuration is replaced, and previously allocated buffers are released.
+* Buffers are normally allocated and maintained within the EDT device library (bufarray = NULL).
+*
+* @note bufarray can alternately point to an array of user buffers which will be
+* used instead of the internally allocated ones, however <b>it will fail</b>
+* (possibly with a system crash) if the system has more than 4 GBytes of
+* memory. Since > 4 GBytes is becoming ubiquitous,
+* providing user buffers has effectively been deprecated. The argument remains in
+* order to maintain code constency, nevertheless <b>EDT can not provide support
+* for any applications that provide a non-NULL argument in bufarray.</b>
+*
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+*
+* @param bufsize size of each buffer, in bytes. For optimal efficiency,
+* allocate a value approximating throughput divided by 20: that is, if
+* transfer occurs at 20 MB per second, allocate 1 MB per buffer. Buffers
+* significantly larger or smaller can overuse memory or lock the system
+* up in processing interrupts at this speed.
+*
+* @param numbufs   number of buffers. Must be 1 or greater. Four is
+* recommended for most applications.
+*
+* @param write_flag  Indicates whether this connection is to be used
+* for input or output. Only one direction is possible per device or
+* subdevice at any given time:
+* - EDT_READ = 0
+* - EDT_WRITE = 1
+*
+* @param bufarray If NULL, the library will allocate a set of
+* page-aligned ring buffers. If not null <b>(Deprecated -- see note above)</b>
+* this argument is an array of pointers to application-allocated
+* and page aligned buffers (use #edt_alloc to allocate page alligned buffers);
+* these buffers must match the size and number of buffers specified in this
+* call and will be used as the ring buffers.
+*
+* @return 0 on success, -1 on error. If all buffers cannot be
+* allocated, none are allocated and an error is returned.  Call
+* #edt_perror to get the system error message.
+*
+*/
 int
 edt_configure_block_buffers(EdtDev *edt_p, int bufsize, int numbufs, int write_flag,
                             int header_size, int header_before)
@@ -1816,21 +1921,19 @@ edt_disable_ring_buffers(EdtDev *edt_p)
 int
 edt_start_buffers(EdtDev *edt_p, uint_t count)
 {
-    if (edt_p->devid == DMY_ID && edt_p->dd_p)
-        dmy_started += count ;
+    if (edt_p->devid == DMY_ID)
+        edt_p->dmy_started += count;
+
     edt_msg(EDTDEBUG, "edt_start_buffers %d\n", count);
-    edt_ioctl(edt_p, EDTS_STARTBUF, &count);
-    return 0;
+    return edt_ioctl(edt_p, EDTS_STARTBUF, &count);
 }
 
 
 int
 edt_lockoff(EdtDev * edt_p)
 {
-    int     count = 0;
-
-    edt_ioctl(edt_p, EDTS_STARTBUF, &count);
-    return 0;
+    int count = 0;
+    return edt_ioctl(edt_p, EDTS_STARTBUF, &count);
 }
 
 /**
@@ -1909,46 +2012,31 @@ edt_read(EdtDev *edt_p, void   *buf, uint_t  size)
 {
     u_char *thisbuf;
 
-
     if (size & 0x01) /* Odd no of bytes illegal.  Mark & Chet Oct'2000 */
-	-- size ;
-
+        -- size;
 
     if (edt_p->last_direction != 1)
-	edt_set_direction(edt_p, EDT_READ);
-
+        edt_set_direction(edt_p, EDT_READ);
 
     if (edt_p->devid != DMY_ID)
     {
+        if (edt_configure_ring_buffers(edt_p, size, 1, EDT_READ, NULL) != 0)
+            return -1;
 
-	if (edt_configure_ring_buffers(edt_p, size, 1, EDT_READ, NULL) != 0)
+        edt_start_buffers(edt_p, 1) ;
+        thisbuf = edt_wait_for_buffers(edt_p, 1);
 
-	    return -1;
+        if (edt_timeouts(edt_p))
+        {
+            size = edt_get_timeout_count(edt_p);
+            edt_msg(EDTDEBUG, "edt_read timeout with count %d\n", size);
+        }
 
-
-	edt_start_buffers(edt_p, 1) ;
-
-
-	thisbuf = edt_wait_for_buffers(edt_p, 1);
-
-
-	if (edt_timeouts(edt_p))
-	{
-	    size = edt_get_timeout_count(edt_p);
-	    edt_msg(EDTDEBUG, "edt_read timeout with count %d\n", size);
-	}
-
-
-	memcpy(buf, thisbuf, size);
-
-
-	edt_disable_ring_buffers(edt_p) ;
-
+        memcpy(buf, thisbuf, size);
+        edt_disable_ring_buffers(edt_p) ;
     }
 
-
     return (size);
-
 }
 
 /**
@@ -1979,47 +2067,32 @@ edt_write(EdtDev *edt_p, void   *buf, uint_t  size)
 {
     u_char **bufs;
 
-
     if (size & 0x01) /* Odd no of bytes illegal.  Mark & Chet Oct'2000 */
-	-- size ;
+        -- size;
 
     if (edt_p->last_direction != (EDT_WRITE+1))
-	edt_set_direction(edt_p, EDT_WRITE);
+        edt_set_direction(edt_p, EDT_WRITE);
 
     if (edt_p->devid != DMY_ID)
     {
+        if (edt_configure_ring_buffers(edt_p, size, 1, EDT_WRITE, NULL) != 0)
+            return -1;
 
-	if (edt_configure_ring_buffers(edt_p, size, 1, EDT_WRITE, NULL) != 0)
+        bufs = edt_buffer_addresses(edt_p);
+        memcpy(bufs[0], buf, size);
+        edt_start_buffers(edt_p, 1) ;
+        edt_wait_for_buffers(edt_p, 1);
 
-	    return -1;
+        if (edt_timeouts(edt_p))
+        {
+            size = edt_get_timeout_count(edt_p);
+            edt_msg(EDTDEBUG, "edt_read timeout with count %d\n", size);
+        }
 
-
-	bufs = edt_buffer_addresses(edt_p);
-
-
-	memcpy(bufs[0], buf, size);
-
-
-	edt_start_buffers(edt_p, 1) ;
-
-
-	(void) edt_wait_for_buffers(edt_p, 1);
-
-
-	if (edt_timeouts(edt_p))
-	{
-	    size = edt_get_timeout_count(edt_p);
-	    edt_msg(EDTDEBUG, "edt_read timeout with count %d\n", size);
-	}
-
-
-	edt_disable_ring_buffers(edt_p) ;
-
+        edt_disable_ring_buffers(edt_p) ;
     }
 
-
     return (size);
-
 }
 
 int
@@ -2110,7 +2183,7 @@ edt_buffer_addresses(EdtDev *edt_p)
 * @param count buffer number for which to block. Completed buffers are
 * numbered cumulatively starting with 0 when the EDT Product is opened.
 * @param timep pointer to an array of two unsigned integers. The first
-* integer is seconds, the next integer is microseconds representing the
+* integer is seconds, the next integer is nanoseconds representing the
 * system time at which the buffer completed.
 *
 * @return Address of last completed buffer on success; NULL on error.
@@ -2157,7 +2230,6 @@ edt_wait_buffers_timed(EdtDev * edt_p, int count, u_int * timep)
 unsigned char *
 edt_last_buffer(EdtDev * edt_p)
 {
-    u_char *ret;
     bufcnt_t     donecount;
     bufcnt_t     last_wait;
     int     delta;
@@ -2173,15 +2245,14 @@ edt_last_buffer(EdtDev * edt_p)
     if (delta == 0)
         delta = 1;
 
-    ret = edt_wait_for_buffers(edt_p, delta) ;
-    return (ret);
+    return edt_wait_for_buffers(edt_p, delta);
 }
 
 /**
 * Like #edt_last_buffer but also returns the time at which the DMA was
 * complete on this buffer. \a timep should point to an array of two
 * unsigned integers which will be filled in with the seconds and
-* microseconds of the time the buffer was finished being transferred.
+* nanoseconds of the time the buffer was finished being transferred.
 *
 * @param edt_p pointer to edt device structure returned by #edt_open or
 * #edt_open_channel
@@ -2201,7 +2272,6 @@ edt_last_buffer(EdtDev * edt_p)
 unsigned char *
 edt_last_buffer_timed(EdtDev * edt_p, u_int * timep)
 {
-    u_char *ret;
     bufcnt_t     donecount;
     bufcnt_t     last_wait;
     int     delta;
@@ -2217,8 +2287,7 @@ edt_last_buffer_timed(EdtDev * edt_p, u_int * timep)
     if (delta == 0)
         delta = 1;
 
-    ret = edt_wait_buffers_timed(edt_p, delta, timep);
-    return (ret);
+    return edt_wait_buffers_timed(edt_p, delta, timep);
 }
 
 char   *
@@ -2433,12 +2502,17 @@ edt_wait_for_buffers(EdtDev * edt_p, int count)
 
     edt_p->last_wait_ret = ret;
 
+    if (edt_p->devid == DMY_ID && edt_p->dmy_wait_for_buffers_callback != NULL)
+    {
+      edt_p->dmy_wait_for_buffers_callback(edt_p, edt_p->ring_buffers[bufnum]);
+    }
+
     return (edt_p->ring_buffers[bufnum]);
 
 }
 
 /**
-* Gets the seconds and microseconds timestamp of when dma was completed
+* Gets the seconds and nanoseconds timestamp of when dma was completed
 * on the buffer specified by \a bufnum. \a bufnum is moduloed by the
 * number of buffers in the ring buffer, so it can either be an index,
 * or the number of buffers completed.
@@ -2588,7 +2662,7 @@ edt_wait_for_next_buffer(EdtDev *edt_p)
 * because the "current" buffer may change between a call to this function
 * and the pointer's access.
 *
-* @param edt_p:	device handle returned from edt_open
+* @param edt_p: device handle returned from edt_open
 *
 *
 */
@@ -2623,7 +2697,7 @@ edt_get_current_dma_buf(EdtDev * edt_p)
 *
 *
 * @param edt_p pointer to edt device structure returned by #edt_open
-* @param count	number of buffers. Must be 1 or greater. Four is
+* @param count  number of buffers. Must be 1 or greater. Four is
 * recommended.
 *
 * @return Returns the address of the ring buffer corresponding to count
@@ -2676,13 +2750,7 @@ edt_done_count(EdtDev * edt_p)
     bufcnt_t  donecount = 0;
 
     if (edt_p->devid == DMY_ID)
-    {
-        if (edt_p->dd_p)
-        {
-            donecount = dmy_started;
-        }
-        else printf("DEBUG - dd_p not set for DMY_ID\n") ;
-    }
+        donecount = edt_p->dmy_started;
     else
         edt_ioctl(edt_p, EDTG_BUFDONE, &donecount);
     return (donecount);
@@ -2719,7 +2787,7 @@ edt_perror(char *errstr)
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
         NULL,
         GetLastError(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	/* Default language */
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),      /* Default language */
         (LPTSTR) & lpMsgBuf,
         0,
         NULL
@@ -2777,30 +2845,23 @@ edt_errno(void)
 uint_t
 edt_reg_read(EdtDev * edt_p, uint_t desc)
 {
-    int     ret;
     edt_buf buf = {0, 0};
+    buf.desc = desc;
 
-
-#ifdef USB
-    if (EDT_REG_TYPE(desc) == REMOTE_USB_TYPE)
-    {
-        buf.value = usb_reg_read(edt_p, desc) ;
-    }
+    if (edt_p->devid == DMY_ID && edt_p->dmy_reg_read_callback != NULL)
+      buf.value = edt_p->dmy_reg_read_callback(edt_p, desc);
     else
-#endif /* USB */
     {
-        buf.desc = desc;
-        ret = edt_ioctl(edt_p, EDTG_REG, &buf);
-        if (ret < 0)
+      int ret = edt_ioctl(edt_p, EDTG_REG, &buf);
+
+      if (ret < 0)
             return ret;
     }
 
     if (dump_reg_access)
     {
-        if (is_reg_dumpable(desc))
-        {
-            printf("%d: reg read  %08x %08x\n", edt_p->channel_no, desc, (uint_t) buf.value);
-        }
+      if (is_reg_dumpable(desc))
+        printf("%d: reg read  %08x %08x\n", edt_p->channel_no, desc, (uint_t) buf.value);
     }
 
     return (u_int) buf.value;
@@ -2839,7 +2900,7 @@ edt_reg_or(EdtDev * edt_p, uint_t desc, uint_t mask)
         if (is_reg_dumpable(desc))
         {
             printf("%d: reg or    %08x %08x\n", edt_p->channel_no,
-			desc, (uint_t) buf.value);
+                        desc, (uint_t) buf.value);
         }
     }
     val = (u_int) buf.value;
@@ -2959,32 +3020,25 @@ edt_reg_setclear(EdtDev * edt_p, uint_t desc, uint_t mask)
 void
 edt_reg_write(EdtDev * edt_p, uint_t desc, uint_t value)
 {
-    int     ret;
-    edt_buf buf;
-
-#ifdef USB
-    if (edt_p->devtype == USB_ID)
-    {
-        usb_reg_write(edt_p, desc, value) ;
-    }
+    if (edt_p->devid == DMY_ID && edt_p->dmy_reg_write_callback != NULL)
+      edt_p->dmy_reg_write_callback(edt_p, desc, value);
     else
-#endif /* USB */
     {
-        buf.desc = desc;
-        buf.value = value;
+      int     ret;
+      edt_buf buf;
 
-        ret = edt_ioctl(edt_p, EDTS_REG, &buf);
-        if (ret < 0)
-            edt_msg_perror(EDTFATAL, "write");
+      buf.desc = desc;
+      buf.value = value;
 
-        if (dump_reg_access)
-        {
-            if (is_reg_dumpable(desc))
-            {
-                printf("%d: reg write %08x %08x\n", edt_p->channel_no,
-			desc, (uint_t) buf.value);
-            }
-        }
+      ret = edt_ioctl(edt_p, EDTS_REG, &buf);
+      if (ret < 0)
+        edt_msg_perror(EDTFATAL, "write");
+    }
+
+    if (dump_reg_access)
+    {
+      if (is_reg_dumpable(desc))
+        printf("%d: reg write %08x %08x\n", edt_p->channel_no, desc, (uint_t) value);
     }
 }
 
@@ -3129,8 +3183,8 @@ edt_enddma_reg(EdtDev * edt_p, uint_t desc, uint_t val)
 *
 * @param reg_desc  Register access description code.
 *
-* @param set	   Register bits to be set.
-* @param clear	   Register bits to be cleared.
+* @param set       Register bits to be set.
+* @param clear     Register bits to be cleared.
 * @param setclear  Register value to be toggled up then down.
 * @param clearset  Register value to be toggled down then up.
 *
@@ -3180,8 +3234,8 @@ edt_read_start_action(EdtDev * edt_p, u_int enable, u_int reg_desc,
 *
 * @param reg_desc  Register access description code.
 *
-* @param set	   Register bits to be set.
-* @param clear	   Register bits to be cleared.
+* @param set       Register bits to be set.
+* @param clear     Register bits to be cleared.
 * @param setclear  Register value to be toggled up then down.
 * @param clearset  Register value to be toggled down then up.
 *
@@ -3231,8 +3285,8 @@ edt_read_end_action(EdtDev * edt_p, u_int enable, u_int reg_desc,
 *
 * @param reg_desc  Register access description code.
 *
-* @param set	   Register bits to be set.
-* @param clear	   Register bits to be cleared.
+* @param set       Register bits to be set.
+* @param clear     Register bits to be cleared.
 * @param setclear  Register value to be toggled up then down.
 * @param clearset  Register value to be toggled down then up.
 *
@@ -3282,8 +3336,8 @@ edt_write_start_action(EdtDev * edt_p, u_int enable, u_int reg_desc,
 *
 * @param reg_desc  Register access description code.
 *
-* @param set	   Register bits to be set.
-* @param clear	   Register bits to be cleared.
+* @param set       Register bits to be set.
+* @param clear     Register bits to be cleared.
 * @param setclear  Register value to be toggled up then down.
 * @param clearset  Register value to be toggled down then up.
 *
@@ -3393,7 +3447,7 @@ edt_intfc_write(EdtDev * edt_p, uint_t offset, u_char data)
 * u_short channel_direction_reg = edt_intfc_read_short(edt_p, SSD16_CHDIR);
 * for (i = 0; i < 16; ++i) {
 *     int dir = channel_dir_reg & (1 << i);
-*	   printf("Channel %d configured for: ", i);
+*          printf("Channel %d configured for: ", i);
 *     if (dir == 0) {
 *         printf("input\n");
 *     } else if (dir == 1) {
@@ -3690,7 +3744,12 @@ pcd_get_stat_polarity(EdtDev * edt_p)
 void
 pcd_set_stat_polarity(EdtDev * edt_p, u_char val)
 {
-    edt_intfc_write(edt_p, PCD_STAT_POLARITY, val);
+    u_char polarity = edt_intfc_read(edt_p, PCD_STAT_POLARITY);
+
+    polarity &= 0xF0;
+    polarity |= val;
+
+    edt_intfc_write(edt_p, PCD_STAT_POLARITY, polarity);
 }
 
 void
@@ -3914,7 +3973,7 @@ pcd_set_abortdma_onintr(EdtDev *edt_p, int flag)
     }
 }
 
-#endif				/* PCD */
+#endif                          /* PCD */
 
 
 
@@ -3935,7 +3994,7 @@ edt_flush_fifo(EdtDev * edt_p)
     unsigned int dmy;
 
     edt_msg(EDTDEBUG, "edt_flush_fifo\n") ;
-    /* Turn off	the PCI	fifo */
+    /* Turn off the PCI fifo */
     tmp = edt_reg_read(edt_p, EDT_DMA_INTCFG);
     tmp &= (~EDT_RFIFO_ENB);
     edt_reg_write(edt_p, EDT_DMA_INTCFG, tmp);
@@ -3967,7 +4026,7 @@ edt_flush_fifo(EdtDev * edt_p)
     }
 
 
-    /* Turn	on the PCI fifos, which	flushes	them */
+    /* Turn     on the PCI fifos, which flushes them */
     tmp |= (EDT_RFIFO_ENB);
     edt_reg_write(edt_p, EDT_DMA_INTCFG, tmp);
     dmy = edt_reg_read(edt_p, EDT_DMA_INTCFG);
@@ -4087,19 +4146,19 @@ edt_set_direction(EdtDev * edt_p, int direction)
 /*
 * EDT IOCTL Interface Routines
 *
-* DESCRIPTION General	Purpose	device control layer for EDT PCI and SBus
+* DESCRIPTION General   Purpose device control layer for EDT PCI and SBus
 * interface products
 *
 * All routines access a specific device, whose handle is created and returned
-* by	the <device>_open() routine.
+* by    the <device>_open() routine.
 */
 
 
-#ifndef	TRUE
-#define	TRUE 1
+#ifndef TRUE
+#define TRUE 1
 #endif
-#ifndef	FALSE
-#define	FALSE 0
+#ifndef FALSE
+#define FALSE 0
 #endif
 
 
@@ -4109,7 +4168,7 @@ edt_set_direction(EdtDev * edt_p, int direction)
 * DESCRIPTION initiate an action in Edt_Dev driver, without getting or setting
 * anything
 *
-* ARGUMENTS: fd	file descriptor	from DEV_open()	routine action	action to
+* ARGUMENTS: fd file descriptor from DEV_open() routine action  action to
 * take -- mustbe XXG_ action, defined in edt_ioctl.h
 */
 int
@@ -4300,7 +4359,13 @@ edt_set_dependent(EdtDev * edt_p, void *addr)
         }
         else
         {
+            if (edt_p->devid == DMY_ID)
+              close(creat(edt_p->edt_devname, 0666));
+
             edt_p->fd = open(edt_p->edt_devname, O_RDWR, 0666);
+
+            if (edt_p->devid == DMY_ID)
+              unlink(edt_p->edt_devname);
         }
 #endif
         edt_write(edt_p, addr, sizeof(Dependent));
@@ -4334,7 +4399,13 @@ edt_get_dependent(EdtDev * edt_p, void *addr)
             FILE_ATTRIBUTE_NORMAL,
             NULL);
 #else
+        if (edt_p->devid == DMY_ID)
+          close(creat(edt_p->edt_devname, 0666));
+
         edt_p->fd = open(edt_p->edt_devname, O_RDWR, 0666);
+
+        if (edt_p->devid == DMY_ID)
+          unlink(edt_p->edt_devname);
 #endif
         ret = edt_read(edt_p, addr, sizeof(Dependent));
 #ifdef _NT_
@@ -4478,6 +4549,7 @@ edt_send_msg(EdtDev * edt_p, int unit, const char *msg, int size)
     {
         edt_msg(EDTFATAL, "Error writing %d bytes to serial buffer\n", size);
         size = sizeof(ser.buf);
+        return -1;
     }
     memcpy(ser.buf,msg,size) ;
 
@@ -4553,7 +4625,7 @@ edt_set_autodir(EdtDev * edt_p, int val)
 *
 * @param edt_p pointer to edt device structure returned by #edt_open or
 * #edt_open_channel
-* @param flag	Tells whether and when to flush the FIFOs. Valid values
+* @param flag   Tells whether and when to flush the FIFOs. Valid values
 * are:
 * \arg \c EDT_ACT_NEVER  don't flush before DMA transfer (default)
 * \arg \c EDT_ACT_ONCE   flush before the start of the next DMA
@@ -5172,9 +5244,9 @@ edt_wait_event_thread(void *pObj)
 }
 
 /* ****************************************************** */
-/* Add an event function for an event_type		 */
-/* Name is derived from event type -			 */
-/* only works for "base events" defined for all boards	 */
+/* Add an event function for an event_type               */
+/* Name is derived from event type -                     */
+/* only works for "base events" defined for all boards   */
 /* ****************************************************** */
 
 int
@@ -5258,9 +5330,9 @@ edt_set_event_func(EdtDev * edt_p, int event_type, EdtEventFunc func, void *data
     /*
     * The continuous parameter now supports one of three modes:
     *
-    *		EDT_EVENT_MODE_ONCE		(0)
-    *		EDT_EVENT_MODE_CONTINUOUS	(1)
-    *		EDT_EVENT_MODE_SERIALIZE	(2)
+    *           EDT_EVENT_MODE_ONCE             (0)
+    *           EDT_EVENT_MODE_CONTINUOUS       (1)
+    *           EDT_EVENT_MODE_SERIALIZE        (2)
     *
     * The mode is passed to the driver in the high byte of event_type.
     */
@@ -5311,11 +5383,11 @@ edt_remove_event_func(EdtDev * edt_p, int event_type)
     return 0;
 }
 
-#elif defined(__sun)		/* _NT_ */
+#elif defined(__sun)            /* _NT_ */
 
 /* *******************************************************/
-/* Add an event function for an event_type		 */
-/* Name is derived from event type			 */
+/* Add an event function for an event_type               */
+/* Name is derived from event type                       */
 /* - only works for "base events" defined for all boards */
 /* *******************************************************/
 
@@ -5365,9 +5437,9 @@ edt_set_event_func(EdtDev * edt_p, int event_type, EdtEventFunc f, void *data,
     /*
     * The continuous parameter now supports one of three modes:
     *
-    *		EDT_EVENT_MODE_ONCE		(0)
-    *		EDT_EVENT_MODE_CONTINUOUS	(1)
-    *		EDT_EVENT_MODE_SERIALIZE	(2)
+    *           EDT_EVENT_MODE_ONCE             (0)
+    *           EDT_EVENT_MODE_CONTINUOUS       (1)
+    *           EDT_EVENT_MODE_SERIALIZE        (2)
     *
     * The mode is passed to the driver in the high byte of event_type.
     */
@@ -5394,7 +5466,7 @@ edt_set_event_func(EdtDev * edt_p, int event_type, EdtEventFunc f, void *data,
 }
 
 /********************************************************/
-/* Close everything and zero memory			 */
+/* Close everything and zero memory                      */
 /********************************************************/
 
 static
@@ -5425,7 +5497,7 @@ edt_wait_event_thread(void *pObj)
 
 #ifdef __sun
     if (p->owner->use_RT_for_event_func)
-        edt_set_RT(1) ; 	/* This isn't a good idea unless
+        edt_set_RT(1) ;         /* This isn't a good idea unless
                             * you really can't live without it.  - Mark
                             */
 #endif
@@ -5463,7 +5535,7 @@ edt_wait_event_thread(void *pObj)
 }
 
 /* *******************************************************/
-/* Delete an event handler				 */
+/* Delete an event handler                               */
 /* *******************************************************/
 
 int
@@ -5503,8 +5575,8 @@ edt_remove_event_func(EdtDev * edt_p, int event_type)
 #include <pthread.h>
 
 /* *******************************************************/
-/* Add an event function for an event_type		 */
-/* Name is derived from event type			 */
+/* Add an event function for an event_type               */
+/* Name is derived from event type                       */
 /* - only works for "base events" defined for all boards */
 /* *******************************************************/
 
@@ -5555,9 +5627,9 @@ edt_set_event_func(EdtDev * edt_p, int event_type, EdtEventFunc f, void *data,
     /*
     * The continuous parameter now supports one of three modes:
     *
-    *		EDT_EVENT_MODE_ONCE		(0)
-    *		EDT_EVENT_MODE_CONTINUOUS	(1)
-    *		EDT_EVENT_MODE_SERIALIZE	(2)
+    *           EDT_EVENT_MODE_ONCE             (0)
+    *           EDT_EVENT_MODE_CONTINUOUS       (1)
+    *           EDT_EVENT_MODE_SERIALIZE        (2)
     *
     * The mode is passed to the driver in the high byte of event_type.
     */
@@ -5584,7 +5656,7 @@ edt_set_event_func(EdtDev * edt_p, int event_type, EdtEventFunc f, void *data,
 }
 
 /********************************************************/
-/* Close everything and zero memory			 */
+/* Close everything and zero memory                      */
 /********************************************************/
 
 static
@@ -5641,7 +5713,7 @@ edt_wait_event_thread(void *pObj)
 }
 
 /* *******************************************************/
-/* Delete an event handler				 */
+/* Delete an event handler                               */
 /* *******************************************************/
 
 int
@@ -5716,7 +5788,7 @@ edt_wait_event_thread(void *pObj)
 }
 
 /* *******************************************************
-* Delete an event handler								*
+* Delete an event handler                                                               *
 * *******************************************************/
 
 int
@@ -5733,7 +5805,7 @@ edt_remove_event_func(EdtDev * edt_p, int event_type)
     return -1;
 }
 
-#endif				/* _NT_ */
+#endif                          /* _NT_ */
 
 int
 edt_enable_event(EdtDev * edt_p, int event_type)
@@ -5964,7 +6036,7 @@ p16d_get_command(EdtDev * edt_p)
 * sets value of command register
 *
 * @param edt_p:     device handle returned from edt_open
-*         val:	     value to which you wish to set the command register
+*         val:       value to which you wish to set the command register
 *
 * @return none
 */
@@ -6024,11 +6096,12 @@ p16d_get_stat(EdtDev * edt_p)
     return (edt_reg_read(edt_p, P16_STATUS));
 }
 
-#endif				/* P16D */
+#endif                          /* P16D */
 
 
 /**
 * parse -u argument returning the device and unit.
+*
 * @return unit or -1 on failure (as well as device in dev, and channel
 * in channel_ptr).
 * @param instr The input string. The argument of the -u option (like
@@ -6048,8 +6121,8 @@ edt_parse_unit_channel(const char *instr,
                        int *channel_ptr)
 {
     int     unit = -1;
-    int		channel = -1;
-    size_t		last;
+    int         channel = -1;
+    size_t              last;
 
     char    retdev[256];
     char    str[256];
@@ -6245,6 +6318,22 @@ edt_ref_tmstamp(EdtDev *edt_p, u_int val)
 
 }
 
+/* check a bit against the capability register*/
+int edt_board_capable(EdtDev *edt_p, u_int options)
+
+{
+  u_int mask;
+
+  mask = edt_reg_read(edt_p, EDT_CAP_REGISTER);
+
+  /* some old boards read all f's */
+  if (mask == 0xffffffff)
+    return 0;
+
+  return ((mask & options) == options);
+
+}
+
 /**
 *
 * Atomically returns the number of bytes read so far into the current buffer
@@ -6259,20 +6348,64 @@ edt_ref_tmstamp(EdtDev *edt_p, u_int val)
 * @return The number of bytes transferred, as described above, plus buffer number by reference.
 *
 */
+/* The counters are individual / channel */
+#define EDT_BYTECOUNTER(channel) (EDT_PCI_FPGA_REGISTER + 0x100 + (4 * (channel)))
 
 uint_t
-edt_get_bufbytecount(EdtDev * edt_p, u_int *cur_buffer)
+edt_get_bufbytecount(EdtDev * edt_p, u_int *bufnum_p)
 {
-    uint_t args[2] ;
+  uint64_t total;
+  u_int ndone;
+  u_int count;
+  uint64_t wrapped;
+  uint64_t totmod;
+  u_int c;
+  u_int bsize;
+  uint_t args[2];
 
+  /* Check for presence of bytecount reg */
+  if (!edt_board_capable(edt_p, EDT_HAS_BYTECOUNT))
+  {
+    /* Old method */
     if (edt_ioctl(edt_p, EDTG_BUFBYTECOUNT, &args) < 0)
-        edt_msg_perror(EDTFATAL, "edt_ioctl(EDTG_BUFBYTECOUNT)");
+      edt_msg_perror(EDTLIB_MSG_FATAL, "edt_ioctl(EDTG_BUFBYTECOUNT)");
 
-    if (cur_buffer)
-        *cur_buffer = args[1] ;
+    if (bufnum_p)
+      *bufnum_p = args[1];
     return (args[0]);
-}
+  }
 
+  /* get an approximate location of DMA based on donecount
+     to ddeal with 32-bit wraparound */
+  bsize = edt_p->ring_buffer_bufsize / 4;
+  ndone = edt_done_count(edt_p);
+  total = (uint64_t)ndone * bsize;
+
+  /* get high 32 bit word based on done */
+  wrapped = total & 0xFFFFFFFF00000000;
+
+  count = edt_reg_read(edt_p, EDT_BYTECOUNTER(edt_p->channel_no));
+  wrapped += count;
+
+  totmod = total & 0xFFFFFFFF;
+
+  /* deal with wraparound special case */
+  /* where total hasn't wrapped 32 bits yet but bytecount has */
+
+  if (count < totmod)
+  {
+    /* increment upper 32 bits*/
+    wrapped += 0x100000000;
+  }
+
+  /* calculate which buffer and buffer offset based on
+     constant size buffers */
+  *bufnum_p = (wrapped / bsize) % edt_p->ring_buffer_numbufs;
+  c = wrapped % bsize;
+
+  return c * 4;
+
+}
 
 void
 edt_dmasync_fordev(EdtDev *edt, int bufnum, int offset, int bytecount)
@@ -6305,10 +6438,10 @@ edt_little_endian()
     u_short test;
     u_char *byte_p;
 
-    byte_p = (u_char *)	& test;
-    *byte_p++ =	0x11;
+    byte_p = (u_char *) & test;
+    *byte_p++ = 0x11;
     *byte_p = 0x22;
-    if (test ==	0x1122)
+    if (test == 0x1122)
     {
         edt_msg(EDTDEBUG, "edt_endian: BIG (SPARC, PowerPC)\n");
         return (0);
@@ -6319,6 +6452,40 @@ edt_little_endian()
         return (1);
     }
 }
+
+
+//
+// Internal EDT lab use only - set all ring buffer SgList entries to specified 32-bit physaddr
+//
+int
+edt_set_buffer_physaddr(EdtDev * edt_p, uint_t index, uint64_t physaddr)
+{
+
+    buf_args sysargs;
+
+
+    if (edt_p->ring_buffers[index])
+    {
+
+        sysargs.index = index;
+        sysargs.addr = physaddr;
+        sysargs.size = 0;
+
+        return edt_ioctl(edt_p, EDTS_BUF, &sysargs);
+
+    }
+    else
+    {
+
+        edt_msg_perror(EDTFATAL,
+                "edt_set_buffer_physaddr: Attempt to set physaddr on unallocated buffer\n");
+
+        return -1;
+
+    }
+
+}
+
 
 /**
 * Used to change the size or direction of one of the ring buffers.
@@ -6475,7 +6642,7 @@ edt_get_todo(EdtDev * edt_p)
 {
     u_int todo ;
     if (edt_p->devid == DMY_ID)
-        todo = dmy_started ;
+        todo = edt_p->dmy_started ;
     else
         edt_ioctl(edt_p, EDTG_TODO, &todo);
     edt_msg(EDTDEBUG, "edt_get_todo: %d\n",todo) ;
@@ -6500,7 +6667,7 @@ edt_set_drivertype(EdtDev *edt_p, u_int type)
 }
 
 /**
-* Gets the seconds and microseconds timestamp in the same format as the
+* Gets the seconds and nanoseconds timestamp in the same format as the
 * buffer_timed functions. Used for debugging and coordinating dma
 * completion time with other events.
 *
@@ -6681,14 +6848,14 @@ edt_set_RT(u_int pri)
 #define XPLLDAT (0x1<<19)
 #define XPLLSTB (0x1<<20)
 
-#define	XC_X16 	(0x00)		/* PC Only: hi for SCLK=16MHz, not SCLK=CCLK */
-#define	XC_AVSEL (0x80)		/* GP Only: hi for SCLK=AVCLK, not SCLK=16MHz*/
+#define XC_X16  (0x00)          /* PC Only: hi for SCLK=16MHz, not SCLK=CCLK */
+#define XC_AVSEL (0x80)         /* GP Only: hi for SCLK=AVCLK, not SCLK=16MHz*/
 
-#define	XC_CCLK	(0x01)		/* These codes interpreted by sse_wpp() */
-#define	XC_DIN	(0x02)          /*  Xilinx config data and clock */
-#define	XC_PROG	(0x04)		/*  inverted in sse_wpp() when driving PROGL */
-#define	XC_INITL (0x04)		/* Actual bit positions in status register */
-#define	XC_DONE  (0x08)
+#define XC_CCLK (0x01)          /* These codes interpreted by sse_wpp() */
+#define XC_DIN  (0x02)          /*  Xilinx config data and clock */
+#define XC_PROG (0x04)          /*  inverted in sse_wpp() when driving PROGL */
+#define XC_INITL (0x04)         /* Actual bit positions in status register */
+#define XC_DONE  (0x08)
 
 /* Write encoded data to parallel port data register */
 static void
@@ -6696,7 +6863,7 @@ sse_wpp(EdtDev *edt_p, int val)
 {
     unsigned char bits;
 
-    bits = edt_intfc_read(edt_p, PCD_FUNCT) & 0x08;	/* Preserve SWAPEND */
+    bits = edt_intfc_read(edt_p, PCD_FUNCT) & 0x08;     /* Preserve SWAPEND */
 
     if (val & XC_DIN)   bits |= 0x04;
     if (val & XC_PROG)  bits |= 0x01;
@@ -6704,7 +6871,7 @@ sse_wpp(EdtDev *edt_p, int val)
 
     edt_intfc_write(edt_p, PCD_FUNCT, bits);
 
-    if (val & XC_CCLK) 		/* strobe the clock hi then low */
+    if (val & XC_CCLK)          /* strobe the clock hi then low */
     {
         edt_intfc_write(edt_p, PCD_FUNCT, (unsigned char) (bits | 0x02));
         edt_intfc_write(edt_p, PCD_FUNCT, bits);
@@ -6728,7 +6895,7 @@ sse_spal(EdtDev * edt_p, int v)
 static void
 sse_xosc(EdtDev * edt_p, int val)
 {
-    int     n, s;	/* First set up MC12430 lines, CLK=0, DAT=0, STB=0 */
+    int     n, s;       /* First set up MC12430 lines, CLK=0, DAT=0, STB=0 */
     int   gspv = edt_intfc_read(edt_p, PCD_PAL0)
         | edt_intfc_read(edt_p, PCD_PAL1) << 8
         | edt_intfc_read(edt_p, PCD_PAL2) << 16;
@@ -6736,28 +6903,28 @@ sse_xosc(EdtDev * edt_p, int val)
     gspv = (gspv & ~XPLLBYP & ~XPLLCLK & ~XPLLDAT & ~XPLLSTB);
     sse_wpp(edt_p, 0);
 
-    edt_msleep(1);		/* Shut down AVSEL */
+    edt_msleep(1);              /* Shut down AVSEL */
 
     for (n = 13; n >= 0; n--)
-    {				/* Send 14 bits of data to MC12430 */
-        s = val & (0x1 << n);	/* get the current data bit */
+    {                           /* Send 14 bits of data to MC12430 */
+        s = val & (0x1 << n);   /* get the current data bit */
 
         if (s)
         {
-            sse_spal(edt_p, gspv | XPLLDAT);	/* Set up data, then clock it */
+            sse_spal(edt_p, gspv | XPLLDAT);    /* Set up data, then clock it */
             sse_spal(edt_p, gspv | XPLLDAT | XPLLCLK);
         }
         else
         {
-            sse_spal(edt_p, gspv);	/* Strobe clock only, no data */
+            sse_spal(edt_p, gspv);      /* Strobe clock only, no data */
             sse_spal(edt_p, gspv | XPLLCLK);
         }
 
         edt_msg(EDTDEBUG, "sse_xosc:  n:%d  s:%x\n", n, (s != 0));
     }
 
-    sse_spal(edt_p, gspv | XPLLSTB);	/* Strobe serial_load */
-    sse_spal(edt_p, gspv);		/* Clear the strobe */
+    sse_spal(edt_p, gspv | XPLLSTB);    /* Strobe serial_load */
+    sse_spal(edt_p, gspv);              /* Clear the strobe */
 
 
     if ((val >> 11) == 6)
@@ -6765,20 +6932,20 @@ sse_xosc(EdtDev * edt_p, int val)
         gspv |= XPLLBYP;
         sse_spal(edt_p, gspv);
 
-        sse_wpp(edt_p, XC_AVSEL);	/* On GP, drive SCLK from AV9110 */
+        sse_wpp(edt_p, XC_AVSEL);       /* On GP, drive SCLK from AV9110 */
     }
     else
         sse_wpp(edt_p, 0);
 
 
     if (XC_X16)
-        sse_wpp(edt_p, XC_X16);		/* On PC, drive SCLK with 16 MHz ref */
+        sse_wpp(edt_p, XC_X16);         /* On PC, drive SCLK with 16 MHz ref */
 }
 
 
 double
 sse_set_out_clk(EdtDev * edt_p, double fmhz)
-{				/* Set ECL clock to freq specified in MHz */
+{                               /* Set ECL clock to freq specified in MHz */
     int     m, n, t, hex, nn, fx;
     edt_pll avp;
     double  avf = 0.0; /* should this have a more reasonable value? --doug */
@@ -6803,56 +6970,56 @@ sse_set_out_clk(EdtDev * edt_p, double fmhz)
         n = 3;
         m = fx / 2;
         nn = 1;
-    }				/* Every 2 MHz */
+    }                           /* Every 2 MHz */
     else if (fx > 200)
     {
         t = 0;
         n = 0;
         m = fx;
         nn = 2;
-    }				/* Every 1 MHz */
+    }                           /* Every 1 MHz */
     else if (fx > 100)
     {
         t = 0;
         n = 1;
         m = fx * 2;
         nn = 4;
-    }				/* Every 500 KHz */
+    }                           /* Every 500 KHz */
     else if (fx >= 50)
     {
         t = 0;
         n = 2;
         m = fx * 4;
         nn = 8;
-    }				/* Every 250 KHz */
+    }                           /* Every 250 KHz */
     else
     {
         avf = edt_find_vco_frequency(edt_p, fmhz * 1E6, (double) 30E6, &avp, 0);
         if (avf != 0)
-            edt_set_out_clk(edt_p, &avp);	/* Load AV9110 */
+            edt_set_out_clk(edt_p, &avp);       /* Load AV9110 */
         t = 6;
         n = 3;
         m = 200;
-        nn = 4;			/* Put MC12430 in bypass, use AV9110 */
+        nn = 4;                 /* Put MC12430 in bypass, use AV9110 */
     }
 
     hex = (t << 11) | (n << 9) | m;
 
-    sse_xosc(edt_p, hex);	/* Load MC12430 hw */
+    sse_xosc(edt_p, hex);       /* Load MC12430 hw */
 
     if (t != 6)
     {
         edt_msg(EDTDEBUG,
             "sse_set_out_clk:  %f MHz  MC12430: t:%d  n:%d  m:%d  hex:0x%04x\n",
             (2.0 * m / nn), t, n, m, hex);
-        return (2.0 * m / nn);	/* Freq of MC12430 in MHz */
+        return (2.0 * m / nn);  /* Freq of MC12430 in MHz */
     }
     else
     {
         edt_msg(EDTDEBUG,
             "sse_set_out_clk: %f MHz AV9110:  m:%d n:%d v:%d r:%d h:%d l:%d x:%d\n",
             (avf / 1E6), avp.m, avp.n, avp.v, avp.r, avp.h, avp.l, avp.x);
-        return (avf / 1E6);	/* Freq of AV9110 in MHz */
+        return (avf / 1E6);     /* Freq of AV9110 in MHz */
     }
 }
 
@@ -7030,7 +7197,7 @@ p11w_set_abortdma_onintr(EdtDev *edt_p, int flag)
     }
 }
 
-#endif				/* P11W */
+#endif                          /* P11W */
 
 /**
 * Gets the device ID of the specified device.
@@ -7144,9 +7311,9 @@ edt_idstring(int id, int promcode)
 {
     if (promcode == AMD_XC5VLX30T_A) {
         switch(id) {
-            case PE4DVCL_ID:	return ("pcie4 dva c-link");
-            case PE8DVCL_ID:	return ("pcie8 dva c-link");
-            case PE8DVCLS_ID:	return ("pcie8 dva cls");
+            case PE4DVCL_ID:    return ("pcie4 dva c-link");
+            case PE8DVCL_ID:    return ("pcie8 dva c-link");
+            case PE8DVCLS_ID:   return ("pcie8 dva cls");
         }
     }
     return edt_idstr(id);
@@ -7169,69 +7336,155 @@ edt_idstr(int id)
     {
 
 /* ALERT: SEE EDT_IDSTRING FOR THESE GUYS which need promcode to distinguish between 'a' and non 'a' versions
-*    case PE4DVCL_ID:	return ("pcie4 dva c-link");
-*    case PE8DVCL_ID:	return ("pcie8 dva c-link");
-*    case PE8DVCLS_ID:	return ("pcie8 dva cls");
+*    case PE4DVCL_ID:     return ("pcie4 dva c-link");
+*    case PE8DVCL_ID:     return ("pcie8 dva c-link");
+*    case PE8DVCLS_ID:    return ("pcie8 dva cls");
 */
+    case PE1DVVL_ID:       return ("VisionLink F1");
+    case PE4DVVL_ID:       return ("VisionLink F4");
+    case PE8VLCLS_ID:      return ("VisionLink CLS");
+    case PE4DVVLFOX_ID:    return ("VisionLink FOX4");
 
-    case P11W_ID:		return("pci 11w");
-    case P16D_ID:		return("pci 16d");
-    case PDV_ID:		return("pci dv");
-    case PDVA_ID:		return("pci dva");
-    case PDVA16_ID:		return("pci dva16");
-    case PDVK_ID:		return("pci dvk");
-    case PDVRGB_ID:		return("pci dv-rgb");
-    case PDV44_ID:		return("pci dv44");
-    case PDVCL_ID:		return("pci dv c-link");
-    case PDVCL2_ID:		return("pci dv cls");
-    case PE4DVCL_ID:	return("pcie4 dv c-link");
-    case PE8DVCL_ID:	return("pcie8 dv c-link");
-    case PE8DVCLS_ID:	return("pcie8 dv cls");
-    case PDVAERO_ID:	return("pcd dv aero serial");
-    case PCD20_ID:		return("pci cd-20");
-    case PCD40_ID:		return("pci cd-40");
-    case PCD60_ID:		return("pci cd-60");
-    case PCDA_ID:		return("pci cda");
-    case PCDCL_ID:		return("pci cd cl");
-    case PGP20_ID:		return("pci gp-20");
-    case PGP40_ID:		return("pci gp-40");
-    case PGP60_ID:		return("pci gp-60");
+    case P11W_ID:          return("pci 11w");
+    case P16D_ID:          return("pci 16d");
+    case PDV_ID:           return("pci dv");
+    case PDVA_ID:          return("pci dva");
+    case PDVA16_ID:        return("pci dva16");
+    case PDVK_ID:          return("pci dvk");
+    case PDVRGB_ID:        return("pci dv-rgb");
+    case PDV44_ID:         return("pci dv44");
+    case PDVCL_ID:         return("pci dv c-link");
+    case PDVCL2_ID:        return("pci dv cls");
+    case PE4DVCL_ID:       return("pcie4 dv c-link");
+    case PE8DVCL_ID:       return("pcie8 dv c-link");
+    case PE8DVCLS_ID:      return("pcie8 dv cls");
+    case PDVAERO_ID:       return("pcd dv aero serial");
+    case PCD20_ID:         return("pci cd-20");
+    case PCD40_ID:         return("pci cd-40");
+    case PCD60_ID:         return("pci cd-60");
+    case PCDA_ID:          return("pci cda");
+    case PCDCL_ID:         return("pci cd cl");
+    case PGP20_ID:         return("pci gp-20");
+    case PGP40_ID:         return("pci gp-40");
+    case PGP60_ID:         return("pci gp-60");
 
-    case PGP_THARAS_ID:	return("pci gp-tharas");
-    case PGP_ECL_ID:	return("pci gp-ecl");
-    case PCD_16_ID:		return("pci cd-16");
-    case PCDA16_ID:		return("pci cda16");
+    case PGP_THARAS_ID:    return("pci gp-tharas");
+    case PGP_ECL_ID:       return("pci gp-ecl");
+    case PCD_16_ID:        return("pci cd-16");
 
-    case PDVFCI_AIAG_ID:return("pci-fci aiag");
-    case PDVFCI_USPS_ID:return("pci-fci usps");
-    case PCDFCI_SIM_ID:	return("pci-fci sim");
-    case PCDFCI_PCD_ID:	return("pci-fci pcd");
-    case PCDFOX_ID:		return("pcd fox");
-    case PDVFOX_ID:		return("pci dv fox");
-    case PE4DVFOX_ID:	return("pcie4 dva fox");
-    case PE8DVFOX_ID:	return("pcie8 dva fox");
-    case P53B_ID:		return("pci 53b");
-    case PDVFOI_ID:		return("pdv foi");
-    case PSS4_ID:		return("pci ss-4");
-    case PSS16_ID:		return("pci ss-16");
-    case PGS4_ID:		return("pci gs-4");
-    case PGS16_ID:		return("pci gs-16");
-    case PE8LX1_ID:		return("pcie8 lx-1");
-    case PE8LX16_LS_ID:	return("pcie8 lx-16 (slow)");
-    case PE8LX16_ID:	return("pcie8 lx-16");
-    case PE4CDA_ID: 	return("pcie4 cda");
-    case PE8LX32_ID:	return("pcie8 lx-32");
-    case PE4AMC16_ID:	return("pcie4 AMC16");
-    case PE8G3S5_ID:  	return("pcie8g3 s5");
-    case WSU1_ID:   	return("wsu 1");
-    case SNAP1_ID:  	return("snap 1");
-    case DMY_ID:		return("dummy");
-    case DMYK_ID:		return("dummy pci dvk/44/foi");
-    case PC104ICB_ID:	return("pc104 icb");
-    default:			return("unknown");
+    case PCDA16_ID:        return("pci cda16");
+    case PE4CDA_ID:        return("pcie4 cda");
+    case PE4CDA16_ID:      return("pcie4 cda16");
+
+    case PDVFCI_AIAG_ID:   return("pci-fci aiag");
+    case PDVFCI_USPS_ID:   return("pci-fci usps");
+    case PCDFCI_SIM_ID:    return("pci-fci sim");
+    case PCDFCI_PCD_ID:    return("pci-fci pcd");
+    case PCDFOX_ID:        return("pcd fox");
+    case PDVFOX_ID:        return("pci dv fox");
+    case PE4DVFOX_ID:      return("pcie4 dva fox");
+    case PE8DVFOX_ID:      return("pcie8 dva fox");
+    case P53B_ID:          return("pci 53b");
+    case PDVFOI_ID:        return("pdv foi");
+    case PSS4_ID:          return("pci ss-4");
+    case PSS16_ID:         return("pci ss-16");
+    case PGS4_ID:          return("pci gs-4");
+    case PGS16_ID:         return("pci gs-16");
+    case PE8LX1_ID:        return("pcie8 lx-1");
+    case PE8LX16_LS_ID:    return("pcie8 lx-16 (slow)");
+    case PE8LX16_ID:       return("pcie8 lx-16");
+    case PE8LX32_ID:       return("pcie8 lx-32");
+    case PE4AMC16_ID:      return("pcie4 AMC16");
+    case PE8G3S5_ID:       return("pcie8 g3s5");
+    case PE8G3A5_ID:       return("pcie8 g3a5");
+    case PE8G3KU_ID:       return("pcie8 g3ku");
+    case PE8G2CML_ID:      return("pcie8 g2cml");
+    case WSU1_ID:          return("wsu 1");
+    case SNAP1_ID:         return("snap 1");
+    case DMY_ID:           return("dummy");
+    case DMYK_ID:          return("dummy pci dvk/44/foi");
+    case PC104ICB_ID:      return("pc104 icb");
+    case PE4BL_RADIO_ID:   return("pcie4 radio blade");
+    case PE4BL_RXLFRADIO_ID: return("pcie4 rx/lf radio blade");
+    case PE4BL_TXLFRADIO_ID: return("pcie4 tx/lf radio blade");
+    case PE1BL_TIMING_ID:  return("pcie1 timing blade");
+    case PE8BL_NIC_ID:     return("pcie8 nic blade");
+    case LCRBOOT_ID:       return("lcr boot");
+    case PE8G2V7_ID:       return("pcie8 g2v7");
+    case PE8BL_WBDSP_ID:   return("pcie8 dsp wideband blade");
+    case PE1BL_WBADC_ID:   return("pcie1 analog wideband blade");
+    default:               return("unknown");
     }
 }
 
+/*
+ * Return the PCI FPGA boot-sector header string.
+ *
+ * EDT PCI FPGA headers are embedded in the device's FPGA PROM and identify the specific FPGA
+ * firmware running on the board. The specific format is hardware-dependent, but typically
+ * consists of the name, build id, date, and time, with each field separated by whitespace.
+ *
+ * By convention, EDT PCI FPGA names are of the form name-XX.ext where XX is the rev number and
+ * ext is the extension. The rev number will be present in the header string but is typically omitted
+ * in the actual file name. Additionally, the extension is usually different -- in the header it will
+ * likely be .ncd or .rpd, whereas the filename extension is virtually always .bit.  For example, the
+ * PROM header name edt_firmware-02.rbt would most likely match a file named edt_firmware.bit in your
+ * package (to find out whether a  given FPGA firmware file matches the one in the board's PROM,
+ * use pciload verify.)
+ *
+ * @param edt_p pointer to edt device structure returned by #edt_open
+ * @param name character string to store the device (must be of sufficient length to store the header
+ * string; typically less than 80 characters but could be up to (and will be truncated to) 128 including
+ * the trailing NULL.
+ * @return
+ */
+char *
+edt_get_flash_prom_header(EdtDev *edt_p, char *name)
+{
+    u_short stat;
+    u_char jumpers, idbits, xidbits;
+    int promcode;
+    EdtPromData pdata;
+    Edt_prominfo *ep;
+
+    promcode = edt_flash_prom_detect(edt_p, &stat);
+    ep = edt_get_prominfo(promcode);
+    jumpers = stat & 0x3;
+    idbits = (stat >>2) & 0x1f;
+    xidbits = stat >> 8;
+
+    ep = edt_get_prominfo(promcode);
+    edt_read_prom_data(edt_p, promcode, ep->defaultseg, &pdata);
+
+    if (promcode > edt_get_max_promcode())
+        sprintf(name, "unknown [%02x %02x]", idbits, xidbits);
+    else strncpy(name, pdata.id, 127);
+
+    return name;
+}
+
+/**
+ * Gets the hardware revision number, from the FLASH prom embedded info
+ * @param edt_p pointer to edt device structure returned by #edt_open
+ * @return the hardware revision, or 0 if no error / no revision
+ */
+int
+edt_get_hw_rev(EdtDev *edt_p)
+{
+    int      promcode;
+    u_short  stat;
+
+    EdtPromData pdata;
+    Edt_embinfo ei;
+    Edt_prominfo *ep;
+
+    promcode = edt_flash_prom_detect(edt_p, &stat);
+    ep = edt_get_prominfo(promcode);
+    edt_read_prom_data(edt_p, promcode, ep->defaultseg, &pdata);
+    if (pdata.esn[0] && (edt_parse_devinfo(pdata.esn, &ei) == 0))
+      return ei.rev;
+    return 0;
+}
 
 /**
 * Performs a UNIX-like system() call which passes the argument
@@ -7241,7 +7494,7 @@ edt_idstr(int id)
 */
 #if defined(VXWORKS) || defined(TEST_VXWORKS)
 /* writable command string for vxworks calling edt_system() */
-char edt_vxw_cmdstr[512];
+char edt_vxw_cmdstr[512] = {0};
 
 /*
 * The following two arrays are used to register a function name with a
@@ -7250,14 +7503,8 @@ char edt_vxw_cmdstr[512];
 *
 * STRATEGY:  Preference is simplicity, but works with most applications.
 */
-static char *program_func_name[32] = { NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-static void * edt_vx_system_func[32] = { NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+static char *program_func_name[32] = {NULL};
+static void * edt_vx_system_func[32] = {NULL};
 
 /*
 * VxWorks programs calling edt_system() must first register the progam name
@@ -7291,42 +7538,40 @@ edt_system(const char *cmdstr)
 {
 #if defined(_NT_)
 
-    int ret;
-    char *newstr = (char *) malloc(512) ;
-    char *p = newstr ;
+    int ret = -1;
+    char newstr[512] = {'\0'};
+    char *p = newstr;
     int nowait = 0;
-    char *arg[32] = { NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-        NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-        NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-        NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-    };
-    int i ;
+    char *arg[32] = {NULL};
+    int arg_cnt = 0;
 
     if (cmdstr == NULL || *cmdstr == '\0')
-        return(0) ;
+        return -1;
 
-    strncpy(newstr, cmdstr, 511) ;
-    for (i = 0; (i < 32) && (p && *p); i++)
+    strncpy(newstr, cmdstr, sizeof(newstr) - 1);
+    for (arg_cnt = 0; (arg_cnt < 32) && (p && *p); arg_cnt++)
     {
         while (*p == ' ' || *p == '\t')
-            *p++ = '\0' ;
+            *p++ = '\0';
 
-        arg[i] = p ;
+        arg[arg_cnt] = p;
 
-        while (*p != ' ' && *p != '\t' && *p != '\0')
-            ++ p ;
+        while ((*p != ' ') && (*p != '\t') && (*p != '\0'))
+            ++p;
     }
 
-    if (*arg[i-1] == '&')
+    /* Convert UNIX '&' for running process in background to NT "nowait".
+     * Mark end of argument list with NULL pointer.
+     */
+    if (*arg[arg_cnt-1] == '&')
     {
-        arg[i-1] = NULL;
+        arg[arg_cnt-1] = NULL;
         nowait = 1;
     }
 
     ret = (int)spawnv((nowait) ? _P_NOWAIT : _P_WAIT, arg[0], arg);
-
-    free(newstr);
     return ret;
+
 #elif defined(VXWORKS) || defined(TEST_VXWORKS)
     /*
     * VxWorks programs calling edt_system() must first register the progam name
@@ -7381,15 +7626,15 @@ edt_system(const char *cmdstr)
 }
 #else
 
-    int	ret ;
+    int                ret ;
 
-    ret	= system(cmdstr) ;
+    ret      = system(cmdstr) ;
 
 #if defined(__sun) || defined(__linux__) || defined(__APPLE__)
     if (ret == -1 || WIFEXITED(ret) == 0)
         return -1 ;
     else
-        return WEXITSTATUS(ret)	;
+        return WEXITSTATUS(ret)      ;
 #else
     return ret ;
 #endif
@@ -7584,6 +7829,7 @@ edt_set_mezz_bitpath(EdtDev *edt_p, const char *bitpath)
 
     return rc;
 }
+
 
 
 /**
@@ -7885,11 +8131,11 @@ edt_pci_reboot(EdtDev *edt_p)
     FILE *fd2;
     char *tmpfname = "TMPfPciReboot.cfg";
 
-    if ((fd2 = fopen(tmpfname, "wb")) == NULL)	{
+    if ((fd2 = fopen(tmpfname, "wb")) == NULL)      {
         edt_msg(EDTFATAL,"edt_pci_reboot: Couldn't write to temp file %s\n", tmpfname);
         return -1;
     }
-    for	(addr=0; addr<=0x3c; addr+=4) {
+    for (addr=0; addr<=0x3c; addr+=4) {
         data  = epr_cfg(edt_p, addr);
         buf[addr] = data;
         putc(data, fd2);
@@ -7904,17 +8150,17 @@ edt_pci_reboot(EdtDev *edt_p)
     edt_reg_write(edt_p, 0x01000085, 0x40) ;
     edt_msleep(2000) ;
 
-    edt_msg(EDTDEBUG, "	 copy     reset     new\n");
-    for	(addr=0; addr<=0x3c; addr+=4) {
+    edt_msg(EDTDEBUG, "  copy     reset     new\n");
+    for (addr=0; addr<=0x3c; addr+=4) {
         rst  = epr_cfg(edt_p, addr);
         copy  =  buf[addr];
         epw_cfg(edt_p, addr, copy) ;
         new_one  = epr_cfg(edt_p, addr);
 
-        edt_msg(EDTDEBUG, "%02x:  %08x  %08x  %08x	 ", addr, copy, rst, new_one);
-        if	(copy != new_one)	edt_msg(EDTDEBUG, "ERROR\n");
-        else if	(rst != new_one)    edt_msg(EDTDEBUG, "changed\n");
-        else			edt_msg(EDTDEBUG, "\n");
+        edt_msg(EDTDEBUG, "%02x:  %08x  %08x  %08x       ", addr, copy, rst, new_one);
+        if      (copy != new_one)       edt_msg(EDTDEBUG, "ERROR\n");
+        else if (rst != new_one)    edt_msg(EDTDEBUG, "changed\n");
+        else                    edt_msg(EDTDEBUG, "\n");
 
         /* specifically check line cache reg to make sure it was reset by OS after cleared */
         if (addr == 0x0c)
@@ -8065,9 +8311,9 @@ edt_set_persistent_buffers(EdtDev * edt_p, int state)
 * @code
 * typedef struct
 * {
-*     uint_t	used_dma ;   // which channels have started dma within current open/close
-*     uint_t	alloc_dma ;  // which channels have has allocated > 1 ring buffer
-*     uint_t	active_dma ; // which channels have dma active right now
+*     uint_t    used_dma ;   // which channels have started dma within current open/close
+*     uint_t    alloc_dma ;  // which channels have has allocated > 1 ring buffer
+*     uint_t    active_dma ; // which channels have dma active right now
 * } edt_dma_info ;
 * @endcode
 *
@@ -8108,76 +8354,201 @@ edt_get_dma_info(EdtDev * edt_p, edt_dma_info *dmainfo)
     return (tmpinfo.used_dma | tmpinfo.alloc_dma | tmpinfo.active_dma) ;
 }
 
-
-/**`
-* Reads file 'edt_parts.xpn', comparing entries with part number,
-* returns matching xilinx in argument '\a xilinx' if match is found.
-* File should be ASCII text, space delimited, one line per entry, as
-* follows:
+/**
+* Reads the default part number->fpga cross-reference file edt_parts.xpn in the current directory, and provides the
+* FPGA if a match is found.
 *
-*  part_number xilinx description
+* Equivalent to calling edt_find_get_xref_info with edt_parts.xpn as the filename.
+* See /ref edt_find_xref_fpga for complete description.
 *
-* anything after the second space is ignored, and can be blank but
-* should be the description (name of the device)
-*
-* @param part_number should be 8 or 10 digits. The last 2 digits of 10 digit part
-* number are rev number. If a match with a 10-digit number is found,
-* return immediately. If no 10-digit match is found but an 8-digit is
-* found, returns with that. That way we can have some numbers return a
-* match regardless of rev, and others that cover a specific rev that takes
-* precedence.
-*
-* @param xilinx is a character array into which the xilinx type will be
+* @param fpga is a character array into which the fpga type will be
 * stored (e.g. 'xc2s100e' will be returned for the part_number '01901933').
-* An array of 128 bytes will be more than enough for the foreseeable
-* future.
+* An array of 128 bytes will be more than enough for the foreseeable future.
 *
 * @return 1 if found 8 or 10 digit match, 0 if not
 */
 int
-edt_find_xpn(char *part_number, char *xilinx)
+edt_find_xpn(char *part_number, char *fpga)
 {
-    FILE *xfp;
-    char str[128];
-    char xf_part_number[128], xf_xilinx[128];
+    return edt_get_xref_info("./edt_parts.xpn", (const char *)part_number, fpga, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+}
 
-    if ((xfp = fopen("edt_parts.xpn", "r")) == NULL)
+/**
+ * Reads a part number->fpga cross-reference file and provides the fpga and base serial number if a match is found.
+ *
+ * Opens the file specified in the \a path argument (e.g. <em>edt_parts.xpn</em>) and
+ * compares the entries with the provided part number. If a match is found, it will be copied
+ * to the \a fpga argument. Will also copy a serial number if found. Format of the file is ASCII text,
+ * one line per part number, as follows:
+ *
+ *  part_number fpga serial description (serial is optional and not present in earlier files)
+ *
+ * Anything after the third item is ignored, and can be blank but should typically be the
+ * description (name of the device). Since files originally had only two fields and no serial
+ * number, an attempt is made to determine if the 3rd field looks like a serial # and copies that if
+ * so, otherwise sets the first character null.
+ *
+ * @param path const character array containing path of the xref fpga file (typ. edt_parts.xpn).
+ * @param part_number character array in which to store the part number, should be 8 or 10 digits.
+ * The last 2 digits of 10 digit part no. are the rev no. If a match with a 10-digit number is found,
+ * returns with the info from that one. If no 10-digit match is found but an 8-digit is found, returns
+ * with that info. That way we can have some numbers return a match regardless of rev, and others that
+ * cover a specific rev that takes precedence.
+ * @param fpga a character array (64-bytes is sufficient) into which the fpga will be stored (e.g. xc2s100e' will
+ * be returned for the part_number '01901933'). If NULL this parameter will be ignored.
+ * @param serial a character array into which the base serial number will be stored. An array of 64 bytes is sufficient, or NULL (ignored).
+ * @param mac_type: a character array (8 bytes is sufficient) into which the mac address board type (as a character string) will be stored. If NULL this parameter will be ignored.
+ * @param mac_offset: a character array (8 bytes is sufficient) into which the mac address offset will be stored. If NULL this parameter will be ignored.
+ * @param nmacs: a character array (8 bytes is sufficient) into which the number of mac addresses (as a character string) for this board type will be stored. If NULL this parameter will be ignored.
+ * @param rsvd1: reserved
+ * @param rsvd2: reserved
+ *
+ * @return number of parameters successfully assigned, or 0 if none.
+ */
+int
+edt_get_xref_info(const char *path, const char *pn, char *fpga, char *sn, char *mtype, char *moffs, char *mcount, char *desc, char *rsvd1, char *rsvd2)
+{
+    int ret = 0;
+    FILE *xfp;
+    char str[EDT_STRBUF_SIZE];
+    char xf_pn[EDT_STRBUF_SIZE], xf_fpga[EDT_STRBUF_SIZE];
+
+    if ((xfp = fopen(path, "r")) == NULL)
     {
-        edt_msg(EDTWARN, "couldn't open 'edt_parts.xpn', will default to smallest first\n");
+        char errmsg[EDT_STRBUF_SIZE];
+        sprintf(errmsg, "couldn't open '%s'\n", path);
+        edt_msg(EDTWARN, errmsg);
         return 0;
     }
 
-    xilinx[0] = '\0';
-
-    while (fgets(str, sizeof(str), xfp))
+    while (fgets(str, EDT_STRBUF_SIZE, xfp) != NULL)
     {
-        if ((strlen(str) > 10) && (*str >= '0') && (*str <= '9'))
+
+        if ((strlen(str) > 10) && (*str >= '0') && (*str <= '9')) /* valid lines begin with a part number */
         {
-            if (sscanf(str, "%s %s", xf_part_number, xf_xilinx))
+            int n;
+
+            /* check for part number match, make sure there's at least one more field (fpga) */
+            if ((n = sscanf(str, "%s %s", xf_pn, xf_fpga)) == 2)
             {
-                /* first check for 10-digit part number, and if match return immediately */
-                if ((strlen(xf_part_number) == 10) && (strcasecmp(xf_part_number, part_number) == 0))
+                /* first check for 10-digit part number match; if found use this line and return */
+                if ((strlen(xf_pn) == 10) && (strcasecmp(xf_pn, pn) == 0))
                 {
-                    strcpy(xilinx, xf_xilinx);
+                    ret = get_xref_info_params(str, fpga, sn, mtype, moffs, mcount, desc, rsvd1, rsvd2);
+
                     fclose(xfp);
-                    return 1;
+                    return ret;
                 }
-                /* no 10-digit so far, check for 8-digit but don't return yet */
-                if ((strlen(xf_part_number) == 8) && (strncasecmp(xf_part_number, part_number, 8) == 0))
-                    strcpy(xilinx, xf_xilinx);
+
+                /* no 10-digit so far, check for 8-digit but don't return yet, */
+                /* in case there's a 10-digit one still to be found */
+                else if ((strlen(xf_pn) == 8) && (strncasecmp(xf_pn, pn, 8) == 0))
+                {
+                    ret = get_xref_info_params(str, fpga, sn, mtype, moffs, mcount, desc, rsvd1, rsvd2);
+                }
             }
         }
     }
 
     fclose(xfp);
 
-    if (*xilinx) /* must be an 8-digit match */
-        return 1;
-
-    return 0;
+    return ret;
 }
 
+/**
+ * EDT Internal: check & assign the remaining xref args
+ */
+static int
+get_xref_info_params(char *str, char *fpga, char *sn, char *mtype, char *moffs, char *mcount, char *desc, char *rsvd1, char *rsvd2)
+{
+    int n, ret = 0;
+    char xf_partnum[128], xf_fpga[128], xf_sn[128], xf_mtype[128], xf_moffs[128], xf_mcount[128], xf_desc[128], xf_rsvd1[128], xf_rsvd2[128];
 
+    if (fpga) fpga[0] = '\0';
+    if (sn) sn[0] = '\0';
+    if (mtype) mtype[0] = '\0';
+    if (moffs) moffs[0] = '\0';
+    if (mcount) mcount[0] = '\0';
+    if (desc) desc[0] = '\0';
+    if (rsvd1) rsvd1[0] = '\0';
+    if (rsvd2) rsvd2[0] = '\0';
+
+    n = sscanf(str, "%s %s %s %s %s %s \"%64[^\"]s\" %s", xf_partnum, xf_fpga, xf_sn, xf_mtype, xf_moffs, xf_mcount, xf_desc, xf_rsvd1, xf_rsvd2);
+
+    /* check if the xf_fpga arg looks like an fpga */
+    if ((n > 1) && fpga && (strlen(xf_fpga) > 1) && (strlen(xf_fpga) <= 64))
+    {
+        strcpy(fpga, xf_fpga);
+        ++ret;
+    }
+
+    /* check if the arg looks like a serial number (old format didn't have this) */
+    if ((n > 2) && sn && (strlen(xf_sn) > 5) && (strlen(xf_sn) < 25))
+    {
+        int i;
+
+        /* walk backward from the end to make sure there are at least 3 trailing digits */
+        strcpy(sn, xf_sn);
+        ++ret;
+        for (i=strlen(xf_sn)-1; i > strlen(xf_sn) - 4; i--)
+        {
+            if (!isdigit(xf_sn[i]))
+            {
+                sn[0] = '\0';
+                --ret;
+                break;
+            }
+        }
+    }
+
+    /* check if the arg looks like a mac type -- s/b 1-3 digit numeric (old format didn't have this) */
+    if ((n > 3) && mtype && (strlen(xf_mtype) > 0) && (strlen(xf_mtype) <= 3) && isdigit_str(xf_mtype))
+    {
+        strcpy(mtype, xf_mtype);
+        ++ret;
+    }
+
+    /* check if the arg looks like a mac offset -- s/b 1-3 digit numeric (old format didn't have this) */
+    if ((n > 4) && moffs && (strlen(xf_moffs) > 0) && (strlen(xf_moffs) <= 3) && isdigit_str(xf_moffs))
+    {
+        strcpy(moffs, xf_moffs);
+        ++ret;
+    }
+
+    /* check if the arg looks like a mac count -- s/b 1-3 digit numeric (old format didn't have this) */
+    if ((n > 5) && mcount && (strlen(xf_mcount) > 0) && (strlen(xf_mcount) <= 3) && isdigit_str(xf_mcount))
+    {
+        strcpy(mcount, xf_mcount);
+        ++ret;
+    }
+
+    /* check if the arg looks like a description -- s/b 3-128 chars (old format didn't have this) */
+    if ((n > 6) && desc && (strlen(xf_desc) > 3) && (strlen(xf_desc) <= 128))
+    {
+        strcpy(desc, xf_desc);
+        ++ret;
+    }
+
+    /* N > 7: future */
+    if (n > 7)
+        strcpy(rsvd1, xf_rsvd1);
+
+    if (n > 8)
+        strcpy(rsvd2, xf_rsvd2);
+
+    return ret;
+}
+
+static int
+isdigit_str(char *s)
+{
+    u_int i;
+
+    for (i=0; i<strlen(s); i++)
+        if ((s[i]) < '0' || s[i] > '9')
+            return 0;
+    return 1;
+}
 
 int
 edt_user_dma_wakeup(EdtDev *edt_p)
@@ -8311,9 +8682,12 @@ edt_set_mezz_id(EdtDev *edt_p)
         {
             test_edt = edt_open_channel(EDT_INTERFACE, edt_p->unit_no, chan);
 
-            ret = edt_ioctl(test_edt, EDTS_MEZZ_ID, &mezz_args);
+            if (test_edt)
+            {
+                ret = edt_ioctl(test_edt, EDTS_MEZZ_ID, &mezz_args);
 
-            edt_close(test_edt);
+                edt_close(test_edt);
+            }
         }
     }
 
@@ -8394,10 +8768,10 @@ edt_get_mezz_id(EdtDev *edt_p)
 
 #define CLK_CPLD 500
 /* register masks */
-#define	EDT_EXTBDID_IMPL	0x10
-#define EDT_EXTBDID_DATA	0x20
-#define EDT_EXTBDID_CLK		0x40
-#define EDT_EXTBDID_TS		0x80
+#define EDT_EXTBDID_IMPL        0x10
+#define EDT_EXTBDID_DATA        0x20
+#define EDT_EXTBDID_CLK         0x40
+#define EDT_EXTBDID_TS          0x80
 
 /*
 * read a 32 bit word from the cpld.
@@ -8408,7 +8782,7 @@ edt_read_extbdid_val(EdtDev *edt_p)
 
 {
     u_int ext_info = 0;
-    int idcnt;		/* counter for reading bits from cpld */
+    int idcnt;          /* counter for reading bits from cpld */
     int bdidreg;
 
     for(idcnt = 31; idcnt >= 0; --idcnt)
@@ -8571,9 +8945,9 @@ void edt_extbdid_reset(EdtDev *edt_p)
 u_int
 edt_get_full_board_id(EdtDev *edt_p, int *extended_n, int *rev_id, u_int *extended_data)
 {
-    u_int mezz_id;		/* board id from mezannine */
-    int board_id = 0;		/* board id read back from cpld. initialized to 0 */
-    int num_blocks = 0;		/* number of 32 bit blocks to read from cpld. initialized to 0 */
+    u_int mezz_id;              /* board id from mezannine */
+    int board_id = 0;           /* board id read back from cpld. initialized to 0 */
+    int num_blocks = 0;         /* number of 32 bit blocks to read from cpld. initialized to 0 */
     int ext_info = 0;
     int ext_data_index = 0;
     int tries = 2;
@@ -8848,13 +9222,17 @@ int
 edt_enable_channels(EdtDev *edt_p, u_int mask)
 {
 
-    if (edt_p->devid == PE8LX32_ID)
+    switch (edt_p->devid)
+    {
+        case PE8LX32_ID:
+        case PE8G2V7_ID:
+            edt_reg_or(edt_p, SSD16_CHEN32, mask);
+            break;
 
-        edt_reg_or(edt_p, SSD16_CHEN32, mask);
-
-    else
-
-        edt_reg_or(edt_p, SSD16_CHEN, mask);
+        default:
+            edt_reg_or(edt_p, SSD16_CHEN, mask);
+            break;
+    }
 
     return 0;
 }
@@ -8877,13 +9255,17 @@ int
 edt_disable_channels(EdtDev *edt_p, u_int mask)
 {
 
-    if (edt_p->devid == PE8LX32_ID)
+    switch (edt_p->devid)
+    {
+        case PE8LX32_ID:
+        case PE8G2V7_ID:
+            edt_reg_and(edt_p, SSD16_CHEN32, ~mask);
+            break;
 
-        edt_reg_and(edt_p, SSD16_CHEN32, ~mask);
-
-    else
-
-        edt_reg_and(edt_p, SSD16_CHEN, ~mask);
+        default:
+            edt_reg_and(edt_p, SSD16_CHEN, ~mask);
+            break;
+    }
 
 
     return 0;
@@ -8908,14 +9290,17 @@ edt_enable_channel(EdtDev *edt_p, u_int channel)
 
     u_int enable_bit = 1 << channel;
 
-    if (edt_p->devid == PE8LX32_ID)
+    switch (edt_p->devid)
+    {
+        case PE8LX32_ID:
+        case PE8G2V7_ID:
+            edt_reg_or(edt_p, SSD16_CHEN32, enable_bit);
+            break;
 
-        edt_reg_or(edt_p, SSD16_CHEN32, enable_bit);
-
-    else
-
-        edt_reg_or(edt_p, SSD16_CHEN, enable_bit);
-
+        default:
+            edt_reg_or(edt_p, SSD16_CHEN, enable_bit);
+            break;
+    }
 
     return 0;
 }
@@ -8941,14 +9326,17 @@ edt_disable_channel(EdtDev *edt_p, u_int channel)
 
     u_int enable_bit = 1 << channel;
 
+    switch (edt_p->devid)
+    {
+        case PE8LX32_ID:
+        case PE8G2V7_ID:
+            edt_reg_and(edt_p, SSD16_CHEN32, ~enable_bit);
+            break;
 
-    if (edt_p->devid == PE8LX32_ID)
-
-        edt_reg_and(edt_p, SSD16_CHEN32, ~enable_bit);
-
-    else
-
-        edt_reg_and(edt_p, SSD16_CHEN, ~enable_bit);
+        default:
+            edt_reg_and(edt_p, SSD16_CHEN, ~enable_bit);
+            break;
+    }
 
     return 0;
 }
@@ -9005,6 +9393,66 @@ edt_bar1_write(EdtDev * edt_p, u_int offset, u_int data)
     edt_reg_write(edt_p, EDT_BAR1_REGISTER | (offset & 0x0ffffffc), data);
 }
 
+
+/**
+* A convenience routine to access the EDT LCR registers.  Passed the Block
+* and offset for a 32-bit word.
+*
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+* @param block     integer register block selector
+* @param offset    integer block offset
+*
+* @return The value of the 32-bit register.
+*
+* \Example
+* u_int regVal = edt_lcr_read(edt_p, 2, 1);
+*
+* @see edt_lcr_write, edt_reg_read.
+*/
+
+unsigned int
+edt_lcr_read(EdtDev *edt_p, unsigned int regBlock, unsigned int regOffset)
+{
+
+    unsigned int regAddr = LCR_DDC_REG_SPACE | ((regBlock & 0x7F) << 12) | (regOffset & 0xFFF);
+
+    return edt_bar1_read(edt_p, regAddr);
+
+}
+
+
+
+/**
+* A convenience routine to access the EDT LCR registers.  Passed the Block
+* and offset for a 32-bit word.
+*
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+* @param block     integer register block selector
+* @param offset    integer block offset
+* @param data      32-bit value to set register with.
+*
+* \Example
+* @code
+* u_int regVal = 0xb01d_bee;
+* edt_lcr_write(edt_p, 2, 1, regVal);
+* @endcode
+*
+* @see edt_demod_read, edt_reg_write.
+*/
+
+void
+edt_lcr_write(EdtDev *edt_p, unsigned int regBlock, unsigned int regOffset, unsigned int regVal)
+{
+
+    unsigned int regAddr = LCR_DDC_REG_SPACE | ((regBlock & 0x7F) << 12) | (regOffset & 0xFFF);
+
+    edt_bar1_write(edt_p, regAddr, regVal);
+
+}
+
+
 /**
 * Routine to set the "port" number, as distinct from the dma channel
 */
@@ -9025,13 +9473,6 @@ edt_get_port(EdtDev *edt_p)
     return edt_p->port_no;
 }
 
-
-
-int
-edt_set_has_pcda_direction_bit(EdtDev *edt_p, u_int val)
-{
-    return edt_ioctl(edt_p, EDTS_HAS_PCDA_DIRECTION_BIT, &val);
-}
 
 /**
 * Reads the specified indirect method 2 register and returns its value.
@@ -9113,7 +9554,7 @@ edt_ind_2_write(EdtDev * edt_p, uint_t desc, u_int value, u_int *width)
  * "p11w":   $P11wHOME
  * "p16d":   $P16dHOME
  * "p53b":   $P53bHOME
- * 
+ *
  * By default, the installation script installs packages in /opt/EDT<em>dev<\em> (Linux) or C:\EDT\<em>dev</em> (Windows),
  * so for example with a pcd package and default install directory, this subroutine would return "/opt/EDTpcd" or "c:\EDT\pcd".
  *
@@ -9201,3 +9642,81 @@ const char *edt_envvar_from_devtype(const int devtype)
     }
     return ret;
 }
+
+/**
+* When "dmy" or "DMY" is passed as the first argument to edt_open*(),
+* edt_p->devid is set to DMY_ID and all attempted interaction with
+* EDT hardware is ignored.
+*
+* This function registers a callback function which is invoked when
+* edt_wait_for_buffers() is called to populate the ring buffer with
+* data.
+*
+* Example:  See the rd16_dmy_dma.c sample program.
+
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+*
+* @param callBack callback function invoked when edt_p->devid is DMY_ID
+* and edt_wait_for_buffers() is called.
+*
+* synopsys:  void (*callBack)(struct edt_device *edt_p, u_char *buf)
+*
+*/
+void
+edt_set_dmy_wait_for_buffers_callback(EdtDev *edt_p, void (*callBack)(struct edt_device *edt_p, u_char *buf))
+{
+  edt_p->dmy_wait_for_buffers_callback = callBack;
+}
+
+/**
+* When "dmy" or "DMY" is passed to edt_open*(), edt_p->devid is set to
+* DMY_ID and all attempted interaction with EDT hardware is ignored.
+*
+* This function registers a callback function which is invoked when
+* edt_reg_read() is called to return a simulated register read value.
+*
+* Example:  See the rd16_dmy_register.c sample program.
+
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+*
+* @param callBack callback function invoked when edt_p->devid is DMY_ID
+* and edt_reg_read() is called.
+*
+* synopsys:  u_int (*callBack)(struct edt_device *edt_p, u_int reg_desc)
+*
+*/
+void
+edt_set_dmy_reg_read_callback(EdtDev *edt_p, u_int (*callBack)(struct edt_device *edt_p, u_int reg_desc))
+{
+  edt_p->dmy_reg_read_callback = callBack;
+}
+
+
+/**
+* When "dmy" or "DMY" is passed as the first argument to edt_open*(),
+* edt_p->devid is set to DMY_ID and all attempted interaction with EDT
+* hardware is ignored.
+*
+* This function registers a callback function which is invoked when
+* edt_reg_write() is called to set a simulated register write value.
+*
+* Example:  See the wr16_dmy_register.c sample program.
+
+* @param edt_p pointer to edt device structure returned by #edt_open or
+* #edt_open_channel
+*
+* @param callBack callback function invoked when edt_p->devid is DMY_ID
+* and edt_reg_write() is called.
+*
+* synopsys:  u_int (*callBack)(struct edt_device *edt_p, u_int reg_desc)
+*
+*/
+void
+edt_set_dmy_reg_write_callback(EdtDev *edt_p, void (*callBack)(struct edt_device *edt_p, u_int reg_desc, u_int reg_value))
+{
+  edt_p->dmy_reg_write_callback = callBack;
+}
+
+

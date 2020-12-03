@@ -1736,7 +1736,7 @@ exitAcq:
 		/*****for NI acquisition***/
 #ifdef _USE_NI
 		Error:
-		if (NI_flag && !darkFlag) {
+		/*if (NI_flag && !darkFlag) {
 			if (DAQmxFailed(error)) {
 				debug = TRUE;
 				DAQmxGetExtendedErrorInfo(errBuff, 2048);
@@ -1761,7 +1761,7 @@ exitAcq:
 				char errStr[256];
 				sprintf(errStr, "National Instruments Device Error: %s", errBuff);
 				MessageBox(main_window_handle, errStr, "message", MB_OK);
-			}
+			}*/
 			if (output_data)
 				_aligned_free(output_data);
 			if (AO_data)

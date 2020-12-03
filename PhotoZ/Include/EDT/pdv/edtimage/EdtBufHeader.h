@@ -63,6 +63,7 @@ public:
     EdtBufHeader(const int sz = 0, const HdrPosition pos = HeaderBefore, const int offset = 0);
     EdtBufHeader(EdtImageData *from);
     EdtBufHeader(EdtBufDataHdr *from);
+    virtual ~EdtBufHeader();
 
     void Init(const int _size, const HdrPosition pos, const int offset);
 
@@ -150,6 +151,7 @@ public:
     virtual HdrPosition HeaderPosition();
     virtual void HeaderPosition(HdrPosition pos);
 };
+
 
 void RegisterHeaderType(const int type, EdtHeaderFactory f);
 

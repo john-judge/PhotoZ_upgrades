@@ -27,9 +27,11 @@ int     findid(char *str, char *idstr);
 char   *strip_crlf(char *str);
 void    propeller_sleep(int n);
 char   *search_for_bitfile(char *rbtfile, const char *cfgfname, char *bitpath);
-int     serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p);
-int     serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p);
-int     serial_init_duncan_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p);
+int     init_serial(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p);
+int     init_serial_basler_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init);
+int     init_serial_duncan_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init);
+int     init_serial_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init);
+int     init_serial_ascii(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init);
 int     send_xilinx_commands(EdtDev * edt_p, char *str);
 int     check_roi(EdtDev * edt_p, Dependent * dd_p, int ena);
 void    check_camera_values(EdtDev * ed, Dependent * dd_p);
@@ -37,10 +39,7 @@ int     kodak_query_serial(EdtDev * edt_p, char *cmd, int *val);
 int     specinst_download(EdtDev * edt_p, char *fname);
 int     specinst_setparams(EdtDev * edt_p, char *fname);
 void	setup_cl2_simulator(EdtDev *edt_p, Dependent *dd_p);
-int     check_register_wrap(EdtDev * edt_p);
 char   *serial_tx_rx(PdvDev * pdv_p, char *command, int hexin);
-void	do_xregwrites(EdtDev *edt_p, Dependent *dd_p);
-int serial_init_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p);
 static int set_rci = 0;
 static int rci_set_unit = 0;
 static long    isascii_str(u_char * buf, int n);
@@ -74,17 +73,24 @@ pdv_channel_initialized(int unit, int channel)
 }
 
 /**
-* Initializes the board and camera. This is the "guts" of the \e
-* inticam program that gets executed to initialize when you choose a
+* Initializes the framegrabber board and camera. This is the "guts" of the
+* \e inticam program that gets executed to initialize when you choose a
 * camera. The library subroutine is provided for programmers who wish
 * to incorporate the initialization procedure into their own
-* applications.  
+* applications.
+* 
+* @note unlike other pdv library calls, pdv_inticam requires an edt device pointer returned from
+* #edt_open or #edt_open_channel. After initializing, close the device with #edt_close before reopening
+* with #pdv_open_channel or #pdv_open for futher use.
+*
+* @note pdv_initcam is designed to initialize EDT framegrabber (input) boards only. For simulator
+* boards, (e.g. the PCIe8 DVa CLS) see the clsiminit.c example/utility application.
 *
 * @param pdv_p   pointer to edt device structure returned by #edt_open 
 * @param dd_p    pointer to a previously allocated (via
 * #pdv_alloc_dependent) and initialized (through #pdv_readcfg)
-* dependent structure. The library uses this until it is either free'd
-* by #pdv_close, or no longer used by later calls to this function
+* dependent structure. The library uses this until it is either freed
+* by #edt_close, or no longer used by later calls to this function
 * (which means that if you call pdv_initcam again, you should free()
 * pdv_p->dd_p first to avoid memory leaks).
 * @param unit    unit number of the device. The first unit is 0.
@@ -98,15 +104,11 @@ pdv_channel_initialized(int unit, int channel)
 *
 * @return 0 on success, -1 on failure
 *
-* @note Unlike most PDV library functions, this one requires an EdtDev struct pointer
-* returned by #edt_open or #edt_open_channel.  
-* 
 * @Example
 * @note The following is simplified example code. Normally, we would
 * check the return values and handle error conditions. See \e initcam.c
 * for a complete example of reading the configuration file and
-* configuring the pdv device driver and camera. For a more complete example,
-* see initcam.c source code.
+* configuring the pdv device driver and camera.
 *
 * @code 
 * Dependent *dd_p;
@@ -124,7 +126,7 @@ pdv_channel_initialized(int unit, int channel)
 * free(dd_p);
 * @endcode
 *
-* @see initcam.c source code
+* @see pdv_readcfg, initcam.c source code
 *
 * @ingroup init
 */
@@ -136,14 +138,14 @@ pdv_initcam(EdtDev * pdv_p, Dependent * dd_p, int unit, Edtinfo * ei_p,
     char errmsg[256];
 
     /* make sure the device is open and valid */
-    if ((pdv_p == NULL) || (dd_p == NULL) || (pdv_p->fd == (HANDLE) NULL))
+    if ((pdv_p == NULL) || (dd_p == NULL) || (pdv_p->fd == 0))
     {
         edt_msg(EDT_MSG_FATAL, "ERROR: invalid dependent struct pointer\n");
         return -1;
     }
 
-#if 0 /* this doesn't work since is_dvcl2 includes PCIe8 and PCIe4 even if they're not configured as a simulator -- need a way to detect that!!! */
-    if (edt_is_dvcl2(pdv_p))
+#if 0 /* this doesn't work since is_simulator includes PCIe8 and PCIe4 even if they're not configured as a simulator -- need a way to detect that!!! */
+    if (edt_is_simulator(pdv_p))
     {
         edt_msg(EDT_MSG_FATAL, "ERROR: this is a simulator (output) board -- use clsimit to initialize\n");
         return -1;
@@ -181,7 +183,7 @@ pdv_initcam(EdtDev * pdv_p, Dependent * dd_p, int unit, Edtinfo * ei_p,
 
     if (pdv_p->devid == PDVFOI_ID)
     {
-        edt_msg(EDT_MSG_FATAL, "FOI not supported beyond v4.1.5.9\n");
+        edt_msg(EDT_MSG_FATAL, "FOI not supported after v4.1.5.9\n");
     }
     else
     {
@@ -192,7 +194,7 @@ pdv_initcam(EdtDev * pdv_p, Dependent * dd_p, int unit, Edtinfo * ei_p,
             /* no bitload if a single FPGA */
             if (edt_has_combined_fpga(pdv_p) )
             {
-                edt_msg(DEBUG1, "DV C-Link, skipping xilinx load\n");
+                edt_msg(DEBUG1, "Combined FPGA, skipping device FPGA load\n");
             }
             else if (strcmp(pdv_p->dd_p->rbtfile, "_SKIPPED_") == 0)
                 edt_msg(INITCAM_MSG_ALWAYS, "skipping bitload\n");
@@ -212,7 +214,7 @@ pdv_initcam(EdtDev * pdv_p, Dependent * dd_p, int unit, Edtinfo * ei_p,
                 return -1;
             }
         }
-        else edt_msg(DEBUG1, "No bitfile specified, skipping xilinx load\n");
+        else edt_msg(DEBUG1, "No bitfile specified, skipping device FPGA load\n");
 
         if (pdv_initcam_reset_camera(pdv_p, pdv_p->dd_p, ei_p))
         {
@@ -251,7 +253,7 @@ pdv_alloc_dependent()
 }
 
 
-void
+static void
 dep_wait(EdtDev * edt_p)
 {
 }
@@ -329,7 +331,7 @@ pdv_initcam_load_bitfile(EdtDev * edt_p,
         if (get_prom_addrs(dd_p->rbtfile, &addr1, &size1, &addr2, &size2) == 0)
         {
 
-            edt_msg(DEBUG1, "loading camera xilinx from PROM @ %x %d / %x %d", addr1, size1, addr2, size2);
+            edt_msg(DEBUG1, "loading device FPGA from PROM @ %x %d / %x %d", addr1, size1, addr2, size2);
             ret = edt_bitload_from_prom(edt_p, addr1, size1, addr2, size2, flags);
             printf("\n");
         }
@@ -338,12 +340,12 @@ pdv_initcam_load_bitfile(EdtDev * edt_p,
 #ifdef NO_FS
             if (emb)
             {
-                /* strip off .bit from name if nofs (embedded) xilinx */
+                /* strip off .bit from name if nofs (embedded) FPGA */
                 strcpy(bitname, dd_p->rbtfile);
                 len = strlen(bitname);
                 if ((len >= 4) && (strcasecmp(&bitname[len-4], ".bit") == 0))
                     bitname[len-4] = '\0';
-                edt_msg(EDT_MSG_INFO_1, "loading embedded camera xilinx %s....\n", bitname);
+                edt_msg(EDT_MSG_INFO_1, "loading embedded camera fpga %s....\n", bitname);
                 ret = edt_bitload(edt_p, bitdir, bitname, 1, 0);
                 if (edt_is_dvfox(edt_p))
                     edt_msleep(500);
@@ -367,7 +369,7 @@ pdv_initcam_load_bitfile(EdtDev * edt_p,
                 }
             }
 
-            edt_msg(DEBUG1, "loading camera xilinx %s....\n", dd_p->rbtfile);
+            edt_msg(DEBUG1, "loading camera fpga %s....\n", dd_p->rbtfile);
 
             if ((ret = edt_bitload(edt_p, dir_arg, dd_p->rbtfile, 0, 0)) != 0)
                 return ret;
@@ -384,9 +386,10 @@ pdv_initcam_load_bitfile(EdtDev * edt_p,
 
 
 
-/*
-* setup registers on the board and send camera setup serial if indicated
-*/
+/**
+ * @internal
+ * Set up registers on the board and send camera setup serial if indicated
+ */
 int
 pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
 {
@@ -395,32 +398,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
 
     if (dd_p->xilinx_rev == NOT_SET)
     {
-        int     rev;
-
-        edt_msg(DEBUG2, "checking for new rev xilinx\n");
-        dep_wait(edt_p);
-
-        pdv_flush_fifo(edt_p); /* ADDED  3/14/2012 RWH */
-
-        edt_reg_write(edt_p, PDV_STAT, 0xff);
-        rev = edt_reg_read(edt_p, PDV_REV);
-        if (rev >= 1 && rev <= 32)
-        {
-            edt_msg(DEBUG2, "xilinx rev set to %d (0x%x)\n", rev, rev);
-            dd_p->xilinx_rev = rev;
-        }
-        else
-        {
-            dd_p->xilinx_rev = 0;
-            edt_msg(DEBUG2, "no xilinx rev from IOCTL, setting to 0\n");
-        }
-
-#ifdef NOT_DONE
-        /* xilinx rev 2 we got option flag register */
-        if ((dd_p->xilinx_rev >= 2) && (dd_p->xilinx_rev != 0xff))
-            dd_p->xilinx_opt = edt_reg_read(edt_p, PDV_XILINX_OPT);
-#endif
-        dd_p->register_wrap = check_register_wrap(edt_p);
+        pdv_check_fpga_rev(edt_p);
 
         /*
         * need to let the driver know the rev in dep_set/get since register
@@ -439,7 +417,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
         && (!(dd_p->cl_cfg & PDV_CL_CFG_RGB)))
         dd_p->dual_channel = 1;
 
-    if (!(edt_is_dvcl2(edt_p) && dd_p->sim_enable))
+    if (!(edt_is_simulator(edt_p) && dd_p->sim_enable))
     {
         int roi_enabled = (dd_p->cl_cfg & PDV_CL_CFG_ROIDIS)?0:1;
 
@@ -485,8 +463,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
     edt_set_dependent(edt_p, dd_p);
 
     edt_msg(DEBUG1, "setting registers....\n");
-    if (edt_p->devid != PDVFOI_ID &&
-        dd_p->genericsim)
+    if (dd_p->genericsim)
     {
         edt_msg(DEBUG1, "setting up for simulator....\n");
         edt_reg_write(edt_p, SIM_LDELAY, dd_p->line_delay);
@@ -516,7 +493,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
 
 
     /* Configuration register settings (except CL2 simulator */
-    if (!(edt_is_dvcl2(edt_p) && dd_p->sim_enable))
+    if (!(edt_is_simulator(edt_p) && dd_p->sim_enable))
     {
         int     configuration = 0;
 
@@ -620,8 +597,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
         edt_reg_write(edt_p, PDV_UTIL3, util3);
     }
 
-    if (edt_p->devid != PDVFOI_ID)
-        pdv_set_fval_done(edt_p, dd_p->fval_done);
+    pdv_set_fval_done(edt_p, dd_p->fval_done);
 
     /* old initcam for irc was this */
     if (dd_p->camera_download == IRC_160)
@@ -680,7 +656,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
             edt_reg_write(edt_p, PDV_TRIGDIV, dd_p->trigdiv);
 
         /* used hwpad to set 30-bit RGB in PDV and maybe PCIe4 medium mode FW but
-        * not PCIe8 or any future boards (better not!) */
+         * not PCIe8 or any future boards (better not!) */
         if (dd_p->rgb30)
             if (edt_p->devid < PE8DVCL_ID)
                 dd_p->hwpad = dd_p->rgb30;
@@ -926,11 +902,10 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
             util2 |= PDV_AQUIRE_MULTIPLE;
 
         /*
-        * RS-232 bit -- overloaded on MC4, only applicable to PCI
-        * DVA or 3v RCI (LVDS or RS422)
+        * RS-232 bit -- overloaded on MC4, only applicable to PCI DVa or DVFox
         */
         if ((dd_p->serial_mode == PDV_SERIAL_RS232)
-            && ((edt_p->devid == PDVA_ID) || (edt_p->devid == PDVFOI_ID) || (edt_is_dvfox(edt_p))))
+            && ((edt_p->devid == PDVA_ID) || (edt_is_dvfox(edt_p))))
             util2 |= PDV_RX232;
 
         else if (dd_p->sel_mc4)
@@ -1021,7 +996,7 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
     else
         pdv_set_waitchar(edt_p, 1, (u_char)dd_p->serial_waitc);
 
-    if (dd_p->user_timeout == NOT_SET && edt_p->devid != PDVFOI_ID)
+    if (dd_p->user_timeout == NOT_SET)
     {
         dd_p->user_timeout = 0;	/* user_set will be the real flag */
         pdv_auto_set_timeout(edt_p);
@@ -1035,12 +1010,12 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
     pdv_set_defaults(edt_p);
     check_camera_values(edt_p, dd_p);
 
-    do_xregwrites(edt_p, dd_p);
+    pdv_do_xregwrites(edt_p, dd_p);
 
     /*
     * final stuff (none applicable to CL2 sim) 
     */
-    if (!(edt_is_dvcl2(edt_p) && dd_p->sim_enable))
+    if (!(edt_is_simulator(edt_p) && dd_p->sim_enable))
     {
         check_terminator(dd_p->serial_term);
 
@@ -1059,8 +1034,8 @@ pdv_initcam_reset_camera(EdtDev * edt_p, Dependent * dd_p, Edtinfo * ei_p)
                 return ret;
         }
 
-        if (strlen(ei_p->serial_init) > 0)
-            serial_init(edt_p, dd_p, ei_p);
+        if (ei_p->serial_init)
+            init_serial(edt_p, dd_p, ei_p);
 
         if (strlen(dd_p->xilinx_init) > 0)
             send_xilinx_commands(edt_p, dd_p->xilinx_init);
@@ -1175,28 +1150,39 @@ fname_from_path(char *fname, char *pathstr)
 * one command at a time.
 */
 int
-serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
+init_serial(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
 {
-    int     ret;
-    int     foi = 0;
-    int     hamamatsu = 0;
-    int     skip_init = 0;
-    char    cmdstr[32];
-    char    resp[257];
+    SerialInitNode *lp = ei_p->serial_init;
 
     edt_msg(DEBUG1, "sending serial init....\n");
 
-    if (dd_p->serial_format == SERIAL_BINARY)
-        return serial_init_binary(edt_p, dd_p, ei_p);
 
-    else if (dd_p->serial_format == SERIAL_BASLER_FRAMING)
-        return serial_init_basler_binary(edt_p, dd_p, ei_p);
+    while (lp)
+    {
+        if (lp->tag == serial_tag_binary)
+            init_serial_binary(edt_p, dd_p, ei_p->serial_init_delay, lp->data);
 
-    else if (dd_p->serial_format == SERIAL_DUNCAN_FRAMING)
-        return serial_init_duncan_binary(edt_p, dd_p, ei_p);
+        else if (lp->tag == serial_tag_baslerf)
+            init_serial_basler_binary(edt_p, dd_p, ei_p->serial_init_delay, lp->data);
 
-    if (edt_p->devid == PDVFOI_ID)
-        foi = 1;
+        else if (lp->tag == serial_tag_duncanf)
+            init_serial_duncan_binary(edt_p, dd_p, ei_p->serial_init_delay, lp->data);
+
+        else init_serial_ascii(edt_p, dd_p, ei_p->serial_init_delay, lp->data);
+
+        lp = lp->next;
+    }
+    return 0;
+
+}
+
+int
+init_serial_ascii(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init)
+{
+    char    resp[257];
+    int     skip_init = 0;
+    int     hamamatsu = 0;
+    int     ret = 0;
 
     if (grepit(dd_p->cameratype, "Hamamatsu") != NULL)
         hamamatsu = 1;
@@ -1239,16 +1225,16 @@ serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
         }
     }
 
-
     if (!skip_init)
     {
         int    i = 0, ms;
         char   *lastp = NULL;
-        char   *p = ei_p->serial_init;
+        char   *p = serial_init;
+        char    cmdstr[32];
 
-        if (ei_p->serial_init_delay == NOT_SET)
+        if (delay == NOT_SET)
             ms = 500;
-        else ms = ei_p->serial_init_delay;
+        else ms = delay;
 
         /*
         * send serial init string
@@ -1272,19 +1258,14 @@ serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
                 {
                     if (is_hex_byte_command(cmdstr))
                     {
-                        if (ei_p->serial_init_delay == NOT_SET)
+                        if (delay == NOT_SET)
                             ms = 10;
                         edt_msg(DEBUG2, "%s\n", cmdstr);
                         pdv_serial_command_hex(edt_p, cmdstr, 1);
-
-                        /* flush out junk */
-                        if (foi)
-                            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 0);
-                        else
-                            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 128);
+                        ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 128);
                         pdv_serial_read(edt_p, resp, ret);
                     }
-                    else if (hamamatsu && !foi)
+                    else if (hamamatsu)
                     {
                         char   *resp_str;
 
@@ -1293,19 +1274,14 @@ serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
                         resp_str = serial_tx_rx(edt_p, cmdstr, 0);
                         edt_msg(DEBUG2, " <%s>\n", strip_crlf(resp_str));
                     }
-                    else			/* FUTURE: expand and test serial_tx_rx under
-                                    * FOI and replace
-                                    * pdv_serial_command/wait/read with that for
-                                    * all */
+                    else			/* FUTURE: expand and test serial_tx_rx and replace
+                                     * pdv_serial_command/wait/read with that for all (?)
+                                     */
                     {
                         /* edt_msg(DEBUG1, ".", cmdstr); */
                         edt_msg(DEBUG2, "%s ", cmdstr);
                         pdv_serial_command(edt_p, cmdstr);
-
-                        if (foi)
-                            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 0);
-                        else
-                            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 16);
+                        ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 16);
                         pdv_serial_read(edt_p, resp, 256);
                         edt_msg(DEBUG2, " <%s>", strip_crlf(resp));
                         edt_msg(DEBUG2, "\n");
@@ -1320,8 +1296,6 @@ serial_init(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
             ++p;
         }
     }
-
-    edt_set_dependent(edt_p, dd_p);
 
     return 0;
 }
@@ -1348,26 +1322,26 @@ atoxdigit(char ch)
 * bytes); does a * wait/read on whitespace only
 */
 int
-serial_init_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
+init_serial_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init)
 {
     int ret;
     u_int i;
-    size_t buflen = strlen(ei_p->serial_binit);
+    size_t buflen = strlen(serial_init);
     int cmdlen = 0, nibble_index = 0;
-    u_char hbuf[256];
-    char    resp[257];
+    u_char hbuf[1024];
+    char    resp[1025];
     u_char ch;
 
 
     /* flush junk */
-    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 128);
+    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1024);
 
     hbuf[0] = 0;
     nibble_index = 0;
     for (i = 0; i < buflen+1; i++)
     {
         if (i < buflen)
-            ch = ei_p->serial_binit[i];
+            ch = serial_init[i];
         else ch = '\0';
 
         if ((i == buflen) || (ch == '\t' || ch == ' '))
@@ -1378,7 +1352,7 @@ serial_init_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
             {
                 /* send command, wait for response */
                 pdv_serial_binary_command(edt_p, (char *) hbuf, cmdlen);
-                if ((ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 256)))
+                if ((ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1024)))
                     pdv_serial_read(edt_p, resp, ret);
             }
 
@@ -1393,8 +1367,7 @@ serial_init_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
         }
         else
         {
-            edt_msg(PDVLIB_MSG_WARNING, "serial_binit: hex string format error on buf[%d] ('%c')\n", i, ei_p->serial_binit[i]);
-printf("%s\n", ei_p->serial_binit);
+            edt_msg(PDVLIB_MSG_WARNING, "serial_binit: hex string format error on buf[%d] ('%c')\n", i, serial_init[i]);
             return -1;
         }
     }
@@ -1410,7 +1383,7 @@ printf("%s\n", ei_p->serial_binit);
 * basler A202k style framing and send the commands to the camera
 */
 int
-serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
+init_serial_basler_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init)
 {
     u_int  i, j;
     char   *p;
@@ -1418,34 +1391,31 @@ serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
     char   *nextp;
     size_t len;
     int     ret;
-    int     foi = 0;
     char    cmdstr[32];
     char    bytestr[3];
-    char    resp[257];
+    char    resp[1024];
 
-    if (edt_p->devid == PDVFOI_ID)
-        foi = 1;
-
-    if (ei_p->serial_init_delay != NOT_SET)
-        ms = ei_p->serial_init_delay;
+    if (delay != NOT_SET)
+        ms = delay;
 
     /* first flush any pending/garbage serial */
     resp[0] = '\0';
-    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 256);
-    pdv_serial_read(edt_p, resp, 256);
+    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1023);
+    pdv_serial_read(edt_p, resp, 1023);
 
     edt_msg(DEBUG1, "sending Basler A202k framed commands to camera:\n");
 
     /*
-    * send serial init string (first stick on a trailing ':' for parser)
-    */
-    p = ei_p->serial_init;
-    len = strlen(ei_p->serial_init);
-    if (ei_p->serial_init[len-1] != ':')
+     * send serial init string (first stick on a trailing ':' for parser)
+     */
+    len = strlen(serial_init);
+    if (serial_init[len-1] != ':')
     {
-        ei_p->serial_init[len] = ':';
-        ei_p->serial_init[len+1] = '\0';
+        serial_init[len] = ':';    /* safe because data is */
+        serial_init[len+1] = '\0'; /* malloc'd to arg len + 2 */
     }
+
+    p = serial_init;
 
     while ((nextp = strchr(p, ':')))
     {
@@ -1462,7 +1432,7 @@ serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
 
         strncpy(cmdstr, p, len);
         cmdstr[len] = 0;
-        memset(resp, '\0', 257);
+        memset(resp, '\0', 1023);
 
         if (len % 2)
         {
@@ -1490,11 +1460,7 @@ serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
         }
         pdv_send_basler_frame(edt_p, bytebuf, (int)len/2);
 
-        /* flush out junk */
-        if (foi)
-            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 0);
-        else
-            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 128);
+        ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1023);
         pdv_serial_read(edt_p, resp, ret);
 
         p = nextp + 1;
@@ -1513,7 +1479,7 @@ serial_init_basler_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
 * camera
 */
 int
-serial_init_duncan_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
+init_serial_duncan_binary(EdtDev * edt_p, Dependent * dd_p, int delay, char *serial_init)
 {
     int    i, j;
     char   *p;
@@ -1521,34 +1487,32 @@ serial_init_duncan_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
     char   *nextp;
     int     len;
     int     ret;
-    int     foi = 0;
     char    cmdstr[32];
     char    bytestr[3];
-    char    resp[257];
+    char    resp[1024];
 
-    if (edt_p->devid == PDVFOI_ID)
-        foi = 1;
-
-    if (ei_p->serial_init_delay != NOT_SET)
-        ms = ei_p->serial_init_delay;
+    if (delay != NOT_SET)
+        ms = delay;
 
     /* first flush any pending/garbage serial */
     resp[0] = '\0';
-    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 256);
-    pdv_serial_read(edt_p, resp, 256);
+    ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1023);
+    pdv_serial_read(edt_p, resp, 1023);
 
     edt_msg(DEBUG1, "sending DuncanTech framed commands to camera:\n");
 
     /*
-    * send serial init string (first stick on a trailing ':' for parser)
-    */
-    p = ei_p->serial_init;
-    len = (int)strlen(ei_p->serial_init);
-    if (ei_p->serial_init[len-1] != ':')
+     * send serial init string (first stick on a trailing ':' for parser)
+     */
+    len = strlen(serial_init);
+    if (serial_init[len-1] != ':')
     {
-        ei_p->serial_init[len] = ':';
-        ei_p->serial_init[len+1] = '\0';
+        serial_init[len] = ':';    /* safe because data is */
+        serial_init[len+1] = '\0'; /* malloc'd to arg len + 2 */
     }
+
+    p = serial_init;
+
     while ((nextp = strchr(p, ':')))
     {
         int     ms = 50;
@@ -1564,7 +1528,7 @@ serial_init_duncan_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
 
         strncpy(cmdstr, p, len);
         cmdstr[len] = 0;
-        memset(resp, '\0', 257);
+        memset(resp, '\0', 1024);
 
         if (len % 2)
         {
@@ -1593,10 +1557,7 @@ serial_init_duncan_binary(EdtDev * edt_p, Dependent * dd_p, Edtinfo *ei_p)
         pdv_send_duncan_frame(edt_p, bytebuf, len/2);
 
         /* flush out junk */
-        if (foi)
-            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 0);
-        else
-            ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 128);
+        ret = pdv_serial_wait(edt_p, dd_p->serial_timeout, 1023);
         pdv_serial_read(edt_p, resp, ret);
 
         p = nextp + 1;
@@ -1798,11 +1759,11 @@ is_hex_byte_command(char *str)
 
 
 /*
-* takes a colon separated string of xilinx commands, parses them into
+* takes a colon separated string of FPGA commands, parses them into
 * individual commands, and sends one at a time to the interface xilinx
 */
 int
-send_xilinx_commands(EdtDev * edt_p, char *str)
+send_fpga_commands(EdtDev * edt_p, char *str)
 {
     char   *p;
     char   *nextp;
@@ -1813,7 +1774,7 @@ send_xilinx_commands(EdtDev * edt_p, char *str)
     unsigned long lvalue;
     u_char  value;
 
-    edt_msg(DEBUG1, "sending xilinx commands....\n");
+    edt_msg(DEBUG1, "sending FPGA commands....\n");
 
     p = str;
 
@@ -1822,7 +1783,7 @@ send_xilinx_commands(EdtDev * edt_p, char *str)
         len = (int)(nextp - p);
         if (len > 31)
         {
-            edt_msg(EDT_MSG_FATAL, "ERROR: xilinx cmd too long\n");
+            edt_msg(EDT_MSG_FATAL, "ERROR: FPGA cmd too long\n");
             return -1;
         }
 
@@ -1846,7 +1807,7 @@ send_xilinx_commands(EdtDev * edt_p, char *str)
         /* else other commands here */
         else
         {
-            edt_msg(PDVLIB_MSG_WARNING, "unknown xilinx command %s\n", cmd);
+            edt_msg(PDVLIB_MSG_WARNING, "unknown FPGA command %s\n", cmd);
         }
 
         p = nextp + 1;
@@ -1930,20 +1891,7 @@ specinst_download(EdtDev * edt_p, char *fname)
 
     pdv_send_break(edt_p);
     edt_msleep(500);
-    if (edt_p->devid == PDVFOI_ID)
-    {
-        edt_send_msg(edt_p, 0, "e 0", 3);
-        edt_msleep(500);
-        edt_send_msg(edt_p, 0, "cf", 2);
-        edt_msleep(500);
-#if 0
-        edt_send_msg(edt_p, 0, "cb 19200", 8);
-        edt_msleep(500);
-#endif
-        edt_send_msg(edt_p, 0, "cw 100", 6);
-        edt_msleep(500);
-        edt_flush_fifo(edt_p);
-    }
+
     /* flush any pending/garbage serial */
     ret = pdv_serial_wait_next(edt_p, edt_p->dd_p->serial_timeout, 256);
     if (ret == 0)
@@ -2020,28 +1968,13 @@ specinst_setparams(EdtDev * edt_p, char *fname)
     u_char  offsetbuf[8];
     u_char  parambuf[8];
     FILE   *fd;
-    int     si_wait = 150;	/* needs to be more for FOI */
+    int     si_wait = 150;
 
 
     edt_msg(DEBUG1, "SpecInst setparams <%s>", fname);
     fflush(stdout);
 
-    if (edt_p->devid == PDVFOI_ID)
-    {
-        si_wait = 500;
-        ret = pdv_serial_read(edt_p, buf, 64);
-        edt_send_msg(edt_p, 0, "cb 19200", 8);
-        pdv_set_baud(edt_p, 19200);
-        edt_msleep(500);
-        ret = pdv_serial_read(edt_p, buf, 64);
-        edt_send_msg(edt_p, 0, "cw 8000", 7);
-        edt_msleep(500);
-        ret = pdv_serial_read(edt_p, buf, 64);
-    }
-    if (edt_p->devid == PDVFOI_ID)
-        pdv_serial_wait_next(edt_p, si_wait, 0);
-    else
-        pdv_serial_wait_next(edt_p, si_wait, 2);
+    pdv_serial_wait_next(edt_p, si_wait, 2);
 
     ret = pdv_serial_read(edt_p, buf, 64);
 
@@ -2060,10 +1993,8 @@ specinst_setparams(EdtDev * edt_p, char *fname)
         edt_msg(EDT_MSG_FATAL, "\ncouldn't open camera parameter file <%s> - aborting", fname);
         return -1;
     }
-    if (edt_p->devid == PDVFOI_ID)
-        pdv_serial_wait_next(edt_p, 1000, 0);
-    else
-        pdv_serial_wait_next(edt_p, 1000, 64);
+
+    pdv_serial_wait_next(edt_p, 1000, 64);
     ret = pdv_serial_read(edt_p, buf, 64);
 
     ena = pdv_get_waitchar(edt_p, &savechar);
@@ -2094,10 +2025,7 @@ specinst_setparams(EdtDev * edt_p, char *fname)
 
         pdv_serial_binary_command(edt_p, (char *) cmdbuf, 1);
         /* pdv_serial_binary_command(edt_p, &cmd, 1); */
-        if (edt_p->devid == PDVFOI_ID)
-            pdv_serial_wait_next(edt_p, 500, 0);
-        else
-            pdv_serial_wait_next(edt_p, 500, 2);
+        pdv_serial_wait_next(edt_p, 500, 2);
         ret = pdv_serial_read(edt_p, resp, 2);
         if ((ret != 1) || (resp[0] != cmd))
         {
@@ -2109,17 +2037,11 @@ specinst_setparams(EdtDev * edt_p, char *fname)
 
         pdv_serial_binary_command(edt_p, (char *) offsetbuf, 4);
 #if 0
-        if (edt_p->devid == PDVFOI_ID)
-            pdv_serial_wait_next(edt_p, si_wait, 0);
-        else
-            pdv_serial_wait_next(edt_p, si_wait, 2);
+        pdv_serial_wait_next(edt_p, si_wait, 2);
         ret = pdv_serial_read(edt_p, buf, 2);
 #endif
         pdv_serial_binary_command(edt_p, (char *) parambuf, 4);
-        if (edt_p->devid == PDVFOI_ID)
-            pdv_serial_wait_next(edt_p, si_wait, 0);
-        else
-            pdv_serial_wait_next(edt_p, si_wait, 2);
+        pdv_serial_wait_next(edt_p, si_wait, 2);
         ret = pdv_serial_read(edt_p, resp, 2);
 
         if ((ret != 1) || (resp[0] != 'Y'))
@@ -2172,8 +2094,7 @@ serial_tx_rx(PdvDev * pdv_p, char *getbuf, int hexin)
 
         /*
         * change 5/28/99 one serial_binary_command for the whole thing --
-        * before it did one write per byte which was dumb and didn't work on
-        * FOI anyway
+        * before it did one write per byte which was dumb 
         */
         for (i = 0; i < nbytes; i++)
         {
@@ -2187,9 +2108,9 @@ serial_tx_rx(PdvDev * pdv_p, char *getbuf, int hexin)
         }
 
         /*
-        * using pdv_serial_binary_command instead of pdv_serial_write
-        * because it prepends a 'c' if FOI
-        */
+         * using pdv_serial_binary_command instead of pdv_serial_write
+         * because it prepends a 'c' if FOI [but FOI is gone anyhow...]
+         */
         pdv_serial_binary_command(pdv_p, (char *) hbuf, nbytes);
         /* edt_msleep(10000); */
     }
@@ -2268,9 +2189,7 @@ serial_tx_rx(PdvDev * pdv_p, char *getbuf, int hexin)
             buf_p += ret;
             length += ret;
         }
-        if (pdv_p->devid == PDVFOI_ID)
-            pdv_serial_wait(pdv_p, 500, 0);
-        else if (pdv_get_waitchar(pdv_p, &waitc) && (lastbyte == waitc))
+        if (pdv_get_waitchar(pdv_p, &waitc) && (lastbyte == waitc))
             ret = 0; /* jump out if waitchar is enabled/received */
         else pdv_serial_wait(pdv_p, pdv_p->dd_p->serial_timeout, 64);
     } while (ret > 0);
@@ -2343,65 +2262,6 @@ strip_crlf(char *str)
     return scRetStr;
 }
 
-/*
-* this code checks for register wrap. Since newer xilinxs have larger
-* register space, there's a possibility that we can read/write registers
-* but they're actually wrapping by 32. So read/write the low register
-* and check if it wraps to high. Uses MASK register and writes back
-* when done
-*
-* RETURNS 1 if wrap, 0 if not
-*/
-int
-check_register_wrap(EdtDev *pdv_p)
-{
-    int wrapped = 0;
-    int r;
-    int mask_lo, mask_lo_wrap;
-
-    /* definately not in and OLD xilinx.... */
-    if (pdv_p->dd_p->xilinx_rev < 2 || pdv_p->dd_p->xilinx_rev > 32)
-        return 1;
-
-    /* made it this far; check for wrap */
-    mask_lo = edt_reg_read(pdv_p, PDV_MASK_LO);
-    mask_lo_wrap = edt_reg_read(pdv_p, PDV_MASK_LO+32) ;
-    edt_reg_write(pdv_p, PDV_MASK_LO+32, 0);
-    edt_reg_write(pdv_p, PDV_MASK_LO, 0xa5);
-    if ((r = edt_reg_read(pdv_p, PDV_MASK_LO+32)) == 0xa5)
-        wrapped = 1;
-
-    /* restore the register */
-    edt_reg_write(pdv_p, PDV_MASK_LO, mask_lo);
-    if (!wrapped)
-        edt_reg_write(pdv_p, PDV_MASK_LO, mask_lo_wrap);
-
-    edt_msg(DEBUG2, "registers %s\n", wrapped? "WRAPPING":"not wrapping");
-    return wrapped;
-}
-
-void
-do_xregwrites(EdtDev *edt_p, Dependent *dd_p)
-{
-    int i;
-
-    /*
-    * set any registers specifically called out with xregwrite
-    * xilinx_flag used to be just a flag 0 or 1 to write, now 
-    * holds the actual address of the register (unless 0xff)
-    */
-    for (i = 0; i < 32; i++)
-    {
-        if (dd_p->xilinx_flag[i] == 0xff)
-            break;
-
-        edt_intfc_write(edt_p, dd_p->xilinx_flag[i], dd_p->xilinx_value[i]);
-        edt_msg(DEBUG2, "xregwrite_%d writing reg 0x%02x value 0x%02x\n",
-            dd_p->xilinx_flag[i], dd_p->xilinx_flag[i],
-            dd_p->xilinx_value[i]);
-        dep_wait(edt_p);
-    }
-}
 
 /*
 * special setup for CL2 Camera Link simulator
@@ -2412,3 +2272,59 @@ setup_cl2_simulator(EdtDev *edt_p, Dependent *dd_p)
     edt_msg(DEBUG1, "STUB setting up camera link simulator...\n");
 }
 
+/*
+* takes a colon separated string of xilinx commands, parses them into
+* individual commands, and sends one at a time to the interface xilinx
+*/
+int
+send_xilinx_commands(EdtDev * edt_p, char *str)
+{
+    char   *p;
+    char   *nextp;
+    int     len;
+    char    cmdstr[32];
+    char    cmd[32];
+    u_int   addr;
+    unsigned long lvalue;
+    u_char  value;
+
+    edt_msg(DEBUG1, "sending xilinx commands....\n");
+
+    p = str;
+
+    while ((nextp = strchr(p, ':')))
+    {
+        len = (int)(nextp - p);
+        if (len > 31)
+        {
+            edt_msg(EDT_MSG_FATAL, "ERROR: xilinx cmd too long\n");
+            return -1;
+        }
+
+        strncpy(cmdstr, p, len);
+        cmdstr[len] = 0;
+
+        sscanf(cmdstr, "%s %x %lx", cmd, &addr, &lvalue);
+        if (addr < 0xffff)
+            addr |= 0x01010000;
+        value = (unsigned char) (lvalue & 0xff);
+        edt_msg(DEBUG1, "%s %08x %02x\n", cmd, addr, value);
+
+        if (strcmp(cmd, "w") == 0)
+        {
+#if 0
+            edt_intfc_write(edt_p, addr, value);
+#else
+            edt_msg(PDVLIB_MSG_WARNING, "ALERT: edt_intfc_write commented out for testing only\n");
+#endif
+        }
+        /* else other commands here */
+        else
+        {
+            edt_msg(PDVLIB_MSG_WARNING, "unknown xilinx command %s\n", cmd);
+        }
+
+        p = nextp + 1;
+    }
+    return 1;
+}

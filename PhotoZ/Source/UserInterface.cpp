@@ -1245,7 +1245,7 @@ void UserInterface::cb_Normalize1(Fl_Light_Button* o, void* v) {
 
 void UserInterface::cb_R1Slider_i(Fl_Slider* o, void*) {
   char buf[16];
-sprintf(buf,"%.3g",tw->convertFittingVar(4,o->value()));
+sprintf_s(buf,"%.3g",tw->convertFittingVar(4,o->value()));
 R1Txt->value(buf);
 
 tw->setFittingVar(4,o->value());
@@ -1257,7 +1257,7 @@ void UserInterface::cb_R1Slider(Fl_Slider* o, void* v) {
 
 void UserInterface::cb_R2Slider_i(Fl_Slider* o, void*) {
   char buf[16];
-sprintf(buf,"%.3g",tw->convertFittingVar(3,o->value()));
+sprintf_s(buf,"%.3g",tw->convertFittingVar(3,o->value()));
 R2Txt->value(buf);
 
 tw->setFittingVar(3,o->value());
@@ -1269,7 +1269,7 @@ void UserInterface::cb_R2Slider(Fl_Slider* o, void* v) {
 
 void UserInterface::cb_alphaTauSlider_i(Fl_Slider* o, void*) {
   char buf[16];
-sprintf(buf,"%.3g",tw->convertFittingVar(2,o->value()));
+sprintf_s(buf,"%.3g",tw->convertFittingVar(2,o->value()));
 alphaTauTxt->value(buf);
 
 tw->setFittingVar(2,o->value());
@@ -1281,7 +1281,7 @@ void UserInterface::cb_alphaTauSlider(Fl_Slider* o, void* v) {
 
 void UserInterface::cb_alphaAmplitudeSlider_i(Fl_Slider* o, void*) {
   char buf[16];
-sprintf(buf,"%.3g",tw->convertFittingVar(1,o->value()));
+sprintf_s(buf,"%.3g",tw->convertFittingVar(1,o->value()));
 alphaAmpTxt->value(buf);
 
 tw->setFittingVar(1,o->value());
@@ -1307,7 +1307,7 @@ void UserInterface::cb_Fit1(Fl_Button* o, void* v) {
 
 void UserInterface::cb_alphaStartPointRoller_i(Fl_Roller* o, void*) {
   char buf[16];
-_gcvt(o->value(),4,buf);
+_gcvt_s(buf,16,o->value(),4);
 tw->setFittingVar(0,o->value());
 tw->redraw();
 alphaStartPointTxt->value(buf);

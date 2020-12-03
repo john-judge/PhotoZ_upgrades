@@ -4,10 +4,10 @@
 
 #include "stdio.h"
 #include "fcntl.h"
-#include "edtimage/edtimage.h"
+#include "edtimage/EdtImage.h"
 #include "imagefilebmp.h"
 
-#include "edtimage/edtlut.h"
+#include "edtimage/EdtLut.h"
 
 
 #define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
