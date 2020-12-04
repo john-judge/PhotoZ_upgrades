@@ -20,7 +20,6 @@ class MainController
 private:
 	//===========================================
 	const float version;
-	float freq;
 	//===========================================
 	void redraw();
 

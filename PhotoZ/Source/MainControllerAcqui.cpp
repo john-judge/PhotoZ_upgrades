@@ -52,8 +52,8 @@ void MainController::takeRli()
 		delete [] traceData;
 		return;
 	}
-//	int program = dc->getCameraProgram();
-//	int freq = Camera::FREQ[program];
+	int program = dc->getCameraProgram();
+	int freq = Camera::FREQ[program];
 	
 //	cam.program(program);
 	dapControl->setDAPs(freq);
