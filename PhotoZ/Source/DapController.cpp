@@ -618,7 +618,7 @@ Error:
 	int height = cam.height();
 	int array_diodes = dataArray->num_raw_array_diodes();
 	short memory1[2560];
-	
+
 	if (width != dataArray->raw_width() || height != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
@@ -660,7 +660,7 @@ Error:
 	cout << " bufferSize " << bufferSize << " array_diodes " << array_diodes << "\n";
 	cam.start_images();
 //	cout<<"\n";
-	
+	NI_openShutter(1);
 	for (int i = 0; i < rliPts; i++)
 	{
 		image = cam.wait_image();
@@ -682,6 +682,7 @@ Error:
 	cam.end_images();
 	memcpy(memory, memory + array_diodes, array_diodes* sizeof(image[1]));		//*sizeof(short)
 	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
+	NI_openShutter(0);
 	return 0;
 }
 
@@ -864,6 +865,31 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcqui, "Dev1/ai3", "acquiInput3", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
 	//TO DO: configure elsewhere
 	cout << "line 815  " << SamplingRate<< "\n";
+	return 0;
+}
+
+//=============================================================================
+int DapController::NI_openShutter(int on)
+{
+	int32       error = 0;
+	TaskHandle  taskHandle = 0;
+	uInt8       data[4] = { 0,on,0,0 };
+	char        errBuff[2048] = { '\0' };
+
+	DAQmxErrChk(DAQmxCreateTask("", &taskHandle));
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandle, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));
+	DAQmxErrChk(DAQmxStartTask(taskHandle));
+	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandle, 1, 1, 10.0, DAQmx_Val_GroupByChannel, data, NULL, NULL));
+
+Error:
+	if (DAQmxFailed(error))
+		DAQmxGetExtendedErrorInfo(errBuff, 2048);
+	if (taskHandle != 0) {
+		DAQmxStopTask(taskHandle);
+		DAQmxClearTask(taskHandle);
+	}
+	if (DAQmxFailed(error))
+		printf("DAQmx Error: %s\n", errBuff);
 	return 0;
 }
 

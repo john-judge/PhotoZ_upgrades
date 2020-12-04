@@ -77,6 +77,7 @@ public:
 	int setDAPs(float64 SamplingRate=2000);//setting default for testing purposes.
 	void releaseDAPs();
 	
+	int NI_openShutter(int on);
 
 	// Flags
 	void setStopFlag(char);
