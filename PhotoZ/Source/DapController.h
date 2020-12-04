@@ -29,11 +29,12 @@ private:
 	//HDAP dap820Put;
 	//HDAP dap820Get;
 
+	int numPts;
+
 	int32_t error =0;
 	char errBuff[2048];
 	
 	float acquiOnset;
-	int numPts;
 	double intPts;
 	float duration;
 	int program;

@@ -79,29 +79,7 @@ void WindowExporter::export1(int x0, int y0, int w, int h)
 	  &bitMapInfo,						// address of structure with bitmap data
 	  DIB_RGB_COLORS			// RGB
 	);
-		
-	//PLWinBmp *winBmp=new PLWinBmp;
-	//winBmp->CreateFromHBitmap(hbm);
-
-	//PLPixel32 ** pLineArray = winBmp->GetLineArray32();
-	//PLPixel32  * pLine;
-	/*
-	int width=winBmp->GetWidth();
-	int height=winBmp->GetHeight();
-	for (int y=0;y<height;y++)
-	{
-		pLine=pLineArray[height-y-1];
-		for(int x=0;x<width;x++)
-		{
-			pLine[x].SetR(buf[4*(width*y+x)+2]);
-			pLine[x].SetG(buf[4*(width*y+x)+1]);
-			pLine[x].SetB(buf[4*(width*y+x)]);
-			pLine[x].SetA(buf[4*(width*y+x)+3]);
-		}
-	}
 	
-	*/
-	imageType = 'T';
 	char *fileName;
 	if(imageType=='B')
 	{

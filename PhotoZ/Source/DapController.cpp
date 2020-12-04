@@ -158,7 +158,7 @@ double DapController::getIntPts()
 int DapController::acqui(short *memory, Camera &cam)
 {
 	int i;
-	//short *buf = new int[4*numPts];
+	short *buf = new short[4*numPts];
 						//DapInputFlush(dap820Get);
 
 	unsigned char *image;
@@ -183,11 +183,11 @@ int DapController::acqui(short *memory, Camera &cam)
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
 	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;	
 	int32 defaultReadSuccess = -1; int32* successfulSamplesIn=&defaultReadSuccess;
-	//DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, false, 0, DAQmx_Val_GroupByChannel, outputs, successfulSamples, NULL));
+	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, false, 0, DAQmx_Val_GroupByChannel, outputs, successfulSamples, NULL));
 	int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);	
 	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
-	//DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcqui, (numPts+7+start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4*numpts, successfulSamplesIn, NULL));
-	//DAQmxErrChk(DAQmxStartTask (taskHandleAcqui));
+	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcqui, (numPts+7+start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4*numPts, successfulSamplesIn, NULL));
+	DAQmxErrChk(DAQmxStartTask (taskHandleAcqui));
 	int tos = 0;
 	for (int ii=0; ii<7; ii++) image = cam.wait_image();		// throw away first seven frames to clear camera saturation
 																// be sure to add 7 to COUNT in lines 327 and 399
@@ -228,9 +228,9 @@ int DapController::acqui(short *memory, Camera &cam)
 void DapController::pseudoAcqui()
 {
 	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;
-	//DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, true, 0, DAQmx_Val_GroupByChannel, pseudoOutputs, successfulSamples, NULL));
+	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration+10, true, 0, DAQmx_Val_GroupByChannel, pseudoOutputs, successfulSamples, NULL));
 	//wait till complete
-	//DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui),30);
+	DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui,30));
 
 }
 
@@ -364,9 +364,9 @@ void DapController::createAcquiDapFile()//set outputs samples array here//config
 
 	// int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);(numPts+7+start_offset)
 	//Set timing for inputs
-		// DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiIn,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising,8*(numPts+7+start_offset)));
+		//DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiIn,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising,8*(numPts+7+start_offset)));
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
-	//DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcqui,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising, duration+10));
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcqui,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising, duration+10));
 	// PseudoRecord-820 v5.dap
 	//pseudoOutputs = new int*[3]; //old idea
 	fillPDOut(pseudoOutputs,1);
@@ -587,7 +587,7 @@ int DapController::takeRli(short *memory, Camera &cam)
 {
 	int32       error = 0;
 	TaskHandle  taskHandle = 0;
-//	uInt8       data[4] = { 0,1,0,0 };
+	uInt8       data[4] = { 0,1,0,0 };
 	char        errBuff[2048] = { '\0' };
 /*
 	DAQmxErrChk(DAQmxCreateTask("", &taskHandle));
@@ -609,7 +609,7 @@ Error:
 //	uInt8 samplesForRLI [] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	uint8_t samplesForRLI[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-//	uInt8 data0[4] = { 0,0,0,0 };
+	uInt8 data0[4] = { 0,0,0,0 };
 	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;	
 	int rliPts = 475;//where is this number coming from?//dafault length of samples, i think.
 	unsigned char *image;
@@ -633,7 +633,7 @@ Error:
 	//Sends the digital samples to port 0 line 0 (connected to LED)
 //	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
-	//DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
+	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 //	DAQmxErrChk(DAQmxCreateTask("", &taskHandleRLI));															code adapted from Chun's above
 //	DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));
 //	DAQmxErrChk(DAQmxStartTask(taskHandleRLI));
@@ -681,7 +681,7 @@ Error:
 
 	cam.end_images();
 	memcpy(memory, memory + array_diodes, array_diodes* sizeof(image[1]));		//*sizeof(short)
-//	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
+	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
 	return 0;
 }
 
@@ -830,24 +830,24 @@ char DapController::getScheduleRliFlag()
 //=============================================================================
 int DapController::setDAPs(float64 SamplingRate) //creates tasks
 {
-	//DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleRLI));
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleRLI));
 	//two tasks RLI and acqui
 	//int32 DAQmxCreateDOChan (TaskHandle taskHandle, const char lines[], const char nameToAssignToLines[], int32 lineGrouping);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreatedochan/
 		//Channel names: http://zone.ni.com/reference/en-XX/help/370466AH-01/mxcncpts/physchannames/
-	//DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
 	//Set timing.
 	//int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
-	//DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleRLI, NULL,SamplingRate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps, 348));
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleRLI, NULL,SamplingRate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps, 348));
 
 
-	//DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcqui));
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcqui));
 			//old idea
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line3", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
-	//DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1, Dev1/port1/line1, Dev1/port1/line3", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1, Dev1/port1/line1, Dev1/port1/line3", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
 	//int32 DAQmxCreateAOVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
 		//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
 	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", -10, 10, DAQmx_Val_Volts, NULL));

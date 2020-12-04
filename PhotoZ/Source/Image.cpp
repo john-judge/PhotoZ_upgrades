@@ -72,14 +72,12 @@ void Image::setY0(int y)
 void Image::setXSize(int p)
 {
 	xSize=p;
-	reAllocMem();
 }
 
 //=============================================================================
 void Image::setYSize(int p)
 {
 	ySize=p;
-	reAllocMem();
 }
 
 //=============================================================================
