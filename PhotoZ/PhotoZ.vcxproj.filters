@@ -111,7 +111,7 @@
     <ClCompile Include="Source\UserInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ImageEncoder.cpp">
+    <ClCompile Include="Source\ImageEncoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -191,7 +191,7 @@
     <ClInclude Include="Source\NIDAQmx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImageEncoder.h">
+    <ClInclude Include="Source\ImageEncoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

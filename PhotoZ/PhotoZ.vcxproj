@@ -104,7 +104,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>clseredt.lib;fltk_gl.lib;jpeg.lib;turbojpeg.lib;edtimage.lib;fltk_images.lib;zlib.lib;fltk.lib;libpng16.lib;pdvlib.lib;fltk_forms.lib;imgfiles.lib;libtiff.lib;pdvplus.lib;OpenGL32.Lib;GlU32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>clseredt.lib;fltk_gl.lib;jpeg.lib;turbojpeg.lib;edtimage.lib;fltk_images.lib;zlib.lib;fltk.lib;libpng16.lib;pdvlib.lib;fltk_forms.lib;imgfiles.lib;libtiff.lib;pdvplus.lib;OpenGL32.Lib;GlU32.Lib;NIDAQmx.lib;nisyscfg.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

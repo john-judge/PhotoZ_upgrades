@@ -25,9 +25,6 @@ private:
 	char imageFormat[8];
 	bool fileLoaded;
 
-	//
-	void reAllocMem();
-
 public:
 	Image();
 	~Image();

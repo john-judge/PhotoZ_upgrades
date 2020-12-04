@@ -81,13 +81,13 @@ DapController::~DapController()
 	delete sti2;
 	releaseDAPs();
 }
-/*
+
 void DapController::NiErrorDump(){
 	if (DAQmxFailed(error))
 		DAQmxGetExtendedErrorInfo(errBuff, 2048);
 		cout << errBuff;
 }
-*/
+
 //=============================================================================
 // Number of Points per Trace
 //=============================================================================
