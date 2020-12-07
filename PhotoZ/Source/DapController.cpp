@@ -848,7 +848,10 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
 			// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line3", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1, Dev1/port1/line1, Dev1/port1/line3", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
+	
+	// Commenting out the following line resolves the multiple channel types per task error. JMJ 12/6/2020
+	//DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1, Dev1/port1/line1, Dev1/port1/line3", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
+
 	//int32 DAQmxCreateAOVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
 		//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
 	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", -10, 10, DAQmx_Val_Volts, NULL));
