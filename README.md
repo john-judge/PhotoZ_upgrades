@@ -1,4 +1,4 @@
-## Referencess
+## References
 
 [DAP programming language documentation](http://www.mstarlabs.com/docs/manuals/DAPL3000.PDF)
 
@@ -53,3 +53,8 @@ The documentation folder in this repo has the PhotoZ user manual and architectur
 
 
 Contact: peter.luick@gmail.com
+
+
+
+
+
