@@ -55,12 +55,12 @@ void Diode::drawTrace(double *proData)
 	double intPts=double(w())/numPts;
 
 	// Draw fewer points as the drawing space gets smaller
-	int step = numPts / (w() * 4);
+	int step = numPts / (max(1,w() * 4));
 	step = max(1, step);
 
 	// Clip the drawing area
 //	fl_clip(x(),y()-h()/2,w()-1,2*h());
-	fl_clip(x(), y() - h() / 2, (w() <= 1) ? w() : (w() - 1), 2 * h());	//	Changed to allow denser display in array window
+	fl_push_clip(x(), y() - h() / 2, (w() <= 1) ? w() : (w() - 1), 2 * h());	//	Changed to allow denser display in array window
 	{
 		// Push The Current Matrix
 		fl_push_matrix();
@@ -68,7 +68,7 @@ void Diode::drawTrace(double *proData)
 			//-----------------------
 			// Translation & Scaling
 			//-----------------------
-			fl_translate(x(),y()+0.7*h());
+			fl_translate(x(), y() + 0.7 * h());
 
 			if(!fpFlag)
 			{
@@ -80,6 +80,7 @@ void Diode::drawTrace(double *proData)
 			}
 
 			fl_translate(aw->getXShift(),0);
+
 
 			//-----------------------
 			// Set Color

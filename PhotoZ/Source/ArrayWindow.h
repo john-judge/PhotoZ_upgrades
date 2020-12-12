@@ -62,6 +62,13 @@ private:
 	double xShift;
 	double yScale2;
 
+	// JMJ 12/12/2020 - Zoom and Pan usability enhancement for large lil Dave arrays.
+	double zoomFactor;
+	double xPan;
+	double yPan;
+	double xDragLast;
+	double yDragLast;
+
 	// background
 	int background;
 

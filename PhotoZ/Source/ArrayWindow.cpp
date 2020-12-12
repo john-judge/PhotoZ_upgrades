@@ -53,6 +53,13 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 	xScale=1;
 	xShift=0;
 	continuous = 0;							//new
+
+	// 12/12/2020 JMJ
+	zoomFactor = 1;
+	xPan = 0;
+	yPan = 0;
+	xDragLast = 0;
+	yDragLast = 0;
 }
 
 //=============================================================================
@@ -132,7 +139,7 @@ void ArrayWindow::setYScale2(double p)
 //=============================================================================
 double ArrayWindow::getYScale2()
 {
-  return yScale2;
+	return yScale2;// *zoomFactor;
 }
 
 //=============================================================================
@@ -144,7 +151,7 @@ void ArrayWindow::setXScale(double p)
 //=============================================================================
 double ArrayWindow::getXScale()
 {
-	return xScale;
+	return xScale;// *zoomFactor;
 }
 
 //=============================================================================
@@ -200,15 +207,42 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 	resizeDiodes();
 }
 
+
+
+
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
 	int mouseButton;
+	double scrollAmt, tmpZoomFactor, xOld, yOld;
+
 	switch(event)
 	{
+		case FL_DRAG: // JMJ 12/12/2020
+			if (Fl::event_button() == 1) {
+
+				// save the location where the drag starts
+				xOld = xDragLast;
+				yOld = yDragLast;
+				xDragLast = Fl::event_x();
+				yDragLast = Fl::event_y();
+				cout << "dragging " << xDragLast << ", " << yDragLast << "\n";
+
+				if (xOld == 0 && yOld == 0) // uninitialized, avoid bad translate
+					return Fl_Double_Window::handle(event);
+
+				// drag buffers get cleared in scheduled AW redraw
+				xPan += (xDragLast - xOld);
+				yPan += (yDragLast - yOld);
+
+				resizeDiodes(); // updated xPan and yPan in Diode widget properties
+				redraw();
+
+				return Fl_Double_Window::handle(event);
+			}
 		case FL_PUSH:
 			mouseButton=Fl::event_button();
-//			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
+			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
 			//==============
 			// Ignornance
 			//==============
@@ -238,14 +272,17 @@ int ArrayWindow::handle(int event)
 					return 1;
 				}				 
 			}
-			/*else if (Fl::event_state(FL_ALT))	// Alt Key is Down
+			else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
 			{
-				while (Fl::event_state(FL_ALT)) {
-					redraw();
-				}
-				tw->redraw();
-					return Fl_Double_Window::handle(event);
-			}*/
+				zoomFactor = 1;
+				xPan = 0;
+				yPan = 0;
+				xDragLast = 0;
+				yDragLast = 0;
+
+				redraw();
+				return Fl_Double_Window::handle(event);
+			}
 			//==============
 			// Selection
 			//==============
@@ -253,7 +290,7 @@ int ArrayWindow::handle(int event)
 			{
 					redraw();
 					tw->redraw();
-					return Fl_Double_Window::handle(event);
+					return 1; // Fl_Double_Window::handle(event);
 			}
 
 			else if(mouseButton==3)		// Clear selected
@@ -263,6 +300,17 @@ int ArrayWindow::handle(int event)
 				redraw();
 				tw->redraw();
 				return 1;
+			}
+			return Fl_Double_Window::handle(event);
+		case FL_MOUSEWHEEL: // JMJ 12/12/2020
+			scrollAmt = Fl::event_dy();
+			tmpZoomFactor = zoomFactor;
+			zoomFactor = min(10, max(0.1, zoomFactor + scrollAmt / h() ));
+			if (zoomFactor != tmpZoomFactor) {
+				cout << "zooming to factor: " << zoomFactor << "\n";
+				resizeDiodes();
+				redraw();
+				
 			}
 			return Fl_Double_Window::handle(event);
 		default:
@@ -385,45 +433,29 @@ void ArrayWindow::clear()
 //=============================================================================
 void ArrayWindow::drawBackground()
 {
-	if(background==BG_None)
-	{
-		return;
-	}
-	else if(background==BG_Image)
-	{
-		image->draw();
-	}
-	else if(background==BG_Rli)
-	{
-		drawRli();
-	}
-	else if(background==BG_Max_Amplitude)
-	{
-		drawMaxAmp();
-	}
-	else if(background==BG_Spike_Amp)
-	{
-		drawSpikeAmp();
-	}
-	else if(background==BG_Max_Amp_Latency)
-	{
-		drawMaxAmpLatency();
-	}
-	else if(background==BG_Half_Amp_Latency)
-	{
-		drawHalfAmpLatency();
-	}
-	else if (background == BG_SIGNAL_TO_NOISE)
-	{
-		drawSignalToNoise();
-	}
-	else if(background==BG_EPSP_Latency)
-	{
-		drawEPSPLatency();
-	}
-	else if(background==BG_Live_Feed)
-	{
-		lf->drawBackground();
+	switch (background) {
+		case BG_None:
+			return;
+		case BG_Image:
+			return image->draw();
+		case BG_Rli:
+			return drawRli();
+		case BG_Max_Amplitude:
+			return drawMaxAmp();
+		case BG_Spike_Amp:
+			return drawSpikeAmp();
+		case BG_Max_Amp_Latency:
+			return drawMaxAmpLatency();
+		case BG_Half_Amp_Latency:
+			return drawHalfAmpLatency();
+		case BG_SIGNAL_TO_NOISE:
+			return drawSignalToNoise();
+		case BG_EPSP_Latency:
+			return drawEPSPLatency();
+		case BG_Live_Feed:
+			return lf->drawBackground();
+		default:
+			return;
 	}
 }
 
@@ -452,15 +484,11 @@ void ArrayWindow::drawRli()
 	{
 		ratio=dataArray->getRliRatio(i);
 
-		if(ratio<0 || ratio>1)
-		{
+		if(ratio<0 || ratio>1) {
 			fl_color(char(155),0,0);
-		}
-		else
-		{
+		} else {
 			colorControl->setGrayScale(ratio);
 		}
-
 		get_diode(i)->drawBackground();
 	}
 }
@@ -923,12 +951,12 @@ void ArrayWindow::resizeDiodes()
 	int array_height = dataArray->binned_height();
 	int num_bdiodes = dataArray->num_binned_diodes();
 
-	int diode_width = min(w() * num / (den * array_width), h() * num / (den * array_height));
-	int diode_height = diode_width;
+	int diode_width = min(w() * num * zoomFactor / (den * array_width), h() * num / (den * array_height));
+	int diode_height = diode_width * zoomFactor;
 
 	// Center the array
-	int array_xoffset = (w() - diode_width*array_width) / 2;
-	int array_yoffset = (h() - diode_height*array_height) / 2;
+	int array_xoffset = (w() - diode_width*array_width) / 2 + xPan;
+	int array_yoffset = (h() - diode_height*array_height) / 2 + yPan;
 	if (array_yoffset + array_height * diode_height > h())
 		array_yoffset = do_yoffset + do_height;
 
