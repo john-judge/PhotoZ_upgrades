@@ -214,7 +214,7 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
-	int mouseButton;
+	int mouseButton, dBinning;
 	double scrollAmt, tmpZoomFactor, xOld, yOld;
 
 	switch(event)
@@ -241,8 +241,8 @@ int ArrayWindow::handle(int event)
 			if (Fl::event_button() == 1) {
 
 				// save the location where the drag starts
+				if(!isDragActive) cout << "activated drag\n";
 				isDragActive = true;
-
 
 				return Fl_Double_Window::handle(event);
 			}
@@ -282,6 +282,7 @@ int ArrayWindow::handle(int event)
 					return 1;
 				}				 
 			}
+			/*
 			else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
 			{
 				cout << "resetting array window \n";
@@ -293,7 +294,7 @@ int ArrayWindow::handle(int event)
 
 				redraw();
 				return Fl_Double_Window::handle(event);
-			}
+			}*/
 			//==============
 			// Selection
 			//==============
@@ -301,7 +302,8 @@ int ArrayWindow::handle(int event)
 			{
 					redraw();
 					tw->redraw();
-					return 1; // Fl_Double_Window::handle(event);
+					Fl_Double_Window::handle(event);
+					return 1;
 			}
 
 			else if(mouseButton==3)		// Clear selected
@@ -314,14 +316,22 @@ int ArrayWindow::handle(int event)
 			}
 			return Fl_Double_Window::handle(event);
 		case FL_MOUSEWHEEL: // JMJ 12/12/2020
-			scrollAmt = -Fl::event_dy();
-			if (scrollAmt < 0) scrollAmt = -0.2;
-			else scrollAmt = 0.2;
-			
+			scrollAmt = Fl::event_dy() > 0 ? -0.2 : 0.2;
 			tmpZoomFactor = zoomFactor;
-			zoomFactor = min(20, max(0.8, zoomFactor + scrollAmt));
+			zoomFactor = min(50, max(0.8, zoomFactor + scrollAmt));
+
 			if (zoomFactor != tmpZoomFactor) {
-				cout << "zooming to factor: " << zoomFactor << "\n";
+				// As we zoom, automatically adjust binning ~ # raw / zoom
+				dBinning = max(1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
+				dataArray->binning(dBinning);
+				aw->changeNumDiodes();
+
+				// clear selected. TO DO: save selected, but separate at each zoom level
+				if (!Fl::event_state(FL_CTRL))	clearSelected(0);
+				if (Fl::event_state(FL_CTRL))	clearSelected(1);
+
+				cout << "zooming to factor: " << zoomFactor \
+					 << "\tbinning: " << dBinning << "\n";
 				resizeDiodes();
 				redraw();
 				
@@ -724,7 +734,7 @@ void ArrayWindow::drawTrace() {
 		if (get_diode(i)->drawTrace(dataArray->getProDataMem(i)))
 			drawnCount++;
 	}
-	cout << "Number of diodes rendered in array window: " << drawnCount << " of " << dataArray->num_binned_diodes() << "\n";
+	cout << "Number of bin traces rendered in array window: " << drawnCount - NUM_FP_DIODES << " of " << dataArray->num_binned_diodes() << "\n";
 }
 
 //=============================================================================

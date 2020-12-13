@@ -30,6 +30,8 @@
 
 #define BG_Live_Feed 8
 
+#define DEFAULT_BINNING_FACTOR 500 // A constant relating zoom and binning to auto-adjust binning JMJ 12/13/2020
+
 class Diode;
 class LiveFeed;
 

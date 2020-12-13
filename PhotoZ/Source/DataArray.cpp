@@ -40,7 +40,7 @@ DataArray::DataArray(int input)
 	numAveRec=5;
 
 	m_raw_depth = 14;
-	digital_binning = 1;
+	digital_binning = max(1, DEFAULT_ARRAY_WIDTH * DEFAULT_ARRAY_HEIGHT / DEFAULT_BINNING_FACTOR);
 
 	record1No=0;
 	record2No=0;
@@ -105,6 +105,8 @@ void DataArray::alloc_raw_mem(int w, int h)
 	m_raw_width = w;
 	m_raw_height = h;
 	cout << " da line 106 - num_raw " << num_raw <<"  "  << m_raw_width<<"  "  <<m_raw_height<<endl;
+	
+	digital_binning = max(1,w * h / DEFAULT_BINNING_FACTOR); // JMJ 12/13/2020 - default binning limits number of bins to ~2000
 //	cout << "line 102 " << sizeof(short**)*num_raw << endl;
 }
 
