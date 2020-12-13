@@ -66,6 +66,7 @@ private:
 	double zoomFactor;
 	double xPan;
 	double yPan;
+	bool isDragActive;
 	double xDragLast;
 	double yDragLast;
 

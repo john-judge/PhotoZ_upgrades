@@ -60,6 +60,7 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 	yPan = 0;
 	xDragLast = 0;
 	yDragLast = 0;
+	isDragActive = false;
 }
 
 //=============================================================================
@@ -139,7 +140,7 @@ void ArrayWindow::setYScale2(double p)
 //=============================================================================
 double ArrayWindow::getYScale2()
 {
-	return yScale2;// *zoomFactor;
+	return yScale2;
 }
 
 //=============================================================================
@@ -151,7 +152,7 @@ void ArrayWindow::setXScale(double p)
 //=============================================================================
 double ArrayWindow::getXScale()
 {
-	return xScale;// *zoomFactor;
+	return xScale;
 }
 
 //=============================================================================
@@ -218,31 +219,40 @@ int ArrayWindow::handle(int event)
 
 	switch(event)
 	{
+	case FL_RELEASE: // JMJ 12/12/2020
+		if (Fl::event_button() == 1) {
+
+			if(!isDragActive) return Fl_Double_Window::handle(event);
+
+			// clear drag location
+			isDragActive = false;
+
+			// drag buffers get cleared in scheduled AW redraw
+			xPan += (Fl::event_x() - xDragLast);
+			yPan += (Fl::event_y() - yDragLast);
+			cout << "dragged to new center: (" << xPan << ", " << yPan << ")\n";
+
+			resizeDiodes(); // updated xPan and yPan in Diode widget properties
+			redraw();
+
+			return Fl_Double_Window::handle(event);
+		}
 		case FL_DRAG: // JMJ 12/12/2020
 			if (Fl::event_button() == 1) {
 
 				// save the location where the drag starts
-				xOld = xDragLast;
-				yOld = yDragLast;
-				xDragLast = Fl::event_x();
-				yDragLast = Fl::event_y();
-				cout << "dragging " << xDragLast << ", " << yDragLast << "\n";
+				isDragActive = true;
 
-				if (xOld == 0 && yOld == 0) // uninitialized, avoid bad translate
-					return Fl_Double_Window::handle(event);
-
-				// drag buffers get cleared in scheduled AW redraw
-				xPan += (xDragLast - xOld);
-				yPan += (yDragLast - yOld);
-
-				resizeDiodes(); // updated xPan and yPan in Diode widget properties
-				redraw();
 
 				return Fl_Double_Window::handle(event);
 			}
 		case FL_PUSH:
+			
+			xDragLast = Fl::event_x();
+			yDragLast = Fl::event_y();
+
 			mouseButton=Fl::event_button();
-			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
+			//cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
 			//==============
 			// Ignornance
 			//==============
@@ -274,6 +284,7 @@ int ArrayWindow::handle(int event)
 			}
 			else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
 			{
+				cout << "resetting array window \n";
 				zoomFactor = 1;
 				xPan = 0;
 				yPan = 0;
@@ -303,9 +314,12 @@ int ArrayWindow::handle(int event)
 			}
 			return Fl_Double_Window::handle(event);
 		case FL_MOUSEWHEEL: // JMJ 12/12/2020
-			scrollAmt = Fl::event_dy();
+			scrollAmt = -Fl::event_dy();
+			if (scrollAmt < 0) scrollAmt = -0.2;
+			else scrollAmt = 0.2;
+			
 			tmpZoomFactor = zoomFactor;
-			zoomFactor = min(10, max(0.1, zoomFactor + scrollAmt / h() ));
+			zoomFactor = min(20, max(0.8, zoomFactor + scrollAmt));
 			if (zoomFactor != tmpZoomFactor) {
 				cout << "zooming to factor: " << zoomFactor << "\n";
 				resizeDiodes();
@@ -405,18 +419,15 @@ void ArrayWindow::draw()
 
 	drawBackground();
 	
-	if(showTrace)
-	{
+	if(showTrace) {
 		drawTrace();
 	}
 
-	if(showRliValue)
-	{
+	if(showRliValue) {
 		drawRliValue();
 	}
 
-	if(showDiodeNum)
-	{
+	if(showDiodeNum) {
 		drawDiodeNum();
 	}
 	
@@ -707,13 +718,13 @@ void ArrayWindow::drawScale()
 }
 
 //=============================================================================
-void ArrayWindow::drawTrace()
-{
-	int i;
-	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)		//  modified to vary diode number with binning
-	{
-		get_diode(i)->drawTrace(dataArray->getProDataMem(i));
+void ArrayWindow::drawTrace() {
+	int drawnCount = 0;
+	for (int i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++) {		//  modified to vary diode number with binning
+		if (get_diode(i)->drawTrace(dataArray->getProDataMem(i)))
+			drawnCount++;
 	}
+	cout << "Number of diodes rendered in array window: " << drawnCount << " of " << dataArray->num_binned_diodes() << "\n";
 }
 
 //=============================================================================

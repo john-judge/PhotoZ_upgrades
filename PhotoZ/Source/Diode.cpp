@@ -49,18 +49,30 @@ void Diode::draw()
 }
 
 //=============================================================================
-void Diode::drawTrace(double *proData)
+bool Diode::drawTrace(double *proData)
 {
-	int numPts=dc->getNumPts();
-	double intPts=double(w())/numPts;
+	int xCenter = x();
+	int yCenter = y() - h() / 2;
+
+	// For efficiency, don't draw if this diode is outside the drawing area 12/12/2020 JMJ
+	if (xCenter > aw->w() || 
+		xCenter < -aw->w() || 
+		yCenter > aw->h() || 
+		yCenter < -aw->h()) {
+		//cout << "not drawing diode at (" << xCenter << ", " << yCenter << \
+			") is outside array window of size " << aw->w() << " x " << aw->h() << "\n";
+		return false;
+	}
+
+	int numPts = dc->getNumPts();
+	double intPts = double(w()) / numPts;
 
 	// Draw fewer points as the drawing space gets smaller
-	int step = numPts / (max(1,w() * 4));
+	int step = numPts / (max(1, w() * 4));
 	step = max(1, step);
 
 	// Clip the drawing area
-//	fl_clip(x(),y()-h()/2,w()-1,2*h());
-	fl_push_clip(x(), y() - h() / 2, (w() <= 1) ? w() : (w() - 1), 2 * h());	//	Changed to allow denser display in array window
+	fl_push_clip(xCenter, yCenter, max(1, w() - 1), 2 * h());	//	Changed to allow denser display in array window
 	{
 		// Push The Current Matrix
 		fl_push_matrix();
@@ -68,7 +80,7 @@ void Diode::drawTrace(double *proData)
 			//-----------------------
 			// Translation & Scaling
 			//-----------------------
-			fl_translate(x(), y() + 0.7 * h());
+			fl_translate(xCenter, y() + 0.7 * h());
 
 			if(!fpFlag)
 			{
@@ -127,6 +139,7 @@ void Diode::drawTrace(double *proData)
 		fl_pop_matrix();
 	}
 	fl_pop_clip();
+	return true;
 }
 
 //=============================================================================
