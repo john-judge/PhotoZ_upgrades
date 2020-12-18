@@ -1,5 +1,13 @@
 //=============================================================================
 // MainControllerAcqui.cpp
+//
+//		JMJ 12/17/2020
+//	This copy of PhotoZ is meant to work without any camera / successful PDV calls
+//		for the purpose of testing with simulated NI-USB hardware
+//		https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019Nw0SAE&l=en-US
+//
+//
+//	This program is for investigation only; DON'T copy this to the main branch.
 //=============================================================================
 #include <time.h>
 #include <sys/types.h>	// _stat
@@ -44,6 +52,9 @@ void MainController::takeRli()
 	// Get Signal
 	//
 	cout << "MainControllerAcqui line 46 \n";
+	fl_alert("This is a simulated version of PhotoZ for software testing! We don't use the camera.\n");
+
+	/*
 	if (cam.open_channel()) {
 		fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
 		delete [] memory;
@@ -51,7 +62,7 @@ void MainController::takeRli()
 			delete [] traceData[i];
 		delete [] traceData;
 		return;
-	}
+	}*/
 	int program = dc->getCameraProgram();
 	int freq = Camera::FREQ[program];
 	
@@ -220,12 +231,13 @@ void MainController::acquiOneRecord()
 		dapControl->createAcquiDapFile();
 
 		Camera cam;
+		/*
 		if (cam.open_channel()) {
 			fl_alert("MCA line 220 Failed to open the camera channel!\n");
 			goto error;
 		}
 		cam.program(dc->getCameraProgram());
-		cam.init_cam();
+		cam.init_cam();*/
 
 		if(trialCount%1==0)
 		{

@@ -1,14 +1,13 @@
 //=============================================================================
 // DapController.cpp
 //
-//
 //		JMJ 12/17/2020
-//	This copy of PhotoZ works without any camera / PDV calls
+//	This copy of PhotoZ is meant to work without any camera / successful PDV calls
 //		for the purpose of testing with simulated NI-USB hardware
 //		https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019Nw0SAE&l=en-US
-//	
-//	This program is for investigation only; DON'T copy this to the main branch.
 //
+//
+//	This program is for investigation only; DON'T copy this to the main branch.
 //=============================================================================
 #include <iostream>
 #include <stdlib.h>		// _gcvt()
@@ -247,7 +246,7 @@ void DapController::resetDAPs()
 
 void DapController::resetCamera()
 {
-	fl_alert("You'll be proceeding without a camera. This is a simulated version of PhotoZ for which the camera is not needed to test simulated hardware with NI-DAQmx \n");
+	fl_alert("You'll be proceeding without a camera. This is a simulated version of PhotoZ meant for testing NI-DAQmx software without hardware. \n");
 }
 
 //=============================================================================
