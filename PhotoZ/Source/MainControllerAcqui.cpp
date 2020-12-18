@@ -226,8 +226,13 @@ void MainController::acquiOneRecord()
 
 		//-------------------------------------------
 		// Recording
+		cout << "\n\n SET DAPS\n";
 		dapControl->setDAPs();
+		
+		cout << "\n\n RESET DAPS\n";
 		dapControl->resetDAPs();
+
+		cout << "\n\n Create DAP file\n";
 		dapControl->createAcquiDapFile();
 
 		Camera cam;
