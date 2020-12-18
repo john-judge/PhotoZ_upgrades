@@ -1,5 +1,14 @@
 //=============================================================================
 // DapController.cpp
+//
+//
+//		JMJ 12/17/2020
+//	This copy of PhotoZ works without any camera / PDV calls
+//		for the purpose of testing with simulated NI-USB hardware
+//		https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019Nw0SAE&l=en-US
+//	
+//	This program is for investigation only; DON'T copy this to the main branch.
+//
 //=============================================================================
 #include <iostream>
 #include <stdlib.h>		// _gcvt()
@@ -162,22 +171,14 @@ int DapController::acqui(short *memory, Camera &cam)
 						//DapInputFlush(dap820Get);
 
 	unsigned char *image;
-	int width = cam.width();
-	int height = cam.height();
-	if (width != dataArray->raw_width() || height != dataArray->raw_height())
-	{
-		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
-		cout << " line 158 width & height " << width << "   " << height << endl;
-		return 0;
-	}
 	int num_diodes = dataArray->num_raw_diodes();
 
 	// Start Acquisition
 	//joe->dave; might need to change it for dave cam
-	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+	//cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 	Sleep(100);
 
-	cam.start_images();
+	//cam.start_images();
 	//DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
@@ -189,8 +190,8 @@ int DapController::acqui(short *memory, Camera &cam)
 	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcqui, (numPts+7+start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4*numPts, successfulSamplesIn, NULL));
 	DAQmxErrChk(DAQmxStartTask (taskHandleAcqui));
 	int tos = 0;
-	for (int ii=0; ii<7; ii++) image = cam.wait_image();		// throw away first seven frames to clear camera saturation
-																// be sure to add 7 to COUNT in lines 327 and 399
+	//for (int ii=0; ii<7; ii++) image = cam.wait_image();		// throw away first seven frames to clear camera saturation
+	/*														// be sure to add 7 to COUNT in lines 327 and 399
 	for (i = 0; i < numPts; i++) {
 		image = cam.wait_image();
 
@@ -209,7 +210,7 @@ int DapController::acqui(short *memory, Camera &cam)
 	}
 	cam.end_images();
 	cam.serial_write("@TXC 0\r");
-
+	*/
 
 	// Get Binary Data (digital outputs)
 	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
@@ -220,8 +221,6 @@ int DapController::acqui(short *memory, Camera &cam)
 	//	*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
 	return 0;
 	//free(buf);
-	free(outputs);
-	return 0;
 }
 
 //=============================================================================
@@ -248,36 +247,7 @@ void DapController::resetDAPs()
 
 void DapController::resetCamera()
 {
-	try {
-		Camera cam;
-		char command1[80];
-		if (cam.open_channel()) {
-			fl_alert("DapC line 229 Failed to open the channel!\n");
-		}
-		//	if (getStopFlag() == 0) {
-		int	sure = fl_ask("Are you sure you want to reset camera?");
-		//	}
-		if (sure == 1) {
-	//		if (stop()) {
-				cam.end_images();
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-//				cam.init_cam();			// replaced for LittleDave
-//				int program = dc->getCameraProgram();
-//				cam.program(program);
-				cout  << " DapC line 251 reset camera " << endl;
-	//		}
-		}
-	}
-	catch (exception& e) {
-		cout << e.what() << '\n';
-	}
+	fl_alert("You'll be proceeding without a camera. This is a simulated version of PhotoZ for which the camera is not needed to test simulated hardware with NI-DAQmx \n");
 }
 
 //=============================================================================
@@ -613,9 +583,10 @@ Error:
 	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;	
 	int rliPts = 475;//where is this number coming from?//dafault length of samples, i think.
 	unsigned char *image;
-	cam.setCamProgram(dc->getCameraProgram());
-	int width = cam.width();
-	int height = cam.height();
+	//cam.setCamProgram(dc->getCameraProgram());
+	//int width = cam.width();
+	//int height = cam.height();
+	/*
 	int array_diodes = dataArray->num_raw_array_diodes();
 	short memory1[2560];
 
@@ -626,7 +597,9 @@ Error:
 		cout << "line 620 - width & height " << width << "   "  << height << endl;
 		cout << "line 621 - raw values     " << dataArray->raw_width() << "   " << dataArray->raw_height() << endl;
 		return 0;
-	}
+	}*/
+
+	fl_alert("Camera not used. This is a simulation.");
 
 	//DapLinePut(dap820Put,"STA Send_Pipe_Output,Start_Output");
 
@@ -645,44 +618,6 @@ Error:
 //    DAQmxWaitUntilTaskDone(taskHandleRLI,-1);
 //can't wait because light will be off by the time camera captures
 
-
-
-	cam.init_cam();
-//	cam.serial_write("@TXC 0\r");
-
-	if (cam.open_channel()) {
-		fl_alert("DapC line 647 Failed to open the channel!\n");
-	}
-	cam.serial_write("@TXC 0\r");
-	cam.serial_write("@SEQ 1\r");
-	//cam.get_image_info();
-	int bufferSize = cam.get_buffer_size();
-	cout << " bufferSize " << bufferSize << " array_diodes " << array_diodes << "\n";
-	cam.start_images();
-//	cout<<"\n";
-	NI_openShutter(1);
-	for (int i = 0; i < rliPts; i++)
-	{
-		image = cam.wait_image();
-		memcpy(memory + array_diodes*i, image, array_diodes);	
-/*		if (i % 50 == 0)
-			{
-			memcpy(memory1, image, array_diodes * sizeof(image[1]));
-			cout << "line 658 i " << i << " 50 " << memory1[50] << " 100 " << memory1[100] << " 500  " << memory1[500] << " \n";
-			}*/
-/*		if (i == 0) cout << "line 660 i=  " << i <<" memory[100]     "<< memory[100] << " 200 " <<memory[200]<<" 1000 " << memory[1000]<<" \n";
-		if (i == 1) cout << "line 660 i=  " << i << " memory[100]     " << memory[100 + array_diodes] << " 200 " << memory[200 + array_diodes] << " 1000 " << memory[1000 + array_diodes] << " \n";
-		if (i % 100 == 0) cout << "line 661 i=  " << i << " memory[100+ad]  " << memory[100+array_diodes*i] << " 200 " << memory[200+array_diodes*i] << " 1000 " << memory[1000+array_diodes*i] << " \n";*/
-		if (cam.num_timeouts() > 10) {
-			cout << "DapC line 663 tineouts \n";
-			return cam.num_timeouts();
-		}
-	}
-
-	cam.end_images();
-	memcpy(memory, memory + array_diodes, array_diodes* sizeof(image[1]));		//*sizeof(short)
-	DAQmxWriteDigitalLines(taskHandleRLI, 1, 1, 10, DAQmx_Val_GroupByChannel, data0, NULL, NULL);			//turn off LED
-	NI_openShutter(0);
 	return 0;
 }
 

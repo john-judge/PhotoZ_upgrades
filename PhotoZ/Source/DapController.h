@@ -1,5 +1,14 @@
 //=============================================================================
 // DapController.h
+//
+//
+//		JMJ 12/17/2020
+//	This copy of PhotoZ works without any camera / PDV calls
+//		for the purpose of testing with simulated NI-USB hardware
+//		https://knowledge.ni.com/KnowledgeArticleDetails?id=kA00Z0000019Nw0SAE&l=en-US
+//
+//
+//	This program is for investigation only; DON'T copy this to the main branch.
 //=============================================================================
 #ifndef _DapController_h
 #define _DapController_h
