@@ -132,6 +132,7 @@ public:
 	void setCameraProgram(int);
 
 	void set_digital_binning(const char*);
+	void set_digital_binning(int);
 
 	void setIntRecords(const char*);
 	void setNumRecords(const char*);

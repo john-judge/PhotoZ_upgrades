@@ -323,8 +323,8 @@ int ArrayWindow::handle(int event)
 			if (zoomFactor != tmpZoomFactor) {
 				// As we zoom, automatically adjust binning ~ # raw / zoom
 				dBinning = max(1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
-				dataArray->binning(dBinning);
-				aw->changeNumDiodes();
+
+				mc->set_digital_binning(dBinning);
 
 				// clear selected. TO DO: save selected, but separate at each zoom level
 				if (!Fl::event_state(FL_CTRL))	clearSelected(0);

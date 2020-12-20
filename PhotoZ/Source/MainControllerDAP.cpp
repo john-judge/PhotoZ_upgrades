@@ -158,8 +158,13 @@ void MainController::set_digital_binning(const char* txt)
 {
 
 	int dbinning = atoi(txt);
-	if (dbinning < 1)
-		dbinning = 1;
+	set_digital_binning(dbinning);
+
+}
+void MainController::set_digital_binning(int dbinning)
+{
+	if (dbinning < 1) dbinning = 1;
+
 	/*if (dbinning == 1) {
 		ui->awFpYScale->value(4.65*log2(dbinning + 1));
 		ui->awYScale->value(4.65*log2(dbinning + 1));
@@ -167,20 +172,20 @@ void MainController::set_digital_binning(const char* txt)
 		setAwYScale(4.65*log2(dbinning + 1));
 	}
 	else {
-		if ((4.65*log(dbinning + 1)) >= 10)
-		{
-			setAwFpYScale(10);
-			setAwYScale(10);
-			ui->awFpYScale->value(10);
-			ui->awYScale->value(10);
-		}
-		else
-		{
-			ui->awFpYScale->value(4.65*log(dbinning + 1));
-			ui->awYScale->value(4.65*log(dbinning + 1));
-			setAwFpYScale(4.65*log(dbinning + 1));
-			setAwYScale(4.65*log(dbinning + 1));
-		}
+	if ((4.65*log(dbinning + 1)) >= 10)
+	{
+		setAwFpYScale(10);
+		setAwYScale(10);
+		ui->awFpYScale->value(10);
+		ui->awYScale->value(10);
+	}
+	else
+	{
+		ui->awFpYScale->value(4.65*log(dbinning + 1));
+		ui->awYScale->value(4.65*log(dbinning + 1));
+		setAwFpYScale(4.65*log(dbinning + 1));
+		setAwYScale(4.65*log(dbinning + 1));
+	}
 	}*/
 
 
