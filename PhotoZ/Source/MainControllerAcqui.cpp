@@ -226,13 +226,8 @@ void MainController::acquiOneRecord()
 
 		//-------------------------------------------
 		// Recording
-		cout << "\n\n SET DAPS\n";
 		dapControl->setDAPs();
-		
-		cout << "\n\n RESET DAPS\n";
 		dapControl->resetDAPs();
-
-		cout << "\n\n Create DAP file\n";
 		dapControl->createAcquiDapFile();
 
 		Camera cam;
@@ -245,16 +240,8 @@ void MainController::acquiOneRecord()
 		cam.init_cam();*/
 
 		if(trialCount%1==0)
-		{
-			// Send Dap File to the DAP board
-			int status=dapControl->sendFile2Dap("Record-820 v5.dap");
-
-			if(status==0)// Failed to Send Dap File
-			{
-				fl_alert("MCA Line 233 Failed to Send DAP files to DAPs!\n");
-				goto error;
-			}											
-
+		{									
+			cout << "\n\n Starting acquisition\n";
 			fr_st = clock();
 			int timeouts = dapControl->acqui(memory, cam);
 			fr_end = clock();
