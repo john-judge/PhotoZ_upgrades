@@ -158,6 +158,11 @@ void MainController::set_digital_binning(const char* txt)
 {
 
 	int dbinning = atoi(txt);
+	set_digital_binning(dbinning);
+}
+
+void MainController::set_digital_binning(int dbinning)
+{
 	if (dbinning < 1)
 		dbinning = 1;
 	/*if (dbinning == 1) {

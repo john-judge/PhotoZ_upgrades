@@ -166,8 +166,6 @@ double DapController::getIntPts()
 int DapController::acqui(short *memory, Camera &cam)
 {
 	int i;
-	short *buf = new short[5*numPts];
-						//DapInputFlush(dap820Get);
 
 	unsigned char *image;
 	int num_diodes = dataArray->num_raw_diodes();
@@ -185,16 +183,19 @@ int DapController::acqui(short *memory, Camera &cam)
 	int32* successfulSamples=&defaultSuccess;	
 	int32 defaultReadSuccess = -1; 
 	int32* successfulSamplesIn=&defaultReadSuccess;
+	cout << "start AI\n";
+	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiAI));
+
 	cout << "\n\n\n******Writing digital output******\n";
 
 	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcquiDO, duration+10, false, 0, DAQmx_Val_GroupByChannel, outputs, successfulSamples, NULL)); // JMJ 12/19 turned on autostart
 	int start_offset = (int)((double) (CAM_INPUT_OFFSET + acquiOnset) / intPts);	
-	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
-	cout << "\n\n\n******Reading analog input into buf******\n";
+	short *buf = new short[4 * (numPts + 7 + start_offset)];
 
-	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcquiAI, (numPts+7+start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 5*numPts, successfulSamplesIn, NULL));
-	//cout << "start AI\n";
-	//DAQmxErrChk(DAQmxStartTask(taskHandleAcquiAI));
+	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
+	cout << "\n\n\n******Reading " << (numPts + 7 + start_offset) << " analog input samples into buf******\n";
+
+	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcquiAI, (numPts+7+start_offset), 1.0, DAQmx_Val_GroupByScanNumber, buf, 4 * (numPts + 7 + start_offset), successfulSamplesIn, NULL));
 	cout << "start DO\n";
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiDO));
 	int tos = 0;
@@ -227,8 +228,9 @@ int DapController::acqui(short *memory, Camera &cam)
 	//cout << "Successful samples received: " << successfulSamplesIn<<"\n";
 	//for (i = 0; i < numPts*4; i++)
 	//	*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
+	free(buf);
 	return 0;
-	//free(buf);
+	
 }
 
 //=============================================================================
@@ -299,8 +301,9 @@ void DapController::createAcquiDapFile()//set outputs samples array here//config
 		//DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiIn,NULL,Camera::FREQ[program],DAQmx_Val_Rising,DAQmx_Val_Rising,8*(numPts+7+start_offset)));
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
 
-	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiAI, "/Dev1/PFI0", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
-	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiDO, "/Dev1/PFI0", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
+	// "" should drive both from Onboard Clock (internal)
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiAI, "", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiDO, "", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
 
 	// PseudoRecord-820 v5.dap
 	//pseudoOutputs = new int*[3]; //old idea
