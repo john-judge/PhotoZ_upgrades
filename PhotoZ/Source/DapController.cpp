@@ -10,6 +10,7 @@
 #include <exception>
 #include <stdint.h>
 #include <FL/fl_ask.H>
+#include <omp.h>
 
 //#include "dapio32.h"
 
