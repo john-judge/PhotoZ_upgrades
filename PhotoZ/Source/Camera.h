@@ -13,14 +13,10 @@
 
 class Camera {
 	char edt_devname[128];
-	int unit;					// Some parameters that can be set, but are
-	int channel;				// usually just 0
 	int m_depth;
 
-	int ipdv=1;
-
-	PdvDev *pdv_pt[3];
-	int timeouts, m_num_timeouts;
+	PdvDev *pdv_pt[4];
+	int timeouts[4], m_num_timeouts;
 	int last_timeouts;
 	int overruns = 0;
 	bool recovering_timeout;
@@ -74,21 +70,21 @@ public:
 
     int open_channel();
 
-	unsigned char* single_image();
+	unsigned char* single_image(int ipdv);
     void start_images();
 	void end_images();
 	void init_cam();
 
 	void setCamProgram(int p);
-    unsigned char* wait_image();
+    unsigned char* wait_image(int ipdv);
 
-	void serial_write(const char *buf);
-	void serial_read(char *buf, int size);
+	void serial_write(const char *buf, int ipdv);
+	//void serial_read(char *buf, int size);
 
-    int num_timeouts();
+    int num_timeouts(int ipdv);
 	
-	void get_image_info();
-	int get_buffer_size();
+	void get_image_info(int ipdv);
+	int get_buffer_size(int ipdv);
 
 	int program();
 	void program(int p);
@@ -97,7 +93,6 @@ public:
 	int height();
 	int depth();
 	int freq();
-	char* devname();
 };
 
 #endif // CAMERA_H_
