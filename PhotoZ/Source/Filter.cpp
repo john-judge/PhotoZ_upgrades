@@ -87,7 +87,7 @@ void Filter::binomial8(double *input,double *output)   //  new 9 point binomial 
 	int i;
 	int numPts = dc->getNumPts();
 
-	double sum;										//filtering excludes first 5 points
+	//double sum;										//filtering excludes first 5 points
 	output[0] = (input[4] + 8 * input[3] + 28 * input[2] + 56 * input[1]) / 93;
 	output[1] = (input[5] + 8 * input[4] + 28 * input[3] + 56 * input[2] + 70 * input[1]) / 163;
 	output[2] = (input[6] + 8 * input[5] + 28 * input[4] + 56 * (input[1] + input[3]) + 70 * input[2]) / 219;
@@ -114,7 +114,7 @@ void Filter::binomial6(double *input, double *output)   //   7 point binomial [f
 	int i;
 	int numPts = dc->getNumPts();
 
-	double sum;										//filtering excludes first 5 points
+	//double sum;										//filtering excludes first 5 points
 	output[0] = (input[3] + 6 * input[2] + 15 * input[1] + 20 * input[0]) / 42;
 	output[1] = (input[4] + 6 * input[3] + 15 * (input[0] + input[2]) + 20 * input[1]) / 57;
 	output[2] = (input[5] + 6 * (input[0]+input[4]) + 15 * (input[1] + input[3]) + 20 * input[2]) /63;
@@ -138,7 +138,7 @@ void Filter::binomial4(double *input, double *output)   //   7 point binomial [f
 	int i;
 	int numPts = dc->getNumPts();
 
-	double sum;										//filtering excludes first 5 points
+	//double sum;										//filtering excludes first 5 points
 	output[0] = (input[2]+4*input[1]+6*input[0])/11;
 	output[1] = (input[3] + 4*(input[0]+input[2]) +6 * input[1]) / 15;
 	for (i = 2; i < numPts - 2; i++)

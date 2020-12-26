@@ -94,7 +94,7 @@ public:
 	int depth();
 	int freq();
 
-	void deinterleave(short * buf, int n, int m);
+	void deinterleave(short * buf);
 };
 
 #endif // CAMERA_H_

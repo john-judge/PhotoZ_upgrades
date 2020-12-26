@@ -228,7 +228,7 @@ int DapController::acqui(short *memory, Camera &cam) {
 	for (int ipdv = 0; ipdv < 4; ipdv++) cam.serial_write("@TXC 0\r", ipdv);
 
 	// Deinterleave memeory
-	cam.deinterleave(memory, width, height);
+	cam.deinterleave(memory);
 
 	// Get Binary Data (digital outputs)
 	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
@@ -673,7 +673,7 @@ Error:
 	if (cam.open_channel()) {
 		fl_alert("DapC line 647 Failed to open the channel!\n");
 	}*/
-	for (int ipdv; ipdv < 4; ipdv++) {
+	for (int ipdv = 0; ipdv < 4; ipdv++) {
 		cam.serial_write("@TXC 0\r", ipdv);
 		cam.serial_write("@SEQ 1\r", ipdv);
 	}

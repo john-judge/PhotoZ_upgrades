@@ -327,7 +327,10 @@ int Camera::freq() {
 // Deinterleave the image in buf given that they were produced by 4 channels
 // Channel memory is contiguous in 1-D array.
 // Note: n * m = numPts. Size of buf is 4 * numPts
-void Camera::deinterleave(short * buf, int n, int m) {
+void Camera::deinterleave(short * buf) {
+
+	int m = width() / 2;
+	int n = height() / 2;
 	
 	// TO DO: do this in place for mem efficiency if necessary
 	short *tmpBuf = new short[4 * n * m];
@@ -375,6 +378,13 @@ void Camera::deinterleave(short * buf, int n, int m) {
 			tmpBuf[iDst] = buf[iSrc];
 		}
 	}
+
+	// copy back to output
+	for (int i = 0; i < 4 * n * m; i++) {
+		buf[i] = tmpBuf[i];
+	}
+
+	delete[] tmpBuf;
 
 	
 
