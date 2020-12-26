@@ -93,6 +93,8 @@ public:
 	int height();
 	int depth();
 	int freq();
+
+	void deinterleave(short * buf, int n, int m);
 };
 
 #endif // CAMERA_H_

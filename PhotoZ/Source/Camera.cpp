@@ -5,6 +5,7 @@
 #include <iostream>
 #include "DapController.h"
 #include "RecControl.h"		//added to get camGain on line 157
+
 using namespace std;
 
 #ifdef LILJOE
@@ -320,4 +321,61 @@ int Camera::depth() {
 
 int Camera::freq() {
 	return FREQ[m_program];
+}
+
+// JMJ 12/26/2020
+// Deinterleave the image in buf given that they were produced by 4 channels
+// Channel memory is contiguous in 1-D array.
+// Note: n * m = numPts. Size of buf is 4 * numPts
+void Camera::deinterleave(short * buf, int n, int m) {
+	
+	// TO DO: do this in place for mem efficiency if necessary
+	short *tmpBuf = new short[4 * n * m];
+
+	// Channel 0 (upper left quadrant)
+	for (int i = 0; i < n * m; i++) {
+		tmpBuf[4 * i + 1] = buf[i];
+	}
+	
+	// Channel 1 (upper right quadrant)
+	for (int iRow = 0; iRow < n; iRow++) {
+		for (int jCol = 0; jCol < m; jCol++) {
+			// find 1-D source array location
+			int iSrc = n * m + iRow * m + jCol; 
+
+			// find 1-D destination array location
+			// Channel 1: reflect col indices across the vertical axis
+			int iDst = 4 * (iRow * m + (n - jCol)) + 2;
+			tmpBuf[iDst] = buf[iSrc];
+		}
+	}
+
+	// Channel 2 (lower left quadrant)
+	for (int iRow = 0; iRow < n; iRow++) {
+		for (int jCol = 0; jCol < m; jCol++) {
+			// find 1-D source array location
+			int iSrc = 2 * n * m + iRow * m + jCol;
+
+			// find 1-D destination array location
+			// Channel 2: reflect row indices across horizontal
+			int iDst = 4 * ((m - iRow) * m + jCol) + 3;
+			tmpBuf[iDst] = buf[iSrc];
+		}
+	}
+
+	// Channel 3 (lower right quadrant)
+	for (int iRow = 0; iRow < n; iRow++) {
+		for (int jCol = 0; jCol < m; jCol++) {
+			// find 1-D source array location
+			int iSrc = 3 * n * m + iRow * m + jCol;
+
+			// find 1-D destination array location
+			// Channel 2: reflect col indices across the vertical axis and row across horizontal
+			int iDst = 4 * ((m - iRow) * m + (n - jCol)) + 4;
+			tmpBuf[iDst] = buf[iSrc];
+		}
+	}
+
+	
+
 }

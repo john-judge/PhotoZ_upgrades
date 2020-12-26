@@ -181,8 +181,12 @@ int DapController::acqui(short *memory, Camera &cam) {
 	//DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
-	int32 defaultSuccess = -1; int32* successfulSamples = &defaultSuccess;
-	int32 defaultReadSuccess = -1; int32* successfulSamplesIn = &defaultReadSuccess;
+	
+	int32 defaultSuccess = -1; 
+	int32* successfulSamples = &defaultSuccess;
+	int32 defaultReadSuccess = -1; 
+	int32* successfulSamplesIn = &defaultReadSuccess;
+
 	DAQmxErrChk(DAQmxWriteDigitalLines(taskHandleAcqui, duration + 10, false, 0, DAQmx_Val_GroupByChannel, outputs, successfulSamples, NULL));
 	int start_offset = (int)((double)(CAM_INPUT_OFFSET + acquiOnset) / intPts);
 	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
@@ -192,51 +196,53 @@ int DapController::acqui(short *memory, Camera &cam) {
 
 	// throw away first seven frames to clear camera saturation
 	// be sure to add 7 to COUNT in lines 327 and 399
+	for (int ii = 0; ii < 7; ii++) image = cam.wait_image(ii % 4);
+
+
+	#pragma omp parallel for 
+
 	for (int ipdv = 0; ipdv < 4; ipdv++) {
-		for (int ii = 0; ii < 7; ii++) image = cam.wait_image(ipdv);
+		for (int i = 0; i < numPts; i++) {
 
+			short* privateMem = memory + ipdv * numPts; // pointer to this thread's section of MEMORY
 
-		#pragma omp parallel for private(buf)
-		{
-			for (int ipdv = 0; ipdv < 4; ipdv++) {
+			// acquire data for this image from the IPDVth channel
+			image = cam.wait_image(ipdv); 
 
-				// TO DO: logic to place this thread's data in the correct place in memory.
+			// Save the image to process later
+			memcpy(privateMem + (num_diodes * i), image, width * height * sizeof(short));
 
-				for (int i = 0; i < numPts; i++) {
-					image = cam.wait_image(ipdv); // acquire data for this image from the IPDVth channel
-
-					// Save the image to process later
-					memcpy(memory + (num_diodes * i), image, width * height * sizeof(short));
-
-					if (cam.num_timeouts(ipdv) != tos) {
-						printf("DapController line 180 timeout on %d\n", i);
-						tos = cam.num_timeouts(ipdv);
-					}
-					if (cam.num_timeouts(ipdv) > 20) {
-						cam.end_images();
-						cam.serial_write("@TXC 0\r", ipdv);
-						return cam.num_timeouts(ipdv);
-					}
-				}
+			if (cam.num_timeouts(ipdv) != tos) {
+				printf("DapController line 180 timeout on %d\n", i);
+				tos = cam.num_timeouts(ipdv);
+			}
+			if (cam.num_timeouts(ipdv) > 20) {
+				cam.end_images();
+				cam.serial_write("@TXC 0\r", ipdv);
+				return cam.num_timeouts(ipdv);
 			}
 		}
-		cam.end_images();
-		for (int ipdv = 0; ipdv < 4; ipdv++) cam.serial_write("@TXC 0\r", ipdv);
-
-
-		// Get Binary Data (digital outputs)
-		//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
-		//DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui),30);
-		//cout << "Successful samples written: " << successfulSamples<<"\n";
-		//cout << "Successful samples received: " << successfulSamplesIn<<"\n";
-		//for (i = 0; i < numPts*4; i++)
-		//	*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
-		return 0;
-		//free(buf);
-		free(outputs);
-		return 0;
 	}
+
+	cam.end_images();
+	for (int ipdv = 0; ipdv < 4; ipdv++) cam.serial_write("@TXC 0\r", ipdv);
+
+	// Deinterleave memeory
+	cam.deinterleave(memory, width, height);
+
+	// Get Binary Data (digital outputs)
+	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
+	//DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcqui),30);
+	//cout << "Successful samples written: " << successfulSamples<<"\n";
+	//cout << "Successful samples received: " << successfulSamplesIn<<"\n";
+	//for (i = 0; i < numPts*4; i++)
+	//	*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
+	return 0;
+	//free(buf);
+	free(outputs);
+	return 0;
 }
+
 
 //=============================================================================
 void DapController::pseudoAcqui()
