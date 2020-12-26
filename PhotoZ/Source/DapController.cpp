@@ -192,18 +192,17 @@ int DapController::acqui(short *memory, Camera &cam) {
 	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
 	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcqui, (numPts + 7 + start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4 * numPts, successfulSamplesIn, NULL));
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcqui));
-	int tos = 0;
 
 	// throw away first seven frames to clear camera saturation
 	// be sure to add 7 to COUNT in lines 327 and 399
-	for (int ii = 0; ii < 7; ii++) image = cam.wait_image(ii % 4);
-
+	for (int ii = 0; ii < 7; ii++) 
+		image = cam.wait_image(ii % 4);
 
 	#pragma omp parallel for 
-
 	for (int ipdv = 0; ipdv < 4; ipdv++) {
 		for (int i = 0; i < numPts; i++) {
 
+			int tos = 0; // private to this thread.
 			short* privateMem = memory + ipdv * numPts; // pointer to this thread's section of MEMORY
 
 			// acquire data for this image from the IPDVth channel
@@ -213,11 +212,11 @@ int DapController::acqui(short *memory, Camera &cam) {
 			memcpy(privateMem + (num_diodes * i), image, width * height * sizeof(short));
 
 			if (cam.num_timeouts(ipdv) != tos) {
-				printf("DapController line 180 timeout on %d\n", i);
+				printf("DapController line 180 timeout on %d for thread %d\n", i, ipdv);
 				tos = cam.num_timeouts(ipdv);
 			}
 			if (cam.num_timeouts(ipdv) > 20) {
-				cam.end_images();
+				cam.end_images(ipdv);
 				cam.serial_write("@TXC 0\r", ipdv);
 				return cam.num_timeouts(ipdv);
 			}
@@ -225,7 +224,8 @@ int DapController::acqui(short *memory, Camera &cam) {
 	}
 
 	cam.end_images();
-	for (int ipdv = 0; ipdv < 4; ipdv++) cam.serial_write("@TXC 0\r", ipdv);
+	for (int ipdv = 0; ipdv < 4; ipdv++) 
+		cam.serial_write("@TXC 0\r", ipdv);
 
 	// Deinterleave memeory
 	cam.deinterleave(memory);
@@ -686,8 +686,7 @@ Error:
 
 	#pragma omp parallel for private(buf)
 	{
-		for (int ipdv; ipdv < 4; ipdv++) {
-			// TO DO: logic to place this thread's data in the correct place in memory.
+		for (int ipdv = 0; ipdv < 4; ipdv++) {
 			for (int i = 0; i < rliPts; i++)
 			{
 				image = cam.wait_image(ipdv);
@@ -701,7 +700,7 @@ Error:
 									if (i == 1) cout << "line 660 i=  " << i << " memory[100]     " << memory[100 + array_diodes] << " 200 " << memory[200 + array_diodes] << " 1000 " << memory[1000 + array_diodes] << " \n";
 									if (i % 100 == 0) cout << "line 661 i=  " << i << " memory[100+ad]  " << memory[100+array_diodes*i] << " 200 " << memory[200+array_diodes*i] << " 1000 " << memory[1000+array_diodes*i] << " \n";*/
 				if (cam.num_timeouts(ipdv) > 10) {
-					cout << "DapC line 663 tineouts \n";
+					cout << "DapC line 663 timeouts for thread " << ipdv << " \n";
 					return cam.num_timeouts(ipdv);
 				}
 			}

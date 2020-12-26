@@ -211,7 +211,6 @@ void MainController::setCameraProgram(int p)
 	dc->setCameraProgram(p);
 	Camera cam;
 	cam.setCamProgram(p);
-//	camera->setCamProgram(p);
 	dc->setDuration();
 	
 	// Resize the array

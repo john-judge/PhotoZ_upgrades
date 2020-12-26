@@ -73,6 +73,7 @@ public:
 	unsigned char* single_image(int ipdv);
     void start_images();
 	void end_images();
+	void end_images(int ipdv);
 	void init_cam();
 
 	void setCamProgram(int p);

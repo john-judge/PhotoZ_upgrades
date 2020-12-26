@@ -88,6 +88,9 @@ void MainController::start()					//this module runs at startup and the initcam c
 	ui->init();
 	cw->setPointXYZ();
 	ui->setValue();	
+	/* 
+	JMJ 12/26/2020 - replaced for little Dave; initcam is now called in Camera::init_cam
+
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
 	system(command);
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
@@ -96,7 +99,8 @@ void MainController::start()					//this module runs at startup and the initcam c
 	system(command);
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
 	system(command);
-	dc->resetCamera();			// replaced for LittleDave works but disable while developing program
+	*/
+	//dc->resetCamera();			// replaced for LittleDave works but disable while developing program
 	dw->init(dc);
 	aw->openImageFile("01-01.bmp");
 	setCameraProgram(7);

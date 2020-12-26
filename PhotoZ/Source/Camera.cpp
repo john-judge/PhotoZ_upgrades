@@ -156,6 +156,10 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 		pdv_pt[i] = pdv_open_channel(edt_devname,
 			(i >> 1) | 1,	// pdv_units	 = [0, 0, 1, 1]
 			i | 1);			// pdv_channels	 = [0, 1, 0, 1]
+		if (!pdv_pt[i]) {
+			cout << "Failed to open channel " << i << " Camera::init_cam()\n";
+			return;
+		}
 	}
 
 	int hbin = 0;
@@ -196,10 +200,6 @@ void Camera::start_images() {					// converted to 4
 		pdv_flush_fifo(pdv_pt[i]);				 // pdv_timeout_restart(pdv_p, 0);	same as pdv_flush  7-4-2020
 		pdv_multibuf(pdv_pt[i], 4);				// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
 		pdv_start_images(pdv_pt[i], 0);
-		/*	sprintf(command, "@TXC 0\r");
-			serial_write(command);
-			sprintf(command, "@SEQ 1\r");
-			serial_write(command);*/
 		Sleep(100);
 		cout << " cam start_images line 185  " << pdv_pt[0] << "\n";
 	}
@@ -207,14 +207,14 @@ void Camera::start_images() {					// converted to 4
 
 // Ends images for all 4 channels.
 void Camera::end_images() {						//	converted to 4
-	cout << " camera end_images line 190   \n";
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) 
+		end_images(i);
+}
 
-		/*		if (!pdv_pt[i])
-					cout << " line 190 " << i << "\n";
-					return;*/
-		pdv_start_images(pdv_pt[i], 1);
-	}
+// Ends images for channel IPDV
+void Camera::end_images(int ipdv) {
+	if (pdv_pt[ipdv])
+		pdv_start_images(pdv_pt[ipdv], 1);
 }
 
 // Get image info for IPDVth channel
