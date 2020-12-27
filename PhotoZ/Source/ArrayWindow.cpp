@@ -214,8 +214,9 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
-	int mouseButton, dBinning;
-	double scrollAmt, tmpZoomFactor, xOld, yOld;
+	int mouseButton;
+	double dBinning;
+	double scrollAmt, tmpZoomFactor;
 
 	switch(event)
 	{
@@ -976,8 +977,8 @@ void ArrayWindow::resizeDiodes()
 	int diode_height = diode_width * zoomFactor;
 
 	// Center the array
-	int array_xoffset = (w() - diode_width*array_width) / 2 + xPan;
-	int array_yoffset = (h() - diode_height*array_height) / 2 + yPan;
+	int array_xoffset = (int)((w() - diode_width*array_width) / 2 + xPan);
+	int array_yoffset = (int)((h() - diode_height*array_height) / 2 + yPan);
 	if (array_yoffset + array_height * diode_height > h())
 		array_yoffset = do_yoffset + do_height;
 

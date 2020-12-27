@@ -325,8 +325,7 @@ int Camera::freq() {
 
 // JMJ 12/26/2020
 // Deinterleave the image in buf given that they were produced by 4 channels
-// Channel memory is contiguous in 1-D array.
-// Note: n * m = numPts. Size of buf is 4 * numPts
+// Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
 void Camera::deinterleave(short * buf) {
 
 	int m = width() / 2;
