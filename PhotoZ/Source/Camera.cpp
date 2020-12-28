@@ -5,6 +5,7 @@
 #include <iostream>
 #include "DapController.h"
 #include "RecControl.h"		//added to get camGain on line 157
+#include <vector>
 
 using namespace std;
 
@@ -194,7 +195,6 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 
 // Starts images for all 4 channels.
 void Camera::start_images() {					// converted to 4
-	char command[80];
 	for (int i = 0; i < 4; i++) {
 		if (!pdv_pt[i]) 		return;
 		pdv_flush_fifo(pdv_pt[i]);				 // pdv_timeout_restart(pdv_p, 0);	same as pdv_flush  7-4-2020
@@ -260,7 +260,7 @@ void Camera::serial_write(const char *buf, int ipdv)
 	pdv_serial_read(pdv_pt[ipdv], buffer, 512 - 1);
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
-	pdv_serial_write(pdv_pt[ipdv], buffer, strlen(buffer));
+	pdv_serial_write(pdv_pt[ipdv], buffer, (int)strlen(buffer));
 }
 
 /*void Camera::serial_read(char *buf, int size)
@@ -323,68 +323,71 @@ int Camera::freq() {
 	return FREQ[m_program];
 }
 
+
+// Deinterleave the image in buf given that they were produced by 4 channels
+void Camera::deinterleave(short * buf) {
+	int m = width() / 2;
+	int n = height() / 2;
+	deinterleave(buf, n, m);
+}
+
 // JMJ 12/26/2020
 // Deinterleave the image in buf given that they were produced by 4 channels
 // Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
-void Camera::deinterleave(short * buf) {
+void Camera::deinterleave(short * buf, int n, int m) {
 
-	int m = width() / 2;
-	int n = height() / 2;
-	
-	// TO DO: do this in place for mem efficiency if necessary
-	short *tmpBuf = new short[4 * n * m];
+	// Idea: do this in place for mem efficiency if necessary
+	vector<short> tmpBuf(4 * n * m, 0);
 
-	// Channel 0 (upper left quadrant)
-	for (int i = 0; i < n * m; i++) {
-		tmpBuf[4 * i + 1] = buf[i];
-	}
-	
-	// Channel 1 (upper right quadrant)
-	for (int iRow = 0; iRow < n; iRow++) {
-		for (int jCol = 0; jCol < m; jCol++) {
-			// find 1-D source array location
-			int iSrc = n * m + iRow * m + jCol; 
-
-			// find 1-D destination array location
-			// Channel 1: reflect col indices across the vertical axis
-			int iDst = 4 * (iRow * m + (n - jCol)) + 2;
-			tmpBuf[iDst] = buf[iSrc];
+	// loop over quadrants, rows, and columns and transform from interleaved to deinterleaved
+	for (int ipdv = 0; ipdv < 4; ipdv++) {
+		for (int iRow = 0; iRow < n; iRow++) {
+			for (int jCol = 0; jCol < m; jCol++) {
+				tmpBuf[mapToDeinterleaved(iRow,jCol,n,m,ipdv)] = buf[mapFromInterleaved(iRow, jCol, n, m, ipdv)];
+			}
 		}
 	}
 
-	// Channel 2 (lower left quadrant)
-	for (int iRow = 0; iRow < n; iRow++) {
-		for (int jCol = 0; jCol < m; jCol++) {
-			// find 1-D source array location
-			int iSrc = 2 * n * m + iRow * m + jCol;
-
-			// find 1-D destination array location
-			// Channel 2: reflect row indices across horizontal
-			int iDst = 4 * ((m - iRow) * m + jCol) + 3;
-			tmpBuf[iDst] = buf[iSrc];
-		}
-	}
-
-	// Channel 3 (lower right quadrant)
-	for (int iRow = 0; iRow < n; iRow++) {
-		for (int jCol = 0; jCol < m; jCol++) {
-			// find 1-D source array location
-			int iSrc = 3 * n * m + iRow * m + jCol;
-
-			// find 1-D destination array location
-			// Channel 2: reflect col indices across the vertical axis and row across horizontal
-			int iDst = 4 * ((m - iRow) * m + (n - jCol)) + 4;
-			tmpBuf[iDst] = buf[iSrc];
-		}
-	}
-
-	// copy back to output
+	// copy back to output array
 	for (int i = 0; i < 4 * n * m; i++) {
 		buf[i] = tmpBuf[i];
 	}
 
-	delete[] tmpBuf;
+}
 
-	
+// Return the 1D array index of the interleaved (source) array given:
+// row i of n rows, column j of m columns, in quadrant QUADRANT
+int Camera::mapFromInterleaved(int i, int j, int n, int m, int quadrant) {
+	if (i >= n || j >= m) {
+		cout << "Index out of range error in Camera::mapFromInterleaved, Quadrant " << quadrant << "  \n";
+		return -1;
+	}
+	return quadrant * n * m +	// quadrant offset (each quadrant of size n * m)
+			i * m +				// row offset (each row of size m)
+			j;					// offset into current column of quadrant
+}
 
+// Return the 1D array index of the deinterleaved (destination) array given:
+// row i of n rows, column j of m columns, in quadrant QUADRANT
+int Camera::mapToDeinterleaved(int i, int j, int n, int m, int quadrant) {
+	if (i >= n || j >= m) {
+		cout << "Index out of range error in Camera::mapToDeinterleaved, Quadrant " << quadrant << "  \n";
+		return -1;
+	}
+	switch (quadrant) {
+		case 0:
+			// Channel 0 (upper left quadrant), no reflections
+			return 4 * (i * m + j);
+		case 1:
+			// Channel 1: reflect col indices across the vertical axis
+			return 4 * (i * m + (m - j - 1)) + 1;
+		case 2:
+			// Channel 2: reflect row indices across horizontal
+			return 4 * ((n - i - 1) * m + j) + 2;
+		case 3:
+			// Channel 3: reflect col indices across the vertical axis and row across horizontal
+			return 4 * ((n - i - 1) * m + (m - j - 1)) + 3;
+		default:
+			return -1;
+	}
 }
