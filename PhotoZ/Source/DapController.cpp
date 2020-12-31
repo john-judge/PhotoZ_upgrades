@@ -173,8 +173,7 @@ int DapController::acqui(short *memory, Camera &cam) {
 
 	// Start Acquisition
 	//joe->dave; might need to change it for dave cam
-	for (int ipdv = 0; ipdv < 4; ipdv++)
-		cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r", ipdv);
+	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r"); // write to channel 0 only
 	Sleep(100);
 
 	cam.start_images();
@@ -217,15 +216,14 @@ int DapController::acqui(short *memory, Camera &cam) {
 			}
 			if (cam.num_timeouts(ipdv) > 20) {
 				cam.end_images(ipdv);
-				cam.serial_write("@TXC 0\r", ipdv);
+				cam.serial_write("@TXC 0\r"); // write to channel 0 only
 				return cam.num_timeouts(ipdv);
 			}
 		}
 	}
 
 	cam.end_images();
-	for (int ipdv = 0; ipdv < 4; ipdv++) 
-		cam.serial_write("@TXC 0\r", ipdv);
+	cam.serial_write("@TXC 0\r"); // write to channel 0 only
 
 	// Deinterleave memeory
 	cam.deinterleave(memory);
@@ -673,10 +671,9 @@ Error:
 	if (cam.open_channel()) {
 		fl_alert("DapC line 647 Failed to open the channel!\n");
 	}*/
-	for (int ipdv = 0; ipdv < 4; ipdv++) {
-		cam.serial_write("@TXC 0\r", ipdv);
-		cam.serial_write("@SEQ 1\r", ipdv);
-	}
+	cam.serial_write("@TXC 0\r");
+	cam.serial_write("@SEQ 1\r");
+	
 	//cam.get_image_info();
 	int bufferSize = cam.get_buffer_size(0);
 	cout << " bufferSize " << bufferSize << " array_diodes " << array_diodes << "\n";

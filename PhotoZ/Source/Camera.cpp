@@ -169,24 +169,22 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	if (start_line_lib[m_program]) start_line = start_line_lib[m_program];
 	else start_line = 65 + (1024 - 2 * HEIGHT[m_program] * ccd_lib_bin[m_program]);		// Chun says cam_num_row gets doubled - did not fully understand
 
-	for (int i = 0; i < 4; i++) {
-
-		sprintf(command, "@SPI 0;2");
-		serial_write(command, i);
-		Sleep(20);
-		sprintf(command, "@SPI 0;0");
-		serial_write(command, i);
-		Sleep(20);
-		sprintf(command, "@SPI 0;4");
-		serial_write(command, i);
-		Sleep(20);
-		sprintf(command, "@PSR %d; %d", ccd_lib_bin[m_program], start_line);
-		serial_write(command, i);
-		Sleep(20);
-		sprintf(command, "@SPI 0; %d", hbin);
-		serial_write(command, i);
-		Sleep(20);
-	}
+	sprintf(command, "@SPI 0;2");
+	serial_write(command);
+	Sleep(20);
+	sprintf(command, "@SPI 0;0");
+	serial_write(command);
+	Sleep(20);
+	sprintf(command, "@SPI 0;4");
+	serial_write(command);
+	Sleep(20);
+	sprintf(command, "@PSR %d; %d", ccd_lib_bin[m_program], start_line);
+	serial_write(command);
+	Sleep(20);
+	sprintf(command, "@SPI 0; %d", hbin);
+	serial_write(command);
+	Sleep(20);
+	
 
 	sprintf(command, "c:\\EDT\\pdv\\setgap2k");// this is a batch job that calls pdb -u 0 -c 0 -f setgap200.txt four times for the different channels. The console indicates successful execution
 	system(command);
@@ -254,13 +252,14 @@ unsigned char* Camera::wait_image(int ipdv) {
 }
 
 // Write a command from buf to IPDVth channel
-void Camera::serial_write(const char *buf, int ipdv)
+// Only channel 0 of Little Dave supports serial write
+void Camera::serial_write(const char *buf)
 {
 	char buffer[512];
-	pdv_serial_read(pdv_pt[ipdv], buffer, 512 - 1);
+	pdv_serial_read(pdv_pt[0], buffer, 512 - 1);
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
-	pdv_serial_write(pdv_pt[ipdv], buffer, (int)strlen(buffer));
+	pdv_serial_write(pdv_pt[0], buffer, (int)strlen(buffer));
 }
 
 /*void Camera::serial_read(char *buf, int size)
@@ -336,7 +335,7 @@ void Camera::deinterleave(short * buf) {
 // Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
 void Camera::deinterleave(short * buf, int n, int m) {
 
-	// Idea: do this in place for mem efficiency if necessary
+	// Idea: do this in place for mem efficiency if needed
 	vector<short> tmpBuf(4 * n * m, 0);
 
 	// loop over quadrants, rows, and columns and transform from interleaved to deinterleaved
@@ -347,12 +346,10 @@ void Camera::deinterleave(short * buf, int n, int m) {
 			}
 		}
 	}
-
 	// copy back to output array
 	for (int i = 0; i < 4 * n * m; i++) {
 		buf[i] = tmpBuf[i];
 	}
-
 }
 
 // Return the 1D array index of the interleaved (source) array given:

@@ -9,7 +9,7 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace UnitTestCamera
+namespace UnitTests
 {		
 	TEST_CLASS(UnitTestCamera)
 	{

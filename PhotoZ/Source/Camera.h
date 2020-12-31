@@ -79,7 +79,7 @@ public:
 	void setCamProgram(int p);
     unsigned char* wait_image(int ipdv);
 
-	void serial_write(const char *buf, int ipdv);
+	void serial_write(const char *buf);
 	//void serial_read(char *buf, int size);
 
     int num_timeouts(int ipdv);
