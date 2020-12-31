@@ -628,7 +628,8 @@ Error:
 	uint8_t samplesForRLI[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	uInt8 data0[4] = { 0,0,0,0 };
-	int32 defaultSuccess = -1; int32* successfulSamples=&defaultSuccess;	
+	int32 defaultSuccess = -1; 
+	int32* successfulSamples=&defaultSuccess;	
 	int rliPts = 475;//where is this number coming from?//dafault length of samples, i think.
 	unsigned char *image;
 	cam.setCamProgram(dc->getCameraProgram());
@@ -665,7 +666,7 @@ Error:
 
 
 
-	cam.init_cam();
+	//cam.init_cam(); // JMJ 12/31: Camera is already initialized in MainControllerAcqui::takeRli. The convention is that cam should be initialized where it is declared
 //	cam.serial_write("@TXC 0\r");
 	/*
 	if (cam.open_channel()) {
@@ -681,13 +682,14 @@ Error:
 //	cout<<"\n";
 	NI_openShutter(1);
 
-	#pragma omp parallel for private(buf)
+	#pragma omp parallel for
 	{
 		for (int ipdv = 0; ipdv < 4; ipdv++) {
 			for (int i = 0; i < rliPts; i++)
 			{
 				image = cam.wait_image(ipdv);
-				memcpy(memory + array_diodes * i, image, array_diodes);
+				// the integer array_diodes is already scaled to 1/4 for each of the 4 channels
+				memcpy(memory + array_diodes * i + ipdv * array_diodes, image, array_diodes);
 				/*		if (i % 50 == 0)
 							{
 							memcpy(memory1, image, array_diodes * sizeof(image[1]));

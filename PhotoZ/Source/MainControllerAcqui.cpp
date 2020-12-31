@@ -31,6 +31,8 @@ void MainController::takeRli()
 	// Allocate Memory
 	//
 	Camera cam;
+	cam.init_cam();
+
 //	int array_diodes = dataArray->num_raw_array_diodes();
 	int bufferSize = dataArray->num_raw_array_diodes();//cam.get_buffer_size();
 	cout << "MainControllerAcqui line 36 " << bufferSize << "\n";
@@ -44,6 +46,8 @@ void MainController::takeRli()
 	// Get Signal
 	//
 	cout << "MainControllerAcqui line 46 \n";
+
+	/*  JMJ 12/31 commented out. open_channel (for LilJoe) is deprecated, use init_cam instead
 	if (cam.open_channel()) {
 		fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
 		delete [] memory;
@@ -52,6 +56,7 @@ void MainController::takeRli()
 		delete [] traceData;
 		return;
 	}
+	*/
 	int program = dc->getCameraProgram();
 	int freq = Camera::FREQ[program];
 	

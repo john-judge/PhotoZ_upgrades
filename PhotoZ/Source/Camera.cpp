@@ -103,6 +103,7 @@ Camera::~Camera() {
 }
 
 // Old open channel used for Lil Joe
+// DEPRECATED?
 int Camera::open_channel() {			//converted to 4
 	int error = 0;
 	for (int i = 0; i < 4; i++)
@@ -194,7 +195,9 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 // Starts images for all 4 channels.
 void Camera::start_images() {					// converted to 4
 	for (int i = 0; i < 4; i++) {
-		if (!pdv_pt[i]) 		return;
+		if (!pdv_pt[i]) return; // Don't start any channels if a single channel is null
+	}
+	for (int i = 0; i < 4; i++) {
 		pdv_flush_fifo(pdv_pt[i]);				 // pdv_timeout_restart(pdv_p, 0);	same as pdv_flush  7-4-2020
 		pdv_multibuf(pdv_pt[i], 4);				// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
 		pdv_start_images(pdv_pt[i], 0);
