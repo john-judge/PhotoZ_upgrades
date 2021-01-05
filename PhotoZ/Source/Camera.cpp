@@ -6,6 +6,8 @@
 #include "DapController.h"
 #include "RecControl.h"		//added to get camGain on line 157
 #include <vector>
+#include <string>
+#include <FL/fl_ask.h>
 
 using namespace std;
 
@@ -90,14 +92,19 @@ Camera::Camera() {
 }
 
 Camera::~Camera() {
+	int retry = 0;
 	for (int i = 0; i < 4; i++) {
 		if (pdv_pt[i]) {
-			if (pdv_close(pdv_pt[i]) < 0) {
-				cout << "Failed to close PDV channel " << i << "\n";
+			while (pdv_close(pdv_pt[i]) < 0 && retry != 1) {
+				retry = fl_choice("Failed to close PDV channel. If you choose not to retry, restart the camera manually.", "Retry", "Exit", "Debugging Info");
+				if (retry == 2) {
+					cout << "Current state of pdv_pt[]\n";
+					for (int j = 0; j < 4; j++)  cout << "pdv_pt[" << j << "]: " << pdv_pt[j] << "\n";
+				}
+				if (retry != 1) cout << "Reattempting to close channel " << i << "...\n";
 			}
-			else {
-				pdv_pt[i] = NULL;
-			}
+
+			//pdv_pt[i] = NULL; // shouldn't be necessary, and may be misleading during memory dumps
 		}
 	}
 }
@@ -151,7 +158,7 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	for (int i = 0; i < 4; i++) {
 		if (pdv_pt[i]) {
 			if (pdv_close(pdv_pt[i]) < 0) {
-				cout << "Failed to close channel i=" << i << ", found open (Camera.cpp, line 151)\n";
+				cout << "When checking for already open channels, we failed to close channel i=" << i << " (Camera.cpp, line 151)\n";
 			}
 		}
 		// according Chun:    
@@ -162,6 +169,11 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 			cout << "Failed to open channel " << i << " Camera::init_cam()\n";
 			return;
 		}
+	}
+
+	cout << "PDV timeouts for channels:\n";
+	for (int i = 0; i < 4; i++) {
+		cout << "\t Channel " << i << "\t" << pdv_get_timeout(pdv_pt[i]) << " ms\n";
 	}
 
 	int hbin = 0;
@@ -186,7 +198,6 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	serial_write(command);
 	Sleep(20);
 	
-
 	sprintf(command, "c:\\EDT\\pdv\\setgap2k");// this is a batch job that calls pdb -u 0 -c 0 -f setgap200.txt four times for the different channels. The console indicates successful execution
 	system(command);
 	return;
@@ -232,6 +243,7 @@ void Camera::get_image_info(int ipdv) {
 
 // Get buffer size for IPDVth channel
 int Camera::get_buffer_size(int ipdv) {
+	if (!pdv_pt[ipdv]) return -1;
 	return pdv_get_imagesize(pdv_pt[ipdv]);
 }
 
@@ -242,6 +254,7 @@ unsigned char* Camera::wait_image(int ipdv) {
 		++overruns;
 	timeouts[0] = pdv_timeouts(pdv_pt[ipdv]);
 	if (timeouts[0] > last_timeouts) {
+		cout << "Channel " << ipdv << " reached " << timeouts[ipdv] << " timeouts. (Camera::wait_image())\n";
 		pdv_timeout_restart(pdv_pt[ipdv], TRUE);
 		last_timeouts = timeouts[0];
 		m_num_timeouts++;
@@ -249,6 +262,7 @@ unsigned char* Camera::wait_image(int ipdv) {
 	}
 	else if (recovering_timeout) {
 		pdv_timeout_restart(pdv_pt[ipdv], TRUE);
+		cout << "Channel " << ipdv << " was restarted due to timeouts. (Camera::wait_image())\n";
 		recovering_timeout = false;
 	}
 	return image;
@@ -262,7 +276,9 @@ void Camera::serial_write(const char *buf)
 	pdv_serial_read(pdv_pt[0], buffer, 512 - 1);
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
-	pdv_serial_write(pdv_pt[0], buffer, (int)strlen(buffer));
+	if (pdv_serial_write(pdv_pt[0], buffer, strlen(buffer)) < 0) {
+		cout << "Failed to serial write to channel 0. Failed command:\n" << buffer << "\n";
+	}
 }
 
 /*void Camera::serial_read(char *buf, int size)

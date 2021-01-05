@@ -172,8 +172,8 @@ int DapController::acqui(short *memory, Camera &cam) {
 	int num_diodes = dataArray->num_raw_diodes();
 
 	// Start Acquisition
-	//joe->dave; might need to change it for dave cam
-	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r"); // write to channel 0 only
+	//joe->dave; might need to change it for dave cam. 
+	//cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r"); 
 	Sleep(100);
 
 	cam.start_images();
@@ -223,7 +223,7 @@ int DapController::acqui(short *memory, Camera &cam) {
 	}
 
 	cam.end_images();
-	cam.serial_write("@TXC 0\r"); // write to channel 0 only
+	//cam.serial_write("@TXC 0\r"); // write to channel 0 only JMJ 12/31 - not for lilDave
 
 	// Deinterleave memeory
 	cam.deinterleave(memory);
@@ -235,7 +235,7 @@ int DapController::acqui(short *memory, Camera &cam) {
 	//cout << "Successful samples received: " << successfulSamplesIn<<"\n";
 	//for (i = 0; i < numPts*4; i++)
 	//	*(memory + (width * height) + (num_diodes*(int)(i/4)))= (short)(*(buf + i));	// copy camera buffer into memory location set aside for raw data
-	return 0;
+
 	//free(buf);
 	free(outputs);
 	return 0;
@@ -672,8 +672,10 @@ Error:
 	if (cam.open_channel()) {
 		fl_alert("DapC line 647 Failed to open the channel!\n");
 	}*/
-	cam.serial_write("@TXC 0\r");
-	cam.serial_write("@SEQ 1\r");
+
+	// JMJ 12/31:
+	//cam.serial_write("@TXC 0\r"); // These are lilJoe commands. Don't send to lilDave
+	//cam.serial_write("@SEQ 1\r");
 	
 	//cam.get_image_info();
 	int bufferSize = cam.get_buffer_size(0);

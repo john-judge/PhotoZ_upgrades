@@ -225,10 +225,12 @@ void MainController::acquiOneRecord()
 		dapControl->createAcquiDapFile();
 
 		Camera cam;
+		/*
 		if (cam.open_channel()) {
 			fl_alert("MCA line 220 Failed to open the camera channel!\n");
 			goto error;
 		}
+		*/
 		cam.program(dc->getCameraProgram());
 		cam.init_cam();
 
