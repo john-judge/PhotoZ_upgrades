@@ -341,9 +341,18 @@ int Camera::freq() {
 	return FREQ[m_program];
 }
 
+// Apply CDS subtraction and deinterleave to a list of raw images.
+void Camera::postAcquisitionProcessing(unsigned short *images, int nImages) {
+	size_t imageSize = width() * height();
+	for (int i = 0; i < nImages; i++) {
+		subtractCDS(images + imageSize * i);
+		deinterleave(images + imageSize * i);
+	}
+}
+
 
 // Deinterleave the image in buf given that they were produced by 4 channels
-void Camera::deinterleave(short * buf) {
+void Camera::deinterleave(unsigned short * buf) {
 	int m = width() / 2;
 	int n = height() / 2;
 	deinterleave(buf, n, m);
@@ -352,7 +361,7 @@ void Camera::deinterleave(short * buf) {
 // JMJ 12/26/2020
 // Deinterleave the image in buf given that they were produced by 4 channels
 // Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
-void Camera::deinterleave(short * buf, int n, int m) {
+void Camera::deinterleave(unsigned short * buf, int n, int m) {
 
 	// Idea: do this in place for mem efficiency if needed
 	vector<short> tmpBuf(4 * n * m, 0);
@@ -405,5 +414,40 @@ int Camera::mapToDeinterleaved(int i, int j, int n, int m, int quadrant) {
 			return 4 * ((n - i - 1) * m + (m - j - 1)) + 3;
 		default:
 			return -1;
+	}
+}
+
+// Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
+void Camera::subtractCDS(unsigned short *image_data)
+{
+	subtractCDS(image_data, width(), height());
+}
+
+// Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
+// This halves the number of columns, m, of each image.
+// We perform this in-place
+// Assumptions for Chun's parameters (removed): 
+//    int loops: N/A (This is the number of images; we'll write function for 1 image)
+//    int factor: 1
+//    int QUAD: 0
+//    int TWOK: 1 
+//    int num_pdvChan: 4
+void Camera::subtractCDS(unsigned short int *image_data, unsigned int m, unsigned int n)
+{
+	// if (factor == 1)
+	int rows = n * 2; // height * # channels / 2
+	int cols = m / 4;  // width / # channels
+	int CDS_add = 256;
+
+	unsigned short int *new_data = image_data;
+	unsigned short int *reset_data = image_data + cols;
+	unsigned short int *old_data = image_data;
+
+	for (int i = 0; i < rows; i++) {
+		for (int j = k; j < k + cols; j++) {
+			*new_data++ = CDS_add + *old_data++ - *reset_data++;
+		}
+		reset_data += cols;
+		old_data += cols;
 	}
 }
