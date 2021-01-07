@@ -402,16 +402,16 @@ int Camera::mapToDeinterleaved(int i, int j, int n, int m, int quadrant) {
 	switch (quadrant) {
 		case 0:
 			// Channel 0 (upper left quadrant), no reflections
-			return 4 * (i * m + j);
+			return mapFromInterleaved(i, j, n, m, quadrant);
 		case 1:
 			// Channel 1: reflect col indices across the vertical axis
-			return 4 * (i * m + (m - j - 1)) + 1;
+			return mapFromInterleaved(i, m-j-1, n, m, quadrant); 
 		case 2:
 			// Channel 2: reflect row indices across horizontal
-			return 4 * ((n - i - 1) * m + j) + 2;
+			return mapFromInterleaved(n-i-1, j, n, m, quadrant);
 		case 3:
 			// Channel 3: reflect col indices across the vertical axis and row across horizontal
-			return 4 * ((n - i - 1) * m + (m - j - 1)) + 3;
+			return mapFromInterleaved(n-i-1, m-j-1, n, m, quadrant);
 		default:
 			return -1;
 	}
@@ -444,7 +444,7 @@ void Camera::subtractCDS(unsigned short int *image_data, unsigned int m, unsigne
 	unsigned short int *old_data = image_data;
 
 	for (int i = 0; i < rows; i++) {
-		for (int j = k; j < k + cols; j++) {
+		for (int j = 0; j < cols; j++) {
 			*new_data++ = CDS_add + *old_data++ - *reset_data++;
 		}
 		reset_data += cols;

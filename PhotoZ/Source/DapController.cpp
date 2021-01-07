@@ -158,18 +158,18 @@ double DapController::getIntPts()
 //=============================================================================
 int DapController::acqui(short *memory, Camera &cam) {
 
-	short *buf = new short[4 * numPts];
+	short *buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
 	//DapInputFlush(dap820Get);
 
 	unsigned char *image;
 	int width = cam.width();
 	int height = cam.height();
+	int quadrantSize = width * height / 4;
 	if (width != dataArray->raw_width() || height != dataArray->raw_height()) {
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
 		cout << " line 158 width & height " << width << "   " << height << endl;
 		return 0;
 	}
-	int num_diodes = dataArray->num_raw_diodes();
 
 	// Start Acquisition
 	//joe->dave; might need to change it for dave cam. 
@@ -202,13 +202,13 @@ int DapController::acqui(short *memory, Camera &cam) {
 		for (int i = 0; i < numPts; i++) {
 
 			int tos = 0; // private to this thread.
-			short* privateMem = memory + ipdv * numPts; // pointer to this thread's section of MEMORY
+			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
 
 			// acquire data for this image from the IPDVth channel
 			image = cam.wait_image(ipdv); 
 
 			// Save the image to process later
-			memcpy(privateMem + (num_diodes * i), image, width * height * sizeof(short));
+			memcpy(privateMem + (quadrantSize * 4 * i), image, width * height * sizeof(short));
 
 			if (cam.num_timeouts(ipdv) != tos) {
 				printf("DapController line 180 timeout on %d for thread %d\n", i, ipdv);
@@ -226,7 +226,7 @@ int DapController::acqui(short *memory, Camera &cam) {
 	//cam.serial_write("@TXC 0\r"); // write to channel 0 only JMJ 12/31 - not for lilDave
 
 	// Deinterleave memeory
-	cam.deinterleave(memory);
+	cam.deinterleave((unsigned short*)memory);
 
 	// Get Binary Data (digital outputs)
 	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
