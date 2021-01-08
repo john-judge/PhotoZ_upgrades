@@ -91,17 +91,56 @@ namespace UnitTests
 		}
 
 
-		TEST_METHOD(mapFromInterleavedTest)
+		TEST_METHOD(mapToRawLocationTest)
 		{
 			Camera cam;
 
-			Assert::AreEqual((short)0, (short)cam.mapFromInterleaved(0, 0, 3, 7, 0));
-			Assert::AreEqual((short)(21 + 6), (short)cam.mapFromInterleaved(0, 6, 3, 7, 1));
-			Assert::AreEqual((short)(21 * 2), (short)cam.mapFromInterleaved(0, 0, 3, 7, 2));
-			Assert::AreEqual((short)(21 * 4 - 1), (short)cam.mapFromInterleaved(2, 6, 3, 7, 3));
+			Assert::AreEqual((short)0, (short)cam.mapToRawLocation(0, 0, 3, 7, 0));
+			Assert::AreEqual((short)(21 + 6), (short)cam.mapToRawLocation(0, 6, 3, 7, 1));
+			Assert::AreEqual((short)(21 * 2), (short)cam.mapToRawLocation(0, 0, 3, 7, 2));
+			Assert::AreEqual((short)(21 * 4 - 1), (short)cam.mapToRawLocation(2, 6, 3, 7, 3));
 		}
 
+		TEST_METHOD(mapQuadrantsTest1)
+		{
+			Camera cam;
 
+			int n = 4;
+			int m = 7;
+			unsigned short* memory = new unsigned short[4 * n * m];
 
+			for (int quad = 0; quad < 4; quad++) {
+				for (int i = 0; i < n; i++) {
+					for (int j = 0; j < m; j++) {
+						memory[cam.mapToRawLocation(i, j, n, m, quad)] = quad;
+					}
+				}
+			}
+
+			cam.mapQuadrants(memory,n,m);
+
+			for (int i = 0; i < n; i++) {
+				// Cbannel 0 final location
+				for (int j = 0; j < m; j++) {
+					Assert::AreEqual((short)0, (short)memory[i * 2 * m + j]);
+				}
+				// Cbannel 1 final location
+				for (int j = m; j < 2 * m; j++) {
+					Assert::AreEqual((short)1, (short)memory[i * 2 * m + j]);
+				}
+			}
+
+			for (int i = n; i < 2 * n; i++) {
+				// Cbannel 2 final location
+				for (int j = 0; j < m; j++) {
+					Assert::AreEqual((short)2, (short)memory[i * 2 * m + j]);
+				}
+				// Cbannel 3 final location
+				for (int j = m; j < 2 * m; j++) {
+					Assert::AreEqual((short)3, (short)memory[i * 2 * m + j]);
+				}
+			}
+			delete[] memory;
+		}
 	};
 }
