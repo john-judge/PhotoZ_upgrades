@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <FL/fl_ask.h>
+#include <omp.h>
 
 #include "Camera.h"
 #include <iostream>
@@ -481,3 +482,223 @@ void Camera::mapQuadrants(unsigned short* memory, int n, int m) {
 void Camera::mapQuadrants(unsigned short* memory) {
 	mapQuadrants(memory, width() / 2, height() / 2);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ============================================================================
+// Code modified from Chun (SM_take_tb-Chun.cpp) for CDS subtraction and frame 
+// deinterleave.
+// The parameters have been removed and hard-coded to match how they get read in
+// in sm.cpp from sm_config.dat 
+// Assuming: 
+//	TWOK = true
+//	QUAD = false
+//	pdv_chan_num = 4
+// factor = 1
+
+
+
+// This is the "Rosetta stone" mapping the SM_config.dat values to the arguments used here.
+// arguments: stripes = image_stripes, layers = image_layers, factor = superFrame
+// SM_take_tb(pdv_chan_num,		file_name,			, 	curNFrames,		
+// SM_take_tb(int numChannels,	char *file_name,	,	int images,					
+
+// cds_lib[curConfig]		=>  int cdsF = 1
+// layers_lib[curConfig],	=>	int layers = 1
+// stripes_lib[curConfig],  =>	int stripes = 4
+// rotate_lib[curConfig],   =>  rotateFlag = 0
+// bad_pix_lib[curConfig],  =>  bad_pix_index = 0
+// ndr_lib[curConfig],		=>  NDR_flag = 0
+// ccd_lib_bin[curConfig] / 2 is passed to value of h_bin, and varies for each little dave program
+// super_frame_lib likely determines superFrame and thus factor? super_frame_lib is almost always 0 in the config.
+
+// frame_interval,			f_size_ratio,		cameraType,			file_frame_w,
+// double frame_interval,	int factor,			char *cameraname,	int file_img_w, 
+
+//BNC_ratio,		ExtTriggerFlag,		preTrigger_frames,		dark_f_flag,	QuadFlag,			 segment_lib[curConfig]);
+//int BNC_ratio,	int ExtTriggerFlag, int preTrigger_frames,	int darkFlag,	int quadFlag, 		 int segmented)
+
+//file_width = image_width
+//file_height = image_height
+int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
+{
+	int layers = 1;
+	int stripes = 4;
+	int file_width = image_width * 2; // CDS subtraction means file_width is twice the final image_width
+	int file_height = image_height;
+
+	//	int SEGS, file_offset, image_offset, frame_length, image_length, file_length;
+	int SEGS, image_length, file_length;
+	//	int frame, segment, row, rowIndex, destIndex, rows, cols, swid, dwid, srcIndex;
+	int segment, row, rowIndex, destIndex, rows, swid, dwid, cols, srcIndex;
+	static int twokchannel[] = { 3, 2, 0, 1, 7, 6, 4, 5, 9, 8, 10, 11, 13, 12, 14, 15 };
+	static int onekchannel[] = { 3, 2, 0, 1, 5, 4, 6, 7 };
+	int *channelOrder = NULL;
+	int num_pdvChan;
+
+
+	SEGS = stripes * layers;
+	image_length = image_width * image_height;
+	file_length = file_width * file_height;
+	rows = file_height / layers;
+
+	if (stripes == 8) {
+		channelOrder = twokchannel;
+		num_pdvChan = 4;
+	}
+	else {
+		channelOrder = onekchannel;
+		num_pdvChan = 2;
+	}
+
+	swid = image_width / stripes;
+	dwid = file_width / stripes;
+
+	omp_set_num_threads(omp_get_num_procs());
+#pragma omp parallel
+	{
+		int segment;
+
+#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
+		for (segment = 0; segment < stripes; ++segment) {
+			srcIndex = channelOrder[segment] % 4;
+			if (num_pdvChan == 4)
+				srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
+			for (row = 0, rowIndex = 0; row < rows; ++row, rowIndex += file_width) {
+				for (destIndex = rowIndex + dwid * segment, cols = dwid; cols > 0; --cols, ++destIndex) {
+					Lut[destIndex] = srcIndex;
+					srcIndex += SEGS / num_pdvChan;
+				}
+				srcIndex += dwid * SEGS / num_pdvChan;
+			}
+		}
+#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
+		for (segment = stripes; segment < SEGS; ++segment) {
+			srcIndex = channelOrder[segment] % 4;
+			if (num_pdvChan == 4)
+				srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
+			else
+				srcIndex += (image_length / 2);
+			for (row = 0, rowIndex = file_length - file_width; row < rows; ++row, rowIndex -= file_width) {
+				for (destIndex = rowIndex + dwid * (segment - SEGS / 2), cols = dwid; cols > 0; --cols, ++destIndex) {
+					Lut[destIndex] = srcIndex;
+					srcIndex += SEGS / num_pdvChan;
+				}
+				srcIndex += dwid * SEGS / num_pdvChan;
+			}
+		}
+	}
+	return 0;
+}
+
+void frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_images, unsigned short *new_images)
+{
+	for (int i = 0; i < length; ++i)
+		*(new_images++) = old_images[*(lookuptable++)];
+
+}
+
+void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, unsigned int height, unsigned int length)
+{
+	int num_pdvChan = 1;
+	bool TWOK = true;
+	bool QUAD = false;
+	int factor = 1;
+
+	int l, m, n, row, col, doublecols = 0, rows = 0, cols = 0;
+	unsigned short int *new_data, *old_data, *reset_data;
+	int CDS_add = 256;
+	int step_cnt, total_cds_loops;
+	double step_size;
+	char str[256];
+
+	total_cds_loops = loops;
+
+
+	if (TWOK) {
+		if (factor == 1)
+			rows = height * (num_pdvChan >> 1);
+		else
+			rows = (height + 2) / (2 * factor) - 2;
+		cols = width / num_pdvChan;
+		doublecols = cols * 2;
+		new_data = image_data;
+		reset_data = image_data + cols;
+		if (factor == 1)
+			old_data = image_data + length / 2;
+		else
+			old_data = image_data + (rows + 2)*doublecols;
+	}
+	else if (QUAD) {
+		rows = height / 2;
+		cols = width;
+		new_data = image_data;
+		reset_data = image_data + width;
+		old_data = image_data + length / 2;
+	}
+	else {
+		rows = height;
+		cols = width / 2;
+		new_data = image_data;
+		reset_data = image_data + cols;
+		old_data = image_data + length / 2;
+	}
+	if (factor == 1) {
+		for (--loops, m = 0; loops > 0; --loops, ++m) {
+			for (row = 0; row < rows; ++row) {
+				for (col = cols; col; --col)
+					*new_data++ = CDS_add + *old_data++ - *reset_data++;
+				new_data += cols;
+				reset_data += cols;
+				old_data += cols;
+			}
+		}
+	}
+	else {
+		for (m = 1; loops; --loops, m += factor) {
+			for (n = 4; n; --n) {
+				for (l = factor - 1; l; --l, ++m) {
+					for (row = rows; row; --row) {
+						for (col = cols; col; --col)
+							*new_data++ = CDS_add + *old_data++ - *reset_data++;
+						new_data += cols;
+						old_data += cols;
+						reset_data += cols;
+					}
+					new_data += doublecols * 2;
+					old_data += doublecols * 2;
+					reset_data += doublecols * 2;
+				}
+				if (loops > 0) {
+					old_data += width * 3 * height / 4 - doublecols;
+					for (row = rows; row; --row) {
+						for (col = cols; col; --col)
+							*new_data++ = CDS_add + *old_data++ - *reset_data++;
+						new_data += cols;
+						old_data += cols;
+						reset_data += cols;
+					}
+					old_data -= width * 3 * height / 4 - doublecols;
+					new_data += doublecols;
+					old_data += doublecols;
+					reset_data += doublecols;
+					++m;
+					m -= factor;
+				}
+			}
+		}
+	}
+}
+
+
+
