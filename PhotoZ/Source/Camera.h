@@ -97,7 +97,9 @@ public:
 
 	void deinterleave(unsigned short *buf, int n, int m);
 	void deinterleave(unsigned short *buf);
-	int mapToRawLocation(int i, int j, int n, int m, int quadrant);
+	void deinterleave2(unsigned short * buf, int n, int m);
+	void deinterleave3(unsigned short * buf, int n, int m);
+	int mapFromInterleaved(int i, int j, int n, int m, int quadrant);
 	int mapToDeinterleaved(int i, int j, int n, int m, int quadrant);
 
 	void subtractCDS(unsigned short *image_data);

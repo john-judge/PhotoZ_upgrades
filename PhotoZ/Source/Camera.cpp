@@ -352,6 +352,8 @@ void Camera::postAcquisitionProcessing(unsigned short *images, int nImages) {
 	}
 }
 
+
+
 // Deinterleave the image in buf given that they were produced by 4 channels
 void Camera::deinterleave(unsigned short * buf) {
 	int m = width() / 2;
@@ -360,37 +362,51 @@ void Camera::deinterleave(unsigned short * buf) {
 }
 
 // JMJ 12/26/2020
-// Deinterleave the image in buf given that they were produced by 4 channels
+// Deinterleave the image in buf given that they were produced by 4 camera channels
+// This is meant to operate on 1 quadrant pointed to from buf
 // Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
-void Camera::deinterleave(unsigned short * memory, int n, int m) {
+void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth) {
 
+	int n = quadHeight / 2;
+	int m = quadWidth / 4; // width is passed in as doubled.
+	int numCamChannels = 4;
 	// Idea: do this in place for mem efficiency if needed
-	vector<unsigned short> tmpBuf(4 * n * m, 0);
+	vector<unsigned short> tmpBuf(quadHeight * quadWidth, 0);
 
 	// loop over quadrants, rows, and columns and transform from interleaved to deinterleaved
-	for (int ipdv = 0; ipdv < 4; ipdv++) {
+
+	for (int ch = 0; ch < 4; ch ++) {
 		for (int iRow = 0; iRow < n; iRow++) {
+			// First half of row is pixel data
 			for (int jCol = 0; jCol < m; jCol++) {
-				tmpBuf[mapToDeinterleaved(iRow,jCol,n,m,ipdv)] = memory[mapToRawLocation(iRow, jCol, n, m, ipdv)];
+				int iDst = mapFromInterleaved(iRow, jCol, n, m, ch);
+				int iSrc = mapToDeinterleaved(iRow, jCol, n, m, ch);
+				tmpBuf[iDst] = buf[iSrc];
 			}
+			// Second half of row is reset data
+			/*for (int jCol = quadWidth / 2; jCol < quadWidth; jCol++) {
+				int ch = (jCol % numCamChannels);
+				tmpBuf[mapToDeinterleaved(iRow, jCol, n, m, ch)]
+					= 0; // buf[mapFromInterleaved(iRow, jCol, n, m, ch)];
+			} */
 		}
 	}
 	// copy back to output array
-	for (int i = 0; i < 4 * n * m; i++) {
-		memory[i] = tmpBuf[i];
+	for (int i = 0; i < quadHeight * quadWidth; i++) {
+		buf[i] = tmpBuf[i];
 	}
 }
 
 // Return the 1D array index of the interleaved (source) array given:
 // row i of n rows, column j of m columns, in quadrant QUADRANT
-int Camera::mapToRawLocation(int i, int j, int n, int m, int quadrant) {
-	if (i >= n || j >= m) {
-		cout << "Index out of range error in Camera::mapToRawLocation, Quadrant " << quadrant << "  \n";
+int Camera::mapFromInterleaved(int i, int j, int n, int m, int quadrant) {
+	if (i >= n || j >= 2 * m) {
+		cout << "Index out of range error in Camera::mapFromInterleaved, Quadrant " << quadrant << "  \n";
 		return -1;
 	}
 	return quadrant * n * m +	// quadrant offset (each quadrant of size n * m)
-			i * m +				// row offset (each row of size m)
-			j;					// offset into current column of quadrant
+		i * m +				// row offset (each row of size m)
+		j;					// offset into current column of quadrant
 }
 
 // Return the 1D array index of the deinterleaved (destination) array given:
@@ -401,22 +417,61 @@ int Camera::mapToDeinterleaved(int i, int j, int n, int m, int quadrant) {
 		return -1;
 	}
 	switch (quadrant) {
-		case 0:
-			// Channel 0 (upper left quadrant), no reflections
-			return mapToRawLocation(i, j, n, m, quadrant);
-		case 1:
-			// Channel 1: reflect col indices across the vertical axis
-			return mapToRawLocation(i, m-j-1, n, m, quadrant); 
-		case 2:
-			// Channel 2: reflect row indices across horizontal
-			return mapToRawLocation(n-i-1, j, n, m, quadrant);
-		case 3:
-			// Channel 3: reflect col indices across the vertical axis and row across horizontal
-			return mapToRawLocation(n-i-1, m-j-1, n, m, quadrant);
-		default:
-			return -1;
+	case 0:
+		// Channel 0 (upper left quadrant), no reflections
+		return 4 * (i * m + j);
+	case 1:
+		// Channel 1: reflect col indices across the vertical axis
+		return 4 * (i * m + (m - j - 1)) + 1;
+	case 2:
+		// Channel 2: reflect row indices across horizontal
+		return 4 * ((n - i - 1) * m + j) + 2;
+	case 3:
+		// Channel 3: reflect col indices across the vertical axis and row across horizontal
+		return 4 * ((n - i - 1) * m + (m - j - 1)) + 3;
+	default:
+		return -1;
 	}
 }
+
+
+// This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
+// Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
+// d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
+// Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
+void Camera::deinterleave2(unsigned short * buf, int quadHeight, int quadWidth) {
+	static int channelOrder[] = { 2, 3, 1, 0 };
+
+	// We say that CDS "doubles" the width
+	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
+	quadHeight *= 2;
+
+	int quadSize = quadWidth * quadHeight;
+	// Idea: do this in place for mem efficiency if needed
+	vector<unsigned short> tmpBuf(quadSize, 0);
+	int numCamChannels = 4; // each PDV channel (quadrant) has 4 camera channels
+
+	unsigned short *data_ptr = buf;
+	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
+	int camChannelWidth = quadWidth / numCamChannels; // div by 2 since only interleaved within half of row
+	
+
+	for (int row = 0; row < quadHeight; row++) {
+		// Every other row is reset data, but is interleaved in same pattern
+		for (int col = 0; col < quadWidth; col++) {
+			int chOrd = channelOrder[col % numCamChannels];
+			int camChOffset = chOrd * camChannelWidth;
+			tmpBuf[row * quadWidth + (col / numCamChannels) + camChOffset]
+				= *data_ptr++;
+		}
+	}
+
+	// copy back to output array
+	for (int i = 0; i < quadSize; i++) {
+		buf[i] = tmpBuf[i];
+	}
+}
+
 
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
 void Camera::subtractCDS(unsigned short *image_data) {
@@ -432,18 +487,17 @@ void Camera::subtractCDS(unsigned short *image_data) {
 //    int QUAD: 0
 //    int TWOK: 1 
 //    int num_pdvChan: 4
-void Camera::subtractCDS(unsigned short int *image_data, unsigned int m, unsigned int n)
+void Camera::subtractCDS(unsigned short int *image_data, unsigned int n, unsigned int m)
 {
 	// factor == 1
-	int rows = n * 2; // height * # channels / 2
-	int cols = m / 4;  // width / # channels
+	int cols = m;  // CDS doubled
 	int CDS_add = 256;
 
-	unsigned short int *new_data = image_data;
-	unsigned short int *reset_data = image_data + cols;
-	unsigned short int *old_data = image_data;
+	unsigned short *new_data = image_data;
+	unsigned short *reset_data = image_data + cols;
+	unsigned short *old_data = image_data;
 
-	for (int i = 0; i < rows; i++) {
+	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < cols; j++) {
 			*new_data++ = CDS_add + *old_data++ - *reset_data++;
 		}
@@ -469,7 +523,7 @@ void Camera::mapQuadrants(unsigned short* memory, int n, int m) {
 				int rowOffset = (quad >> 1) & 1; // next bit
 
 				tmpBuf[(i + rowOffset * n) * imgFullWidth + (j + colOffset * m)]
-					= memory[mapToRawLocation(i, j, n, m, quad)];
+					= memory[mapFromInterleaved(i, j, n, m, quad)];
 			}
 		}
 	}
@@ -534,7 +588,7 @@ int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
 {
 	int layers = 1;
 	int stripes = 4;
-	int file_width = image_width * 2; // CDS subtraction means file_width is twice the final image_width
+	int file_width = image_width; // CDS subtraction means file_width is twice the final image_width
 	int file_height = image_height;
 
 	//	int SEGS, file_offset, image_offset, frame_length, image_length, file_length;
@@ -564,40 +618,36 @@ int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
 	swid = image_width / stripes;
 	dwid = file_width / stripes;
 
-	omp_set_num_threads(omp_get_num_procs());
-#pragma omp parallel
-	{
-		int segment;
-
-#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
-		for (segment = 0; segment < stripes; ++segment) {
-			srcIndex = channelOrder[segment] % 4;
-			if (num_pdvChan == 4)
-				srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
-			for (row = 0, rowIndex = 0; row < rows; ++row, rowIndex += file_width) {
-				for (destIndex = rowIndex + dwid * segment, cols = dwid; cols > 0; --cols, ++destIndex) {
-					Lut[destIndex] = srcIndex;
-					srcIndex += SEGS / num_pdvChan;
-				}
-				srcIndex += dwid * SEGS / num_pdvChan;
+	for (int segment = 0; segment < stripes; ++segment) {
+		srcIndex = channelOrder[segment] % 4;
+		if (num_pdvChan == 4)
+			srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
+		for (row = 0, rowIndex = 0; row < rows; ++row, rowIndex += file_width) {
+			for (destIndex = rowIndex + dwid * segment, cols = dwid; cols > 0; --cols, ++destIndex) {
+				Lut[destIndex] = srcIndex;
+				srcIndex += SEGS / num_pdvChan;
 			}
-		}
-#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
-		for (segment = stripes; segment < SEGS; ++segment) {
-			srcIndex = channelOrder[segment] % 4;
-			if (num_pdvChan == 4)
-				srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
-			else
-				srcIndex += (image_length / 2);
-			for (row = 0, rowIndex = file_length - file_width; row < rows; ++row, rowIndex -= file_width) {
-				for (destIndex = rowIndex + dwid * (segment - SEGS / 2), cols = dwid; cols > 0; --cols, ++destIndex) {
-					Lut[destIndex] = srcIndex;
-					srcIndex += SEGS / num_pdvChan;
-				}
-				srcIndex += dwid * SEGS / num_pdvChan;
-			}
+			srcIndex += dwid * SEGS / num_pdvChan;
 		}
 	}
+		
+	for (int segment = stripes; segment < SEGS; ++segment) {
+		srcIndex = channelOrder[segment] % 4;
+		if (num_pdvChan == 4)
+			srcIndex += (image_length / 4)*(channelOrder[segment] / 4);
+		else
+			srcIndex += (image_length / 2);
+		for (row = 0, rowIndex = file_length - file_width; row < rows; ++row, rowIndex -= file_width) {
+			for (destIndex = rowIndex + dwid * (segment - SEGS / 2), cols = dwid; cols > 0; --cols, ++destIndex) {
+				Lut[destIndex] = srcIndex;
+				srcIndex += SEGS / num_pdvChan;
+			}
+			srcIndex += dwid * SEGS / num_pdvChan;
+		}
+	}
+		
+		
+	
 	return 0;
 }
 
