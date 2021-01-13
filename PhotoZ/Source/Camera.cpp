@@ -348,92 +348,9 @@ void Camera::postAcquisitionProcessing(unsigned short *images, int nImages) {
 	size_t imageSize = width() * height();
 	for (int i = 0; i < nImages; i++) {
 		subtractCDS(images + imageSize * i);
-		deinterleave(images + imageSize * i);
+		deinterleave2(images + imageSize * i,height(),width());
 	}
 }
-
-
-
-// Deinterleave the image in buf given that they were produced by 4 channels
-void Camera::deinterleave(unsigned short * buf) {
-	int m = width() / 2;
-	int n = height() / 2;
-	deinterleave(buf, n, m);
-}
-
-// JMJ 12/26/2020
-// Deinterleave the image in buf given that they were produced by 4 camera channels
-// This is meant to operate on 1 quadrant pointed to from buf
-// Each channel memory is contiguous in 1-D array. The channels' memory buffers are back-to-back.
-void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth) {
-
-	int n = quadHeight / 2;
-	int m = quadWidth / 4; // width is passed in as doubled.
-	int numCamChannels = 4;
-	// Idea: do this in place for mem efficiency if needed
-	vector<unsigned short> tmpBuf(quadHeight * quadWidth, 0);
-
-	// loop over quadrants, rows, and columns and transform from interleaved to deinterleaved
-
-	for (int ch = 0; ch < 4; ch ++) {
-		for (int iRow = 0; iRow < n; iRow++) {
-			// First half of row is pixel data
-			for (int jCol = 0; jCol < m; jCol++) {
-				int iDst = mapFromInterleaved(iRow, jCol, n, m, ch);
-				int iSrc = mapToDeinterleaved(iRow, jCol, n, m, ch);
-				tmpBuf[iDst] = buf[iSrc];
-			}
-			// Second half of row is reset data
-			/*for (int jCol = quadWidth / 2; jCol < quadWidth; jCol++) {
-				int ch = (jCol % numCamChannels);
-				tmpBuf[mapToDeinterleaved(iRow, jCol, n, m, ch)]
-					= 0; // buf[mapFromInterleaved(iRow, jCol, n, m, ch)];
-			} */
-		}
-	}
-	// copy back to output array
-	for (int i = 0; i < quadHeight * quadWidth; i++) {
-		buf[i] = tmpBuf[i];
-	}
-}
-
-// Return the 1D array index of the interleaved (source) array given:
-// row i of n rows, column j of m columns, in quadrant QUADRANT
-int Camera::mapFromInterleaved(int i, int j, int n, int m, int quadrant) {
-	if (i >= n || j >= 2 * m) {
-		cout << "Index out of range error in Camera::mapFromInterleaved, Quadrant " << quadrant << "  \n";
-		return -1;
-	}
-	return quadrant * n * m +	// quadrant offset (each quadrant of size n * m)
-		i * m +				// row offset (each row of size m)
-		j;					// offset into current column of quadrant
-}
-
-// Return the 1D array index of the deinterleaved (destination) array given:
-// row i of n rows, column j of m columns, in quadrant QUADRANT
-int Camera::mapToDeinterleaved(int i, int j, int n, int m, int quadrant) {
-	if (i >= n || j >= m) {
-		cout << "Index out of range error in Camera::mapToDeinterleaved, Quadrant " << quadrant << "  \n";
-		return -1;
-	}
-	switch (quadrant) {
-	case 0:
-		// Channel 0 (upper left quadrant), no reflections
-		return 4 * (i * m + j);
-	case 1:
-		// Channel 1: reflect col indices across the vertical axis
-		return 4 * (i * m + (m - j - 1)) + 1;
-	case 2:
-		// Channel 2: reflect row indices across horizontal
-		return 4 * ((n - i - 1) * m + j) + 2;
-	case 3:
-		// Channel 3: reflect col indices across the vertical axis and row across horizontal
-		return 4 * ((n - i - 1) * m + (m - j - 1)) + 3;
-	default:
-		return -1;
-	}
-}
-
 
 // This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
@@ -487,7 +404,7 @@ void Camera::subtractCDS(unsigned short *image_data) {
 //    int QUAD: 0
 //    int TWOK: 1 
 //    int num_pdvChan: 4
-void Camera::subtractCDS(unsigned short int *image_data, unsigned int n, unsigned int m)
+void Camera::subtractCDS(unsigned short int *image_data, int n, int m)
 {
 	// factor == 1
 	int cols = m;  // CDS doubled
@@ -505,45 +422,6 @@ void Camera::subtractCDS(unsigned short int *image_data, unsigned int n, unsigne
 		old_data += cols;
 	}
 }
-
-// Map quadrants from 4 contiguous quadrant-rows to a complete image read for display
-// the input format is that produced after CDS and deinterleave on the raw image mem
-// the resulting format is the format ready for ArrayWindow display
-void Camera::mapQuadrants(unsigned short* memory, int n, int m) {
-	
-	// Idea: do this in place for mem efficiency if needed
-	vector<unsigned short> tmpBuf(4 * n * m, 0);
-	int imgFullWidth = 2 * m;
-
-	// map each channel to the display channel
-	for (int quad = 0; quad < 4; quad++) {
-		for (int i = 0; i < n; i++) {
-			for (int j = 0; j < m; j++) {
-				int colOffset = quad & 1;		 // least sig bit
-				int rowOffset = (quad >> 1) & 1; // next bit
-
-				tmpBuf[(i + rowOffset * n) * imgFullWidth + (j + colOffset * m)]
-					= memory[mapFromInterleaved(i, j, n, m, quad)];
-			}
-		}
-	}
-	for (int i = 0; i < 4 * n * m; i++) {
-		memory[i] = tmpBuf[i];
-	}
-}
-
-// Map quadrants from 4 contiguous quadrant-rows to a complete image read for display
-void Camera::mapQuadrants(unsigned short* memory) {
-	mapQuadrants(memory, width() / 2, height() / 2);
-}
-
-
-
-
-
-
-
-
 
 
 

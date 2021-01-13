@@ -95,18 +95,10 @@ public:
 	int depth();
 	int freq();
 
-	void deinterleave(unsigned short *buf, int n, int m);
-	void deinterleave(unsigned short *buf);
 	void deinterleave2(unsigned short * buf, int n, int m);
-	void deinterleave3(unsigned short * buf, int n, int m);
-	int mapFromInterleaved(int i, int j, int n, int m, int quadrant);
-	int mapToDeinterleaved(int i, int j, int n, int m, int quadrant);
 
 	void subtractCDS(unsigned short *image_data);
-	void subtractCDS(unsigned short *image_data, unsigned int m, unsigned int n);
-
-	void mapQuadrants(unsigned short* memory);
-	void mapQuadrants(unsigned short* memory, int n, int m);
+	void subtractCDS(unsigned short *image_data, int m, int n);
 
 	void postAcquisitionProcessing(unsigned short *images, int nImages);
 
