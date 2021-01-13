@@ -81,13 +81,13 @@ namespace UnitTests
 		}*/
 
 		
-		TEST_METHOD(Deinterleave2Test1)
+		TEST_METHOD(DeinterleaveTest)
 		{
-			int qWidth = 512;  // number of rows per quadrant
+			int qWidth = 256;  // number of rows per quadrant
 			int qHeight = 20;  // number of cols per quadrant
 			
 
-			unsigned short* memory = new unsigned short[qWidth * qHeight];
+			unsigned short* memory = new unsigned short[qWidth * qHeight * 2];
 			
 			// Row 1
 			memory[0] = 0;
@@ -110,19 +110,26 @@ namespace UnitTests
 			
 			Camera cam;
 			cam.deinterleave2(memory, qHeight, qWidth);
+			int camChannelWidth = qWidth / 4;
 			
 			// In first row (first 512)
-			Assert::AreEqual((short)0, (short)memory[0]);
-			Assert::AreEqual((short)64, (short)memory[64]);
-			Assert::AreEqual((short)128, (short)memory[128]);
-			Assert::AreEqual((short)192, (short)memory[192]);
-			Assert::AreEqual((short)255, (short)memory[255]);
-			Assert::AreEqual((short)1000, (short)memory[256]);
-			Assert::AreEqual((short)1064, (short)memory[256 + 64]);
+			Assert::AreEqual((short)(3 * camChannelWidth), (short)memory[0]);
+			Assert::AreEqual((short)(2 * camChannelWidth), (short)memory[64]);
+			Assert::AreEqual((short)(0 * camChannelWidth), (short)memory[128]);
+			Assert::AreEqual((short)(1 * camChannelWidth), (short)memory[192]);
+
+			Assert::AreEqual((short)0, (short)memory[camChannelWidth * 2]);
+			Assert::AreEqual((short)64, (short)memory[camChannelWidth * 3]);
+			Assert::AreEqual((short)128, (short)memory[camChannelWidth * 1]);
+			Assert::AreEqual((short)192, (short)memory[camChannelWidth * 0]);
+
+			Assert::AreEqual((short)255, (short)memory[(int)(255 / 4)]);
+			Assert::AreEqual((short)1000, (short)memory[256 + camChannelWidth * 2]);
+			Assert::AreEqual((short)1064, (short)memory[256 + camChannelWidth * 3]);
 
 			// In second row
-			Assert::AreEqual((short)0, (short)memory[512]);
-			Assert::AreEqual((short)2, (short)memory[512 + 2]);
+			Assert::AreEqual((short)0, (short)memory[512 + camChannelWidth * 2]);
+			Assert::AreEqual((short)2, (short)memory[512 + 2 +camChannelWidth * 2]);
 
 			delete[] memory;
 		}

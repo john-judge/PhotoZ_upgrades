@@ -370,7 +370,7 @@ void Camera::deinterleave2(unsigned short * buf, int quadHeight, int quadWidth) 
 
 	unsigned short *data_ptr = buf;
 	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
-	int camChannelWidth = quadWidth / numCamChannels; // div by 2 since only interleaved within half of row
+	int camChannelWidth = quadWidth / numCamChannels;
 	
 
 	for (int row = 0; row < quadHeight; row++) {

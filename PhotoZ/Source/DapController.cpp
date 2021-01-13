@@ -225,8 +225,8 @@ int DapController::acqui(short *memory, Camera &cam) {
 	cam.end_images();
 	//cam.serial_write("@TXC 0\r"); // write to channel 0 only JMJ 12/31 - not for lilDave
 
-	// Deinterleave memeory
-	cam.deinterleave((unsigned short*)memory);
+	// Deinterleave memeory *********
+	//cam.deinterleave2((unsigned short*)memory);
 
 	// Get Binary Data (digital outputs)
 	//int numBytes=DapBufferGet(dap820Get,8*numPts*sizeof(short),buf);
