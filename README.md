@@ -42,6 +42,12 @@ new_take: has a new way to acquire images (FP diodes don't work though). Might b
 
 drag-select: started work on being able to select multiple diodes at once and group together for analysis. Requires extensive refactoring to make it work, however.
 
+simulation: disabled PDV calls to allow testing playground for NI-DAQmx with simulated NI-USB hardware
+
+PDV-multi: multithreaded acquisition for Little Dave
+
+visual: branch for reworking GUI to be more usable and less memory-hungry
+
 ## Other Information
 
 Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) on the Joe computer
@@ -50,9 +56,6 @@ EDT/PDV API code with examples can be found at C:/EDT/pdv
 
 The documentation folder in this repo has the PhotoZ user manual and architecture docs, Camera datasheet, and a short test program
 
-
-
-Contact: peter.luick@gmail.com
 
 
 
