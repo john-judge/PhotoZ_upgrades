@@ -23,7 +23,8 @@ private:
 	TaskHandle taskHandlePut = 0;
 
 	TaskHandle taskHandleRLI;
-	TaskHandle taskHandleAcqui;
+	TaskHandle taskHandleAcquiDO;
+	TaskHandle taskHandleAcquiAI;
 
 	// Removed along with DAPIO32 JMJ 12/3
 	//HDAP dap820Put;
