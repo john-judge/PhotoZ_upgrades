@@ -344,11 +344,11 @@ int Camera::freq() {
 }
 
 // Apply CDS subtraction and deinterleave to a list of raw images.
-void Camera::postAcquisitionProcessing(unsigned short *images, int nImages) {
+void Camera::reassembleImages(unsigned short *images, int nImages) {
 	size_t imageSize = width() * height();
 	for (int i = 0; i < nImages; i++) {
-		subtractCDS(images + imageSize * i);
-		deinterleave2(images + imageSize * i,height(),width());
+		subtractCDS(images + imageSize * i, height(), width());
+		deinterleave(images + imageSize * i,height(),width());
 	}
 }
 
@@ -356,7 +356,7 @@ void Camera::postAcquisitionProcessing(unsigned short *images, int nImages) {
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
-void Camera::deinterleave2(unsigned short * buf, int quadHeight, int quadWidth) {
+void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth) {
 	static int channelOrder[] = { 2, 3, 1, 0 };
 
 	// We say that CDS "doubles" the width
@@ -372,7 +372,6 @@ void Camera::deinterleave2(unsigned short * buf, int quadHeight, int quadWidth) 
 	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
 	int camChannelWidth = quadWidth / numCamChannels;
 	
-
 	for (int row = 0; row < quadHeight; row++) {
 		// Every other row is reset data, but is interleaved in same pattern
 		for (int col = 0; col < quadWidth; col++) {
@@ -391,35 +390,22 @@ void Camera::deinterleave2(unsigned short * buf, int quadHeight, int quadWidth) 
 
 
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
-void Camera::subtractCDS(unsigned short *image_data) {
-	subtractCDS(image_data, width(), height());
-}
-
-// Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
-// This halves the number of columns, m, of each image.
-// We perform this in-place
-// Assumptions for Chun's parameters (removed): 
-//    int loops: N/A (This is the number of images; we'll write function for 1 image)
-//    int factor: 1
-//    int QUAD: 0
-//    int TWOK: 1 
-//    int num_pdvChan: 4
-void Camera::subtractCDS(unsigned short int *image_data, int n, int m)
+// This halves the number of columns of each raw image
+// quad_width is the final width of the frame
+void Camera::subtractCDS(unsigned short *image_data, int quad_height, int quad_width)
 {
-	// factor == 1
-	int cols = m;  // CDS doubled
-	int CDS_add = 256;
+	int CDS_add = 2560;
 
 	unsigned short *new_data = image_data;
-	unsigned short *reset_data = image_data + cols;
+	unsigned short *reset_data = image_data + quad_width;
 	unsigned short *old_data = image_data;
 
-	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < cols; j++) {
+	for (int i = 0; i < quad_height; i++) {
+		for (int j = 0; j < quad_width; j++) {
 			*new_data++ = CDS_add + *old_data++ - *reset_data++;
 		}
-		reset_data += cols;
-		old_data += cols;
+		reset_data += quad_width;
+		old_data += quad_width;
 	}
 }
 
@@ -536,6 +522,14 @@ void frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_i
 
 }
 
+
+// We perform this in-place
+// Assumptions for Chun's parameters (removed): 
+//    int loops: N/A (This is the number of images; we'll write function for 1 image)
+//    int factor: 1
+//    int QUAD: 0
+//    int TWOK: 1 
+//    int num_pdvChan: 4
 void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, unsigned int height, unsigned int length)
 {
 	int num_pdvChan = 1;
@@ -553,34 +547,21 @@ void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, 
 	total_cds_loops = loops;
 
 
-	if (TWOK) {
-		if (factor == 1)
-			rows = height * (num_pdvChan >> 1);
-		else
-			rows = (height + 2) / (2 * factor) - 2;
-		cols = width / num_pdvChan;
-		doublecols = cols * 2;
-		new_data = image_data;
-		reset_data = image_data + cols;
-		if (factor == 1)
-			old_data = image_data + length / 2;
-		else
-			old_data = image_data + (rows + 2)*doublecols;
-	}
-	else if (QUAD) {
-		rows = height / 2;
-		cols = width;
-		new_data = image_data;
-		reset_data = image_data + width;
+
+	if (factor == 1)
+		rows = height * (num_pdvChan >> 1);
+	else
+		rows = (height + 2) / (2 * factor) - 2;
+	cols = width / num_pdvChan;
+	doublecols = cols * 2;
+	new_data = image_data;
+	reset_data = image_data + cols;
+	if (factor == 1)
 		old_data = image_data + length / 2;
-	}
-	else {
-		rows = height;
-		cols = width / 2;
-		new_data = image_data;
-		reset_data = image_data + cols;
-		old_data = image_data + length / 2;
-	}
+	else
+		old_data = image_data + (rows + 2)*doublecols;
+	
+
 	if (factor == 1) {
 		for (--loops, m = 0; loops > 0; --loops, ++m) {
 			for (row = 0; row < rows; ++row) {
@@ -592,40 +573,7 @@ void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, 
 			}
 		}
 	}
-	else {
-		for (m = 1; loops; --loops, m += factor) {
-			for (n = 4; n; --n) {
-				for (l = factor - 1; l; --l, ++m) {
-					for (row = rows; row; --row) {
-						for (col = cols; col; --col)
-							*new_data++ = CDS_add + *old_data++ - *reset_data++;
-						new_data += cols;
-						old_data += cols;
-						reset_data += cols;
-					}
-					new_data += doublecols * 2;
-					old_data += doublecols * 2;
-					reset_data += doublecols * 2;
-				}
-				if (loops > 0) {
-					old_data += width * 3 * height / 4 - doublecols;
-					for (row = rows; row; --row) {
-						for (col = cols; col; --col)
-							*new_data++ = CDS_add + *old_data++ - *reset_data++;
-						new_data += cols;
-						old_data += cols;
-						reset_data += cols;
-					}
-					old_data -= width * 3 * height / 4 - doublecols;
-					new_data += doublecols;
-					old_data += doublecols;
-					reset_data += doublecols;
-					++m;
-					m -= factor;
-				}
-			}
-		}
-	}
+
 }
 
 

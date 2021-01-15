@@ -109,7 +109,7 @@ namespace UnitTests
 			memory[512 + 8] = 2;
 			
 			Camera cam;
-			cam.deinterleave2(memory, qHeight, qWidth);
+			cam.deinterleave(memory, qHeight, qWidth);
 			int camChannelWidth = qWidth / 4;
 			
 			// In first row (first 512)
@@ -134,27 +134,71 @@ namespace UnitTests
 			delete[] memory;
 		}
 		
+		// open a test raw image RLI-5.txt and output a processed image for visual inspection, no CDS
+		TEST_METHOD(DeinterleaveImageTest1) {
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
 
+			fileIn = "RLI-5.txt";
+			fileOut = "Output-5.txt";
+			quad_height = 5;
+			quad_width = 1024;
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, false);
+		}
+
+		// open a test raw image RLI-7.txt and output a processed image for visual inspection, no CDS
+		TEST_METHOD(DeinterleaveImageTest2) {
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
+
+			fileIn = "RLI-7.txt";
+			fileOut = "Output-7.txt";
+			quad_height = 5; 
+			quad_width = 512; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, false);
+		}
+
+		// open a test raw image RLI-5.txt and output a processed image for visual inspection, with CDS
 		TEST_METHOD(reassembleImageTest1) {
-			// Chun's functions, modified in DapController.cpp
-			// open a test raw image and output a processed image for visual inspection
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
+			
+			fileIn = "RLI-5.txt";
+			fileOut = "OutputCDS-5.txt";
+			quad_height = 5;
+			quad_width = 1024;
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, true);
+		}
 
-			// This is the doubled-width quadrant size before CDS subtraction
-			//int quadrantSize = 256 * 20; // the other 3 quadrants are 0s
-			int quadrantSize = 2 * 256 * 20; // 10240	
+		// open a test raw image RLI-7.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(reassembleImageTest2) {
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
+
+			fileIn = "RLI-7.txt";
+			fileOut = "OutputCDS-7.txt";
+			quad_height = 5;
+			quad_width = 512; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, true);
+		}
+
+
+		// given height and width of a quadrant / image after CDS subtraction (the final dimensions)
+		// SCALE is used to scale floating point numbers to the full range of unsigned char (255) or unsigned short (65535)
+		void reassembleImage(const char* fileIn, const char* fileOut, int quad_height, int quad_width, double scale, bool CDS) {
 			// Read in test image data (
 			std::ifstream file;
-			file.open(TEST_CASE_DATA_DIRECTORY + "RLI-5.txt");
+			file.open(TEST_CASE_DATA_DIRECTORY + fileIn);
 			const wchar_t * message = L"File should be open";
 			Assert::IsTrue(file.is_open(), message);
-
+			int quadrantSize = 2 * quad_height * quad_width;
 			unsigned short *rawMemory = new unsigned short[quadrantSize];
 			unsigned short *new_image = new unsigned short[quadrantSize];
 
 			string index, data;
 			int i = 0;
 			while (file >> index >> data && i < quadrantSize) {
-				rawMemory[i] = (unsigned short)(stod(data) * 65535);
+				rawMemory[i] = (unsigned short)(stod(data) * scale);
 				i++;
 			}
 			file.close();
@@ -163,33 +207,31 @@ namespace UnitTests
 			Assert::AreEqual(quadrantSize, i, message);
 
 
-			int quad_height = 5;
-			int quad_width = 1024;
-
 			message = L"Dimensions for a quadrant are incorrect.\n";
 			Assert::AreEqual(quadrantSize, quad_height * quad_width * 2, message);
-			
+
 			Camera cam;
 			// There are 4 camera channels within each PDV channel
-			cam.deinterleave2(rawMemory, quad_height, quad_width);
+			cam.deinterleave(rawMemory, quad_height, quad_width);
+			if (CDS) cam.subtractCDS(rawMemory, quad_height, quad_width);
 
 			// write test data to 
 			std::ofstream outFile;
 
-			string dstFileName = "Output-5-5.txt";
+			remove((TEST_CASE_DATA_DIRECTORY + fileOut).c_str());
+			outFile.open(TEST_CASE_DATA_DIRECTORY + fileOut, std::ofstream::out | std::ofstream::app);
 
-			remove((TEST_CASE_DATA_DIRECTORY + dstFileName).c_str());
-			outFile.open(TEST_CASE_DATA_DIRECTORY + dstFileName, std::ofstream::out | std::ofstream::app);
+			if (CDS) quadrantSize /= 2; // if CDS was applied, only write back the first half.
 
 			for (int i = 0; i < quadrantSize; i++)
-				outFile << i << "\t" << (double)rawMemory[i] / (double)65535 << "\n";
+				outFile << i << "\t" << (double)rawMemory[i] / (double)scale << "\n";
 
 			outFile.close();
 
 			delete[] rawMemory;
 			delete[] new_image;
-
 		}
 
 	};
 }
+

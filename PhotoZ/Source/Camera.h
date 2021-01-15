@@ -95,12 +95,12 @@ public:
 	int depth();
 	int freq();
 
-	void deinterleave2(unsigned short * buf, int n, int m);
+	void reassembleImages(unsigned short *images, int nImages);
 
-	void subtractCDS(unsigned short *image_data);
-	void subtractCDS(unsigned short *image_data, int m, int n);
+	void deinterleave(unsigned short * buf, int quad_height, int quad_width);
+	void subtractCDS(unsigned short *image_data, int quad_height, int quad_width);
 
-	void postAcquisitionProcessing(unsigned short *images, int nImages);
+
 
 };
 
