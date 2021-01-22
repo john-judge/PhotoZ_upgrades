@@ -159,7 +159,7 @@ namespace UnitTests
 		}
 
 		// open a test raw image RLI-5.txt and output a processed image for visual inspection, with CDS
-		TEST_METHOD(reassembleImageTest1) {
+		TEST_METHOD(reassembleImageTest5) {
 			const char* fileIn, *fileOut;
 			int quad_height, quad_width;
 			
@@ -171,15 +171,43 @@ namespace UnitTests
 		}
 
 		// open a test raw image RLI-7.txt and output a processed image for visual inspection, with CDS
-		TEST_METHOD(reassembleImageTest2) {
+		TEST_METHOD(reassembleImageTest7) {
 			const char* fileIn, *fileOut;
 			int quad_height, quad_width;
 
 			fileIn = "RLI-7.txt";
 			fileOut = "OutputCDS-7.txt";
 			quad_height = 5;
-			quad_width = 512; // Needs to change, incomplete image
+			quad_width = 1024; // Needs to change, incomplete image
 			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, true);
+		}
+
+		// open a test raw image RLI-128.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(reassembleImageTest128) {
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
+
+			fileIn = "RLI-128.txt";
+			fileOut = "OutputCDS-128.txt";
+			quad_height = 20;
+			quad_width = 128; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, true);
+			fileOut = "Output-128.txt";
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, false);
+		}
+
+		// open a test raw image RLI-256.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(reassembleImageTest256) {
+			const char* fileIn, *fileOut;
+			int quad_height, quad_width;
+
+			fileIn = "RLI-256.txt";
+			fileOut = "OutputCDS-256.txt";
+			quad_height = 5;
+			quad_width = 512; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, true);
+			fileOut = "Output-256.txt";
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, false);
 		}
 
 

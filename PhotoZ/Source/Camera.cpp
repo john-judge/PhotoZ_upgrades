@@ -394,7 +394,7 @@ void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth) {
 // quad_width is the final width of the frame
 void Camera::subtractCDS(unsigned short *image_data, int quad_height, int quad_width)
 {
-	int CDS_add = 2560;
+	int CDS_add = 1024;
 
 	unsigned short *new_data = image_data;
 	unsigned short *reset_data = image_data + quad_width;
