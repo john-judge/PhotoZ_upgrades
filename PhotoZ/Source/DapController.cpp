@@ -686,13 +686,31 @@ int DapController::takeRli(short* memory, Camera& cam)
 		}
 	}
 
-	// Printing the raw data of the most recent camera image
+	//=============================================================================
+	// Printing the raw data of an image for debugging
 	std::ofstream outFile;
-	outFile.open("RLI.txt", std::ofstream::out | std::ofstream::app);
-	unsigned short* debuggingPointer = (unsigned short*)image;
+	outFile.open("RLI-0.txt", std::ofstream::out | std::ofstream::trunc);
 	for (int k = 0; k < array_diodes; k++)
-		outFile << k << " " << debuggingPointer[k] << "\n";
-	cout << "\nWrote most recent image's raw data to PhotoZ/RLI.txt\n";
+		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
+	outFile.close();
+
+	outFile.open("Output-0.txt", std::ofstream::out | std::ofstream::trunc);
+	cam.deinterleave((unsigned short*)(memory + array_diodes * 300),cam.height(), cam.width());
+	for (int k = 0; k < array_diodes; k++)
+		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
+	outFile.close();
+
+	outFile.open("OutputCDS-0.txt", std::ofstream::out | std::ofstream::trunc);
+	cam.subtractCDS((unsigned short*)(memory + array_diodes * 300), cam.height(), cam.width());
+	for (int k = 0; k < array_diodes / 2; k++)
+		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
+	outFile.close();
+
+	cout << "\nWrote 300th image's raw data to PhotoZ/: RLI-0.txt, Output-0.txt, and OutputCDS-0.txt\n";
+	//=============================================================================
+
+
+
 	cam.end_images();					// does not seem to matter
 
 	memcpy(memory, memory + array_diodes, array_diodes * 2);		//*sizeof(short)

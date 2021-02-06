@@ -3,6 +3,7 @@
 //=============================================================================
 #include "Camera.h"
 #include <iostream>
+#include <vector>
 #include "DapController.h"
 #include "RecControl.h"		//added to get camGain on line 157
 using namespace std;
@@ -288,7 +289,71 @@ int Camera::freq() {
 	return FREQ[m_program];
 }
 
-/*char* Camera::devname() {
-	return edt_devname;
-}*/
+// Apply CDS subtraction and deinterleave to a list of raw images.
+void Camera::reassembleImages(unsigned short* images, int nImages) {
+	size_t imageSize = width() * height();
+	for (int i = 0; i < nImages; i++) {
+		subtractCDS(images + imageSize * i, height(), width());
+		deinterleave(images + imageSize * i, height(), width());
+	}
+}
+
+
+// This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
+// Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
+// d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
+// Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
+void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth) {
+	static int channelOrder[] = { 2, 3, 1, 0 };
+
+	// We say that CDS "doubles" the width
+	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
+	quadHeight *= 2;
+
+	int quadSize = quadWidth * quadHeight;
+	// Idea: do this in place for mem efficiency if needed
+	vector<unsigned short> tmpBuf(quadSize, 0);
+	int numCamChannels = 4; // each PDV channel (quadrant) has 4 camera channels
+
+	unsigned short* data_ptr = buf;
+	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
+	int camChannelWidth = quadWidth / numCamChannels;
+
+	for (int row = 0; row < quadHeight; row++) {
+		// Every other row is reset data, but is interleaved in same pattern
+		for (int col = 0; col < quadWidth; col++) {
+			int chOrd = channelOrder[col % numCamChannels];
+			int camChOffset = chOrd * camChannelWidth;
+			tmpBuf[row * quadWidth + (col / numCamChannels) + camChOffset]
+				= *data_ptr++;
+		}
+	}
+
+	// copy back to output array
+	for (int i = 0; i < quadSize; i++) {
+		buf[i] = tmpBuf[i];
+	}
+}
+
+
+// Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
+// This halves the number of columns of each raw image
+// quad_width is the final width of the frame
+void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_width)
+{
+	int CDS_add = 1024;
+
+	unsigned short* new_data = image_data;
+	unsigned short* reset_data = image_data + quad_width;
+	unsigned short* old_data = image_data;
+
+	for (int i = 0; i < quad_height; i++) {
+		for (int j = 0; j < quad_width; j++) {
+			*new_data++ = CDS_add + *old_data++ - *reset_data++;
+		}
+		reset_data += quad_width;
+		old_data += quad_width;
+	}
+}
+
 

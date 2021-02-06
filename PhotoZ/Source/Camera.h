@@ -100,6 +100,13 @@ public:
 	int depth();
 	int freq();
 	//	char* devname();
+
+
+	void reassembleImages(unsigned short* images, int nImages);
+
+	void deinterleave(unsigned short* buf, int quad_height, int quad_width);
+	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
+
 };
 
 #endif // CAMERA_H_
