@@ -205,8 +205,8 @@ int DapController::acqui(short *memory, Camera &cam) {
 			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
 
 			// acquire data for this image from the IPDVth channel
-			image = cam.wait_image(ipdv); 
-
+			image = cam.wait_image(ipdv);
+			
 			// Save the image to process later
 			memcpy(privateMem + (quadrantSize * 4 * i), image, width * height * sizeof(short));
 

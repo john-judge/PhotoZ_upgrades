@@ -10,6 +10,7 @@ UnitTest1/TestData/*.png
 UnitTest1/TestData/.ipynb_checkpoints/
 UnitTest1/TestData/.ipynb_checkpoints/*
 UnitTest1/TestData/Output*.txt
+UnitTest1/TestData/RLI*.txt
 
 # User-specific files
 *.suo

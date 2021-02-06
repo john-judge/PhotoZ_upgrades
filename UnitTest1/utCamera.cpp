@@ -182,32 +182,32 @@ namespace UnitTests
 			reassembleImage(fileIn, fileOut, quad_height, quad_width, 65535, true);
 		}
 
-		// open a test raw image RLI-128.txt and output a processed image for visual inspection, with CDS
-		TEST_METHOD(reassembleImageTest128) {
+		// open a test raw image RLI-off.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(reassembleImageTestFLIoff) {
 			const char* fileIn, *fileOut;
 			int quad_height, quad_width;
 
-			fileIn = "RLI-128.txt";
-			fileOut = "OutputCDS-128.txt";
-			quad_height = 20;
-			quad_width = 128; // Needs to change, incomplete image
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, true);
-			fileOut = "Output-128.txt";
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, false);
+			fileIn = "RLI-off (1).txt";
+			fileOut = "OutputCDS-off (1).txt";
+			quad_height = 5;
+			quad_width = 1024; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, true);
+			fileOut = "Output-off (1).txt";
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, false);
 		}
 
-		// open a test raw image RLI-256.txt and output a processed image for visual inspection, with CDS
-		TEST_METHOD(reassembleImageTest256) {
+		// open a test raw image RLI-on.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(reassembleImageTestFLIon) {
 			const char* fileIn, *fileOut;
 			int quad_height, quad_width;
 
-			fileIn = "RLI-256.txt";
-			fileOut = "OutputCDS-256.txt";
+			fileIn = "RLI-on (1).txt";
+			fileOut = "OutputCDS-on (1).txt";
 			quad_height = 5;
-			quad_width = 512; // Needs to change, incomplete image
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, true);
-			fileOut = "Output-256.txt";
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 255, false);
+			quad_width = 1024; // Needs to change, incomplete image
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, true);
+			fileOut = "Output-on (1).txt";
+			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, false);
 		}
 
 
@@ -226,7 +226,8 @@ namespace UnitTests
 			string index, data;
 			int i = 0;
 			while (file >> index >> data && i < quadrantSize) {
-				rawMemory[i] = (unsigned short)(stod(data) * scale);
+				if (scale == 1) rawMemory[i] = (unsigned short)(atoi(data.c_str()) * scale);
+				else rawMemory[i] = (unsigned short)(stod(data) * scale);
 				i++;
 			}
 			file.close();
@@ -252,13 +253,15 @@ namespace UnitTests
 			if (CDS) quadrantSize /= 2; // if CDS was applied, only write back the first half.
 
 			for (int i = 0; i < quadrantSize; i++)
-				outFile << i << "\t" << (double)rawMemory[i] / (double)scale << "\n";
+				if (scale == 1) outFile << i << "\t" << (unsigned short)rawMemory[i] << "\n";
+				else outFile << i << "\t" << (double)rawMemory[i] / (double)scale << "\n";
 
 			outFile.close();
 
 			delete[] rawMemory;
 			delete[] new_image;
 		}
+
 
 	};
 }
