@@ -1,3 +1,6 @@
+
+
+
 ## References
 
 [DAP programming language documentation](http://www.mstarlabs.com/docs/manuals/DAPL3000.PDF)
@@ -47,6 +50,12 @@ simulation: disabled PDV calls to allow testing playground for NI-DAQmx with sim
 PDV-multi: multithreaded acquisition for Little Dave
 
 visual: branch for reworking GUI to be more usable and less memory-hungry
+
+## Related Tools
+
+[PhotoZ_images.ipynb](https://colab.research.google.com/drive/1rVvRQeR6k0fvj9AQME0fRrZxCG_BQWxN#scrollTo=IYLcCMMeZp1z): Colab Notebook for plotting, debugging, and transforming image data
+
+[Cell Detection](https://github.com/ksscheuer/ROI_Identification) Kate's SNR clustering method for identifying ROIs
 
 ## Other Information
 
