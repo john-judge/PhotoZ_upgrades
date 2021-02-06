@@ -629,8 +629,9 @@ Error:
 
 	uInt8 data0[4] = { 0,0,0,0 };
 	int32 defaultSuccess = -1; 
-	int32* successfulSamples=&defaultSuccess;	
-	int rliPts = 475;//where is this number coming from?//dafault length of samples, i think.
+	int32* successfulSamples=&defaultSuccess;
+
+	int rliPts = 475; //default length of samples, for RLI
 	unsigned char *image;
 	cam.setCamProgram(dc->getCameraProgram());
 	int width = cam.width();
