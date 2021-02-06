@@ -6,16 +6,21 @@
 
 #include "edtinc.h"
 
-  extern class RecControl *recControl;  // from definitions.h for getting camGain
+extern class RecControl* recControl;  // from definitions.h for getting camGain
 // compiler camera switch
 //#define LILJOE
 #define LILDAVE
 
 class Camera {
 	char edt_devname[128];
+	int unit;					// Some parameters that can be set, but are
+	int channel;				// usually just 0
 	int m_depth;
 
-	PdvDev *pdv_pt[4];
+	int ipdv = 0;
+
+	PdvDev* pdv_pt[4];
+	//	PdvDev *pdv_p;
 	int timeouts[4], m_num_timeouts;
 	int last_timeouts;
 	int overruns = 0;
@@ -65,27 +70,27 @@ public:
 	static const int reserve3_lib[];
 #endif // LILDAVE*/
 
-    Camera();
-    ~Camera();
+	Camera();
+	~Camera();
 
-    int open_channel();
+	int open_channel();
 
-	unsigned char* single_image(int ipdv);
-    void start_images();
+	unsigned char* single_image();
+	void start_images();
 	void end_images();
-	void end_images(int ipdv);
 	void init_cam();
 
 	void setCamProgram(int p);
-    unsigned char* wait_image(int ipdv);
+	unsigned char* wait_image(int ipdv);
 
-	void serial_write(const char *buf);
-	//void serial_read(char *buf, int size);
+	void serial_write(const char* buf);
+	void serial_read(char* buf, int size);
 
-    int num_timeouts(int ipdv);
-	
-	void get_image_info(int ipdv);
-	int get_buffer_size(int ipdv);
+	int num_timeouts();
+	//	int timeouts[4];
+
+	void get_image_info();
+	int get_buffer_size();
 
 	int program();
 	void program(int p);
@@ -94,14 +99,7 @@ public:
 	int height();
 	int depth();
 	int freq();
-
-	void reassembleImages(unsigned short *images, int nImages);
-
-	void deinterleave(unsigned short * buf, int quad_height, int quad_width);
-	void subtractCDS(unsigned short *image_data, int quad_height, int quad_width);
-
-
-
+	//	char* devname();
 };
 
 #endif // CAMERA_H_

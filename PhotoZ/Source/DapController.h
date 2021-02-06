@@ -4,9 +4,7 @@
 #ifndef _DapController_h
 #define _DapController_h
 //=============================================================================
-
-//#include "dapio32.h"  //Removed DAPIO32 JMJ 12/3
-
+#include "dapio32.h"
 #include "edtinc.h"
 #include <fstream>
 #include "NIDAQmx.h"
@@ -15,26 +13,19 @@ class DapChannel;
 class Camera;
 
 //=============================================================================
-class DapController  
+class DapController
 {
 private:
-
-	TaskHandle taskHandleLed = 0;
+	TaskHandle taskHandleGet = 0;
 	TaskHandle taskHandlePut = 0;
+	HDAP dap820Put;
+	HDAP dap820Get;
 
-	TaskHandle taskHandleRLI;
-	TaskHandle taskHandleAcqui;
-
-	// Removed along with DAPIO32 JMJ 12/3
-	//HDAP dap820Put;
-	//HDAP dap820Get;
-
-	int numPts;
-
-	int32_t error =0;
+	int32_t error = 0;
 	char errBuff[2048];
-	
+
 	float acquiOnset;
+	int numPts;
 	double intPts;
 	float duration;
 	int program;
@@ -58,31 +49,28 @@ private:
 	char ltpIndFlag;
 	char scheduleFlag;
 	char scheduleRliFlag;
-	//int **outputs; //old idea! Let's try saving space
-	//int **pseudoOutputs;
-	uint8_t *outputs;
-	uint8_t *pseudoOutputs;
+
 public:
 	// Constructors
 	DapController();
 	~DapController();
-	DapChannel *reset;
-	DapChannel *shutter;
-	DapChannel *sti1;
-	DapChannel *sti2;
+	DapChannel* reset;
+	DapChannel* shutter;
+	DapChannel* sti1;
+	DapChannel* sti2;
 
 	void NiErrorDump();
-	
+
 	// Set DAP and release DAP
-	int setDAPs(float64 SamplingRate=2000);//setting default for testing purposes.
+	int setDAPs(float64 SamplingRate = 2000);//setting default for testing purposes.
+	int NI_openShutter(uInt8);
 	void releaseDAPs();
-	
-	int NI_openShutter(int on);
+
 
 	// Flags
 	void setStopFlag(char);
 	char getStopFlag();
-	
+
 	void setScheduleFlag(char);
 	void setScheduleRliFlag(char);
 	char getScheduleFlag();
@@ -93,11 +81,11 @@ public:
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
-	void fillPDOut(uint8_t *outputs, char realFlag);
+	void fillPDOut(std::fstream&, char realFlag);
 
 	// Acquisition Control
-	int sendFile2Dap(const char *);
-	int acqui(short *, Camera &);
+	int sendFile2Dap(const char*);
+	int acqui(short*, Camera&);
 	void pseudoAcqui();
 	int stop();
 	void resetDAPs();
@@ -121,14 +109,14 @@ public:
 	float getDuration();
 
 	// Stimulator
-	void setNumPulses(int ch,int num);
+	void setNumPulses(int ch, int num);
 	int getNumPulses(int ch);
-	void setIntPulses(int ch,int num);
+	void setIntPulses(int ch, int num);
 	int getIntPulses(int ch);
 
-	void setNumBursts(int ch,int num);
+	void setNumBursts(int ch, int num);
 	int getNumBursts(int ch);
-	void setIntBursts(int ch,int num);
+	void setIntBursts(int ch, int num);
 	int getIntBursts(int ch);
 };
 

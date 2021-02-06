@@ -60,7 +60,7 @@ void continue_livefeed(void *arg)
 void LiveFeed::update_image()
 {
 	for (int i = 0; i < 4; i++) {
-		unsigned char* im = cam->single_image(i);
+		unsigned char* im = cam->single_image();
 		memcpy(image + imagesize * i / 4, im, sizeof(short)*imagesize/4);
 	}
 }
