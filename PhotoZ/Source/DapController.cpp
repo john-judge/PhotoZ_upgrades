@@ -646,7 +646,6 @@ int DapController::takeRli(short* memory, Camera& cam)
 		cout << "memory " << memory[0] << "  " << memory[200] << " mm_0"<< mm_0<<"\n";
 		cout << "line 682 " << image[50] << "\n";
 		cout << " DapC line 660 \n";*/
-	cam.get_image_info();
 	//cam.init_cam();					//seems unnecessary
 
 	/* JMJ 2/6/21 -- this shouldn't be needed since we call init_cam() from MainController
@@ -663,7 +662,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 		for (int j = 0; j < 1; j++)
 		{
 			image = cam.wait_image(j);
-			memcpy(memory + array_diodes * i, image, array_diodes * 2);
+			memcpy(&memory[array_diodes * i], image, array_diodes * 2);
 			/*			image = cam.wait_image(1);
 						image = cam.wait_image(2);
 						image = cam.wait_image(3);*/
@@ -678,7 +677,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 		for (int j = 0; j < 1; j++)
 		{
 			image = cam.wait_image(j);
-			memcpy(memory + array_diodes * i, image, array_diodes * 2); // memcpy takes the size in bytes (not pixels)
+			memcpy(&memory[array_diodes * i], image, array_diodes * 2); // memcpy takes the size in bytes (not pixels)
 /*			image = cam.wait_image(1);
 			image = cam.wait_image(2);
 			image = cam.wait_image(3);*/
@@ -686,34 +685,77 @@ int DapController::takeRli(short* memory, Camera& cam)
 		}
 	}
 
+
+	cam.end_images();					// does not seem to matter
+
+
+
+	// Image reassembly
+	//cam.reassembleImages((unsigned short*)(memory + array_diodes * 200), rliPts - 200);
+
 	//=============================================================================
-	// Printing the raw data of an image for debugging
+	// Printing the raw data of images for debugging
 	std::ofstream outFile;
-	outFile.open("RLI-0.txt", std::ofstream::out | std::ofstream::trunc);
+	outFile.open("RLI-ALL.txt", std::ofstream::out | std::ofstream::trunc);
+	int line = 0;
+	for (int i = 200; i < rliPts-1; i++) {
+		unsigned short* imgDebug = (unsigned short*)&memory [array_diodes * i];
+		int w = cam.width();
+		int h = cam.height();
+		cam.deinterleave(imgDebug, h, w);
+		//cam.subtractCDS(imgDebug, h, w);
+		for (int k = 0; k < array_diodes; k++) { // Is PDV's reported image height doubled for CDS subtraction?
+			outFile << line << " " << imgDebug[k] << "\n";
+			line++;
+		}
+	}
+	outFile.close();
+
+	/*
+	outFile.open("RLI-300.txt", std::ofstream::out | std::ofstream::trunc);
 	for (int k = 0; k < array_diodes; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
 
-	outFile.open("Output-0.txt", std::ofstream::out | std::ofstream::trunc);
+	
+	outFile.open("Output-300.txt", std::ofstream::out | std::ofstream::trunc);
 	cam.deinterleave((unsigned short*)(memory + array_diodes * 300),cam.height(), cam.width());
 	for (int k = 0; k < array_diodes; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
 
-	outFile.open("OutputCDS-0.txt", std::ofstream::out | std::ofstream::trunc);
+	outFile.open("OutputCDS-300.txt", std::ofstream::out | std::ofstream::trunc);
 	cam.subtractCDS((unsigned short*)(memory + array_diodes * 300), cam.height(), cam.width());
 	for (int k = 0; k < array_diodes / 2; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
 
-	cout << "\nWrote 300th image's raw data to PhotoZ/: RLI-0.txt, Output-0.txt, and OutputCDS-0.txt\n";
+	cout << "\nWrote 300th image's raw data to PhotoZ/: RLI-300.txt, Output-300.txt, and OutputCDS-300.txt\n";
+
+	outFile.open("RLI-450.txt", std::ofstream::out | std::ofstream::trunc);
+	for (int k = 0; k < array_diodes; k++)
+		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
+	outFile.close();
+
+	outFile.open("Output-450.txt", std::ofstream::out | std::ofstream::trunc);
+	cam.deinterleave((unsigned short*)(memory + array_diodes * 450), cam.height(), cam.width());
+	for (int k = 0; k < array_diodes; k++)
+		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
+	outFile.close();
+
+	outFile.open("OutputCDS-450.txt", std::ofstream::out | std::ofstream::trunc);
+	cam.subtractCDS((unsigned short*)(memory + array_diodes * 450), cam.height(), cam.width());
+	for (int k = 0; k < array_diodes / 2; k++)
+		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
+	outFile.close();
+
+	cout << "\nWrote 450th image's raw data to PhotoZ/: RLI-450.txt, Output-450.txt, and OutputCDS-450.txt\n";
+	*/
+	
 	//=============================================================================
 
-
-
-	cam.end_images();					// does not seem to matter
-
 	memcpy(memory, memory + array_diodes, array_diodes * 2);		//*sizeof(short)
+
 	Sleep(100);
 	NI_openShutter(0);
 	return 0;
