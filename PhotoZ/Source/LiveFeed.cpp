@@ -60,7 +60,7 @@ void continue_livefeed(void *arg)
 void LiveFeed::update_image()
 {
 	for (int i = 0; i < 4; i++) {
-		unsigned char* im = cam->single_image();
+		unsigned char* im = cam->single_image(0);
 		memcpy(image + imagesize * i / 4, im, sizeof(short)*imagesize/4);
 	}
 }
@@ -134,7 +134,7 @@ bool LiveFeed::begin_livefeed()
 
 	//DapLinePut(dap820Put, "START Send_Pipe_Output, Start_Output");
     cam = new Camera();
-    if (cam->open_channel())
+    if (cam->open_channel(0))
     {
         cam = nullptr;
         fl_alert("The camera is already in use!\n");

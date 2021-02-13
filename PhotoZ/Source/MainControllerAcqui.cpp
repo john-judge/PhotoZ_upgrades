@@ -27,43 +27,45 @@ void MainController::takeRli()
 {
 	int i, j;		// i is array index; j = time index
 
-	//-------------------------------------------
-	// Allocate Memory
-	//
+
 	Camera cam;
 	//-------------------------------------------
-
 	// Attempt channel open before allocating memory
-	if (cam.open_channel()) {
-		fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
-		return;
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (cam.open_channel(ipdv)) {
+			fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
+			return;
+		}
 	}
-
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
 	cam.init_cam();
 
+	//-------------------------------------------
 	// Allocate image memory 
-	int bufferSizePixels = cam.get_buffer_size() / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).
+	int bufferSizePixels = cam.get_buffer_size(0) / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).
 	int array_diodes = dataArray->num_raw_array_diodes();
-	short* memory = new short[((size_t)bufferSizePixels) * 475];
+	short* memory = new short[((size_t)bufferSizePixels) * (475+1) * NUM_PDV_CHANNELS];
 	short** traceData = new short* [array_diodes];
 	for (i = 0; i < array_diodes; i++) {
 		traceData[i] = new short[475];
 	}
 
+	//-------------------------------------------
 	// validate image quadrant size match expected
-	if (array_diodes != cam.get_buffer_size() / 2) {
-		cout << "\nAborting acquisition. The size PhotoZ expects for this quadrant is: \t" \
-			<< array_diodes << " pixels" \
-			<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-			<< cam.get_buffer_size() << " bytes = " << cam.get_buffer_size() / 2 << " pixels.\n\n";
-		return;
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (array_diodes != cam.get_buffer_size(ipdv) / 2) {
+			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
+				<< array_diodes << " pixels" \
+				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
+				<< cam.get_buffer_size(ipdv) << " bytes = " << cam.get_buffer_size(ipdv) / 2 << " pixels.\n\n";
+			fl_alert("RLI Acquisition failed. Please retry Take RLI once before examining debugging output.\n");
+			return;
+		}
 	}
 
-	cam.get_image_info();
+	cam.get_image_info(0);
 	int program = dc->getCameraProgram();
 	int freq = Camera::FREQ[program];
-	//	cam.program(program);
 	dapControl->setDAPs();			//conveted to DAQmx
 
 	/*dapControl->resetDAPs();
@@ -231,9 +233,11 @@ void MainController::acquiOneRecord()
 		dapControl->createAcquiDapFile();
 
 		Camera cam;
-		if (cam.open_channel()) {
-			fl_alert("MCA line 220 Failed to open the camera channel!\n");
-			goto error;
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			if (cam.open_channel(ipdv)) {
+				fl_alert("MCA line 220 Failed to open the camera channel!\n");
+				goto error;
+			}
 		}
 		cam.program(dc->getCameraProgram());
 		cout << "MainCohntrAcqui AcquiOneRec line 223\n";

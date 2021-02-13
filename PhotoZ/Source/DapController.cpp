@@ -10,6 +10,7 @@
 #include <exception>
 #include <stdint.h>
 #include <FL/fl_ask.H>
+#include <omp.h> // parallelization
 
 #include "dapio32.h"
 #include "NIDAQmx.h"
@@ -157,16 +158,15 @@ double DapController::getIntPts()
 int DapController::acqui(short* memory, Camera& cam)
 {
 	int i;
-	short* buf = new short[8 * numPts];
-	//DapInputFlush(dap820Get);
+	short* buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
 
 	unsigned char* image;
 	int width = cam.width();
 	int height = cam.height();
-	if (width != dataArray->raw_width() || height != dataArray->raw_height())
-	{
+	int quadrantSize = width * height;
+	if (width != dataArray->raw_width() || height != dataArray->raw_height()) {
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
-		cout << " line 158 width & height " << width << "   " << height << endl;
+		cout << " DapController::acqui() cam.width & cam.height " << width << "   " << height << endl;
 		return 0;
 	}
 	int num_diodes = dataArray->num_raw_diodes();
@@ -174,32 +174,39 @@ int DapController::acqui(short* memory, Camera& cam)
 	// Start Acquisition
 	//joe->dave; might need to change it for dave cam
 	//	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
-	Sleep(100);
+	//Sleep(100);
 
-	cam.start_images();
-	//DapLinePut(dap820Put, "START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
+	#pragma omp parallel for 
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 
-	int tos = 0;
-	for (int ii = 0; ii < 7; ii++) image = cam.wait_image(0);		// throw away first seven frames to clear camera saturation
-																// be sure to add 7 to COUNT in lines 327 and 399
-	for (i = 0; i < numPts; i++) {
-		image = cam.wait_image(0);
+		cam.start_images(ipdv);
 
-		// Save the image to process later
-		memcpy(memory + (num_diodes * i), image, width * height * sizeof(short));
+		int tos = 0;
+		for (int ii = 0; ii < 7; ii++) image = cam.wait_image(0);		// throw away first seven frames to clear camera saturation
+																	// be sure to add 7 to COUNT in lines 327 and 399
+		for (i = 0; i < numPts; i++) {
 
-		if (cam.num_timeouts() != tos) {
-			printf("DapController line 180 timeout on %d\n", i);
-			tos = cam.num_timeouts();
+			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+
+			// acquire data for this image from the IPDVth channel
+			image = cam.wait_image(ipdv);
+
+			// Save the image to process later
+			memcpy(privateMem + (quadrantSize * i), image, quadrantSize * sizeof(short));
+
+			if (cam.num_timeouts(ipdv) != tos) {
+				printf("DapController line 180 timeout on %d\n", i);
+				tos = cam.num_timeouts(ipdv);
+			}
+			if (cam.num_timeouts(ipdv) > 20) {
+				cam.end_images(ipdv);
+				if(ipdv == 0) cam.serial_write("@TXC 0\r"); // only write to channel 0
+				return cam.num_timeouts(ipdv);
+			}
 		}
-		if (cam.num_timeouts() > 20) {
-			cam.end_images();
-			cam.serial_write("@TXC 0\r");
-			return cam.num_timeouts();
-		}
+		cam.end_images(ipdv);
+		if (ipdv == 0) cam.serial_write("@TXC 0\r");
 	}
-	cam.end_images();
-	cam.serial_write("@TXC 0\r");
 
 
 	// Get Binary Data (digital outputs)
@@ -610,6 +617,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 	cam.setCamProgram(dc->getCameraProgram());	//	*** necessary for changes in program - without this fl_alert is triggered	
 	int width = cam.width();
 	int height = cam.height();
+	int quadrantSize = width * height;
 	cout << " line 611 width " << width << " height " << height << " \n";
 	int array_diodes = dataArray->num_raw_array_diodes();
 
@@ -655,47 +663,59 @@ int DapController::takeRli(short* memory, Camera& cam)
 	*/
 	//	cam.serial_write("@TXC 0\r");
 	//	cam.serial_write("@SEQ 1\r");
-	cam.start_images();
 
-	for (int i = 0; i < 200; i++)				// acquire 200 dark frames with LED off
-	{
-		for (int j = 0; j < 1; j++)
+	// acquire 200 dark frames with LED off
+	#pragma omp parallel for
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		cam.start_images(ipdv);
+		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+
+		for (int i = 0; i < 200; i++)				
 		{
-			image = cam.wait_image(j);
-			memcpy(&memory[array_diodes * i], image, array_diodes * 2);
-			/*			image = cam.wait_image(1);
-						image = cam.wait_image(2);
-						image = cam.wait_image(3);*/
-						//			if (cam.num_timeouts() > 0) return cam.num_timeouts();
+			// acquire data for this image from the IPDVth channel
+			image = cam.wait_image(ipdv);
+
+			// Save the image to process later
+			memcpy(privateMem, image, quadrantSize * sizeof(short));
+			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
 		}
 	}
+	// parallel section pauses, threads sync and close
 
 	NI_openShutter(1);
 	Sleep(100);
-	for (int i = 200; i < rliPts; i++)			// acquire 275 frames with LED on
-	{
-		for (int j = 0; j < 1; j++)
-		{
-			image = cam.wait_image(j);
-			memcpy(&memory[array_diodes * i], image, array_diodes * 2); // memcpy takes the size in bytes (not pixels)
-/*			image = cam.wait_image(1);
-			image = cam.wait_image(2);
-			image = cam.wait_image(3);*/
-			//			if (cam.num_timeouts() > 0) return cam.num_timeouts();
+
+	// parallel acquisition resumes now that light is on
+	#pragma omp parallel for
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+
+		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
+			// acquire data for this image from the IPDVth channel
+			image = cam.wait_image(ipdv);
+
+			// Save the image to process later
+			memcpy(privateMem, image, quadrantSize * sizeof(short));
+			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
 		}
+		cam.end_images(ipdv);					// does not seem to matter
 	}
+	Sleep(100);
+	NI_openShutter(0); // light off
 
-
-	cam.end_images();					// does not seem to matter
-
-
-
+	//=============================================================================
 	// Image reassembly
-	//cam.reassembleImages((unsigned short*)(memory + array_diodes * 200), rliPts - 200);
+	unsigned short* img = (unsigned short*)(memory);
+	for (int i = 0; i < rliPts; i++) {
+		cam.reassembleImage(img); // deinterleaves, CDS subtracts, and arranges quadrants
+		if(i == 300) cam.printFinishedImage(img);
+		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image start	
+	}
 
 	//=============================================================================
 	// Printing the raw data of images for debugging
-	std::ofstream outFile;
+	
+	/*
 	outFile.open("RLI-ALL.txt", std::ofstream::out | std::ofstream::trunc);
 	int line = 0;
 	for (int i = 200; i < rliPts-1; i++) {
@@ -703,61 +723,40 @@ int DapController::takeRli(short* memory, Camera& cam)
 		int w = cam.width();
 		int h = cam.height();
 		cam.deinterleave(imgDebug, h, w);
-		//cam.subtractCDS(imgDebug, h, w);
-		for (int k = 0; k < array_diodes; k++) { // Is PDV's reported image height doubled for CDS subtraction?
+		cam.subtractCDS(imgDebug, h, w);
+		for (int k = 0; k < array_diodes/ 2; k++) { // Is PDV's reported image height doubled for CDS subtraction?
 			outFile << line << " " << imgDebug[k] << "\n";
 			line++;
 		}
 	}
 	outFile.close();
 
-	/*
+
+	// Save image raw data for debugging
+	std::ofstream outFile;
 	outFile.open("RLI-300.txt", std::ofstream::out | std::ofstream::trunc);
 	for (int k = 0; k < array_diodes; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
-
-	
 	outFile.open("Output-300.txt", std::ofstream::out | std::ofstream::trunc);
 	cam.deinterleave((unsigned short*)(memory + array_diodes * 300),cam.height(), cam.width());
 	for (int k = 0; k < array_diodes; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
-
 	outFile.open("OutputCDS-300.txt", std::ofstream::out | std::ofstream::trunc);
 	cam.subtractCDS((unsigned short*)(memory + array_diodes * 300), cam.height(), cam.width());
 	for (int k = 0; k < array_diodes / 2; k++)
 		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
 	outFile.close();
-
 	cout << "\nWrote 300th image's raw data to PhotoZ/: RLI-300.txt, Output-300.txt, and OutputCDS-300.txt\n";
 
-	outFile.open("RLI-450.txt", std::ofstream::out | std::ofstream::trunc);
-	for (int k = 0; k < array_diodes; k++)
-		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
-	outFile.close();
-
-	outFile.open("Output-450.txt", std::ofstream::out | std::ofstream::trunc);
-	cam.deinterleave((unsigned short*)(memory + array_diodes * 450), cam.height(), cam.width());
-	for (int k = 0; k < array_diodes; k++)
-		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
-	outFile.close();
-
-	outFile.open("OutputCDS-450.txt", std::ofstream::out | std::ofstream::trunc);
-	cam.subtractCDS((unsigned short*)(memory + array_diodes * 450), cam.height(), cam.width());
-	for (int k = 0; k < array_diodes / 2; k++)
-		outFile << k << " " << memory[array_diodes * 450 + k] << "\n";
-	outFile.close();
-
-	cout << "\nWrote 450th image's raw data to PhotoZ/: RLI-450.txt, Output-450.txt, and OutputCDS-450.txt\n";
 	*/
 	
 	//=============================================================================
 
-	memcpy(memory, memory + array_diodes, array_diodes * 2);		//*sizeof(short)
+	//memcpy(memory, memory + array_diodes, array_diodes * 2);		//*sizeof(short)
 
-	Sleep(100);
-	NI_openShutter(0);
+
 	return 0;
 }
 

@@ -5,6 +5,7 @@
 #define CAMERA_H_
 
 #include "edtinc.h"
+#define NUM_PDV_CHANNELS 4
 
 extern class RecControl* recControl;  // from definitions.h for getting camGain
 // compiler camera switch
@@ -13,15 +14,9 @@ extern class RecControl* recControl;  // from definitions.h for getting camGain
 
 class Camera {
 	char edt_devname[128];
-	int unit;					// Some parameters that can be set, but are
-	int channel;				// usually just 0
 	int m_depth;
-
-	int ipdv = 0;
-
-	PdvDev* pdv_pt[4];
-	//	PdvDev *pdv_p;
-	int timeouts[4], m_num_timeouts;
+	PdvDev* pdv_pt[NUM_PDV_CHANNELS];
+	int timeouts[NUM_PDV_CHANNELS], m_num_timeouts;
 	int last_timeouts;
 	int overruns = 0;
 	bool recovering_timeout;
@@ -73,11 +68,11 @@ public:
 	Camera();
 	~Camera();
 
-	int open_channel();
+	int open_channel(int ipdv);
 
-	unsigned char* single_image();
-	void start_images();
-	void end_images();
+	unsigned char* single_image(int ipdv);
+	void start_images(int ipdv);
+	void end_images(int ipdv);
 	void init_cam();
 
 	void setCamProgram(int p);
@@ -86,11 +81,10 @@ public:
 	void serial_write(const char* buf);
 	void serial_read(char* buf, int size);
 
-	int num_timeouts();
-	//	int timeouts[4];
+	int num_timeouts(int ipdv);
 
-	void get_image_info();
-	int get_buffer_size();
+	void get_image_info(int ipdv);
+	int get_buffer_size(int ipdv);
 
 	int program();
 	void program(int p);
@@ -99,14 +93,13 @@ public:
 	int height();
 	int depth();
 	int freq();
-	//	char* devname();
 
-
-	void reassembleImages(unsigned short* images, int nImages);
+	void reassembleImage(unsigned short* image, bool mapQuadrants);
+	void reassembleImage(unsigned short* image);
 
 	void deinterleave(unsigned short* buf, int quad_height, int quad_width);
 	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
-
+	void printFinishedImage(unsigned short* image);
 };
 
 #endif // CAMERA_H_

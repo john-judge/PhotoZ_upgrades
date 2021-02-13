@@ -126,7 +126,7 @@ void MainController::redraw()
 //=============================================================================
 void MainController::quit()
 {
-	char choice=fl_ask("Do you really want to quit Photoz-LilJoe?");
+	char choice=fl_ask("Do you really want to quit Photoz-LilDave?");
 	if(choice)
 	{
 		this->~MainController();

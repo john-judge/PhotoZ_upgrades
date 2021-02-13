@@ -13,6 +13,7 @@ UnitTest1/TestData/Output*.txt
 UnitTest1/TestData/RLI*.txt
 PhotoZ/RLI*.txt
 PhotoZ/*-0.txt
+PhotoZ/*-out.txt
 
 # User-specific files
 *.suo
