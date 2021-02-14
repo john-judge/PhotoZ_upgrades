@@ -6,6 +6,7 @@
 #include <fstream>
 #include <time.h>
 #include <string.h>
+#include <unordered_map>
 #include <stdio.h>
 #include <exception>
 #include <stdint.h>
@@ -666,18 +667,20 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 	// acquire 200 dark frames with LED off
 	#pragma omp parallel for
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		cam.start_images(ipdv);
-		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+	{
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			cam.start_images(ipdv);
+			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
 
-		for (int i = 0; i < 200; i++)				
-		{
-			// acquire data for this image from the IPDVth channel
-			image = cam.wait_image(ipdv);
+			for (int i = 0; i < 200; i++)
+			{
+				// acquire data for this image from the IPDVth channel
+				image = cam.wait_image(ipdv);
 
-			// Save the image to process later
-			memcpy(privateMem, image, quadrantSize * sizeof(short));
-			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
+				// Save the image to process later
+				memcpy(privateMem, image, quadrantSize * sizeof(short));
+				privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
+			}
 		}
 	}
 	// parallel section pauses, threads sync and close
@@ -687,28 +690,58 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 	// parallel acquisition resumes now that light is on
 	#pragma omp parallel for
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+	{
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			// pointer to this thread's section of MEMORY
+			short* privateMem = memory +
+				ipdv * quadrantSize +
+				quadrantSize * NUM_PDV_CHANNELS * 200; // offset of where we left off
 
-		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
-			// acquire data for this image from the IPDVth channel
-			image = cam.wait_image(ipdv);
+			for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
+				// acquire data for this image from the IPDVth channel
+				image = cam.wait_image(ipdv);
 
-			// Save the image to process later
-			memcpy(privateMem, image, quadrantSize * sizeof(short));
-			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
+				// Save the image to process later
+				memcpy(privateMem, image, quadrantSize * sizeof(short));
+				privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
+				/*cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<
+					" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";*/
+			}
+			cam.end_images(ipdv);					// does not seem to matter
 		}
-		cam.end_images(ipdv);					// does not seem to matter
 	}
 	Sleep(100);
 	NI_openShutter(0); // light off
 
+
+
 	//=============================================================================
 	// Image reassembly
+	unordered_map<int, std::string> framesToDebug;
+	framesToDebug[300] = "300";
+	framesToDebug[450] = "450";
+
 	unsigned short* img = (unsigned short*)(memory);
 	for (int i = 0; i < rliPts; i++) {
-		cam.reassembleImage(img); // deinterleaves, CDS subtracts, and arranges quadrants
-		if(i == 300) cam.printFinishedImage(img);
+
+		bool debug = framesToDebug.find(i) != framesToDebug.end();
+
+		if (debug) {
+			std::string filename = "raw-full-out" + framesToDebug[i] + ".txt";
+			cam.printFinishedImage(img, filename.c_str());
+			cout << "\t This full image was located in MEMORY at offset " <<
+				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
+		}
+
+		cam.reassembleImage(img, false, (i == 450)); // deinterleaves, CDS subtracts, and arranges quadrants
+
+		if (debug) {
+			std::string filename = "full-out" + framesToDebug[i] + ".txt";
+			cam.printFinishedImage(img, filename.c_str());
+			cout << "\t This full image was located in MEMORY at offset " <<
+				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
+		}
+
 		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image start	
 	}
 
@@ -734,10 +767,6 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 	// Save image raw data for debugging
 	std::ofstream outFile;
-	outFile.open("RLI-300.txt", std::ofstream::out | std::ofstream::trunc);
-	for (int k = 0; k < array_diodes; k++)
-		outFile << k << " " << memory[array_diodes * 300 + k] << "\n";
-	outFile.close();
 	outFile.open("Output-300.txt", std::ofstream::out | std::ofstream::trunc);
 	cam.deinterleave((unsigned short*)(memory + array_diodes * 300),cam.height(), cam.width());
 	for (int k = 0; k < array_diodes; k++)

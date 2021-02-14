@@ -94,12 +94,13 @@ public:
 	int depth();
 	int freq();
 
-	void reassembleImage(unsigned short* image, bool mapQuadrants);
-	void reassembleImage(unsigned short* image);
+	void reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose);
 
 	void deinterleave(unsigned short* buf, int quad_height, int quad_width);
 	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
-	void printFinishedImage(unsigned short* image);
+
+	void printFinishedImage(unsigned short* image, const char* filename);
+	void printQuadrant(unsigned short* image, const char* filename);
 };
 
 #endif // CAMERA_H_

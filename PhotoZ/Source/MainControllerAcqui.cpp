@@ -53,11 +53,12 @@ void MainController::takeRli()
 	//-------------------------------------------
 	// validate image quadrant size match expected
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		if (array_diodes != cam.get_buffer_size(ipdv) / 2) {
+		int PDV_size = cam.get_buffer_size(ipdv) / 2;
+		if (array_diodes != PDV_size) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< array_diodes << " pixels" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-				<< cam.get_buffer_size(ipdv) << " bytes = " << cam.get_buffer_size(ipdv) / 2 << " pixels.\n\n";
+				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
 			fl_alert("RLI Acquisition failed. Please retry Take RLI once before examining debugging output.\n");
 			return;
 		}

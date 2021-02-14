@@ -40,7 +40,7 @@ const char* Camera::LABEL[] = {
 	"7500 Hz  256x40" };
 
 //const int Camera::WIDTH[]  = {2048,	2048,	1024,	1024,	512,	512,	256,	256};
-//const int Camera::HEIGHT[] = {1024,	100,	320,	160,	160,	80,		60,		40};
+//const int Camera::HEIGHT[] = {1024,	100,	320,	160,	160,	80,		60,		40}; 
 
 // JMJ 2/6/21 -- For testing, these are sizes based on of .cfg files:
 const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
@@ -309,19 +309,23 @@ int Camera::freq() {
 
 // Apply CDS subtraction and deinterleave to one raw image
 // TO DO: reverse order of operations for efficiency (less swapping in deinterleave).
-void Camera::reassembleImage(unsigned short* image) {
-	reassembleImage(image, true);
-}
-
-// Apply CDS subtraction and deinterleave to one raw image
-// TO DO: reverse order of operations for efficiency (less swapping in deinterleave).
-void Camera::reassembleImage(unsigned short* image, bool mapQuadrants) {
+// mapQuadrants: whether to remap quadrants to full image view
+// verbose: whether to print out the image data to file at intermediate stages
+void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose) {
 	int w = width();
 	int h = height();
 	size_t quadrantSize = (size_t)w * (size_t)h;
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		std::string filename = "RLI-ch0.txt";
+		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
+		
 		subtractCDS(image + ipdv * quadrantSize, h, w);
+		filename = "Output-ch0.txt";
+		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
+
 		deinterleave(image + ipdv * quadrantSize, h, w);
+		filename = "OutputCDS-ch0.txt";
+		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
 	}
 
 	if (!mapQuadrants) return;
@@ -416,15 +420,26 @@ void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_w
 	}
 }
 
+// TO DO:  external facing image size should be post CDS subtraction  size
 
-void Camera::printFinishedImage(unsigned short* image) {
-	std::string annotation = "full";
-	int full_img_size = NUM_PDV_CHANNELS * width() * height() / 2; // Divide by 2 since image has been CDS subtracted
+
+void Camera::printFinishedImage(unsigned short* image, const char* filename) {
+	int full_img_size = NUM_PDV_CHANNELS * width() * height(); // Divide by 2 to account for CDS subtraction
 	std::ofstream outFile;
-	outFile.open(annotation + "-out.txt", std::ofstream::out | std::ofstream::trunc);
+	outFile.open(filename, std::ofstream::out | std::ofstream::trunc);
 	for (int k = 0; k < full_img_size; k++)
 		outFile << k << " " << image[k] << "\n";
 	outFile.close();
-	cout << "\nWrote full image's raw data to PhotoZ/: full-out.txt\n";
+	cout << "\nWrote full image's raw data to PhotoZ/" << filename << "\n";
+}
 
+
+void Camera::printQuadrant(unsigned short* image, const char* filename) {
+	int quadrantSize = width() * height(); // pre-CDS subtracted size
+	std::ofstream outFile;
+	outFile.open(filename, std::ofstream::out | std::ofstream::trunc);
+	for (int k = 0; k < quadrantSize; k++)
+		outFile << k << " " << image[k] << "\n";
+	outFile.close();
+	cout << "\nWrote quadrant raw data to PhotoZ/" << filename << "\n";
 }
