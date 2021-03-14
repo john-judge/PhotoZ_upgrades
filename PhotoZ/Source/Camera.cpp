@@ -346,9 +346,10 @@ int Camera::freq() {
 // Apply CDS subtraction and deinterleave to a list of raw images.
 void Camera::reassembleImages(unsigned short *images, int nImages) {
 	size_t imageSize = width() * height();
+	int channelOrder[] = { 2, 3, 1, 0 };
 	for (int i = 0; i < nImages; i++) {
 		subtractCDS(images + imageSize * i, height(), width());
-		deinterleave(images + imageSize * i,height(),width());
+		deinterleave(images + imageSize * i,height(),width(), channelOrder);
 	}
 }
 
@@ -356,8 +357,8 @@ void Camera::reassembleImages(unsigned short *images, int nImages) {
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
-void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth) {
-	static int channelOrder[] = { 2, 3, 1, 0 };
+void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth, int* channelOrder) {
+	
 
 	// We say that CDS "doubles" the width
 	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
@@ -448,7 +449,8 @@ void Camera::subtractCDS(unsigned short *image_data, int quad_height, int quad_w
 
 //file_width = image_width
 //file_height = image_height
-int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
+
+/*int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
 {
 	int layers = 1;
 	int stripes = 4;
@@ -514,6 +516,7 @@ int makeLookUpTable(unsigned int *Lut, int image_width, int image_height)
 	
 	return 0;
 }
+*/
 
 void frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_images, unsigned short *new_images)
 {
@@ -530,6 +533,7 @@ void frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_i
 //    int QUAD: 0
 //    int TWOK: 1 
 //    int num_pdvChan: 4
+/*
 void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, unsigned int height, unsigned int length)
 {
 	int num_pdvChan = 1;
@@ -574,7 +578,7 @@ void subtractCDS(unsigned short int *image_data, int loops, unsigned int width, 
 		}
 	}
 
-}
+}*/
 
 
 
