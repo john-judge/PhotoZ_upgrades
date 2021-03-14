@@ -31,15 +31,17 @@ namespace UnitTests
 		// open a test raw image RLI-02062021.txt and output a processed image for visual inspection, with CDS
 		TEST_METHOD(reassembleImageRLI) {
 			const char* fileIn, *fileOut;
-			int quad_height, quad_width;
+			int img_height, img_width;
 
 			fileIn = "RLI-raw-full-out450.txt";
 			fileOut = "OutputCDS-raw-full-out450.txt";
-			quad_height = 40;
-			quad_width = 1024; // Needs to change, incomplete image
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, true);
+			img_height = 40; // must be divisible by 4
+			img_width = 1024; // Needs to change, incomplete image
+
+			
+			reassembleImage(fileIn, fileOut, img_height / 4, img_width, 1, true);
 			fileOut = "Output-raw-full-out450.txt";
-			reassembleImage(fileIn, fileOut, quad_height, quad_width, 1, false);
+			reassembleImage(fileIn, fileOut, img_height / 4, img_width, 1, false);
 		}
 
 
@@ -52,35 +54,40 @@ namespace UnitTests
 			const wchar_t * message = L"File should be open";
 			Assert::IsTrue(file.is_open(), message);
 			int quadrantSize = 2 * quad_height * quad_width;
-			unsigned short *rawMemory = new unsigned short[quadrantSize];
-			unsigned short *new_image = new unsigned short[quadrantSize];
+			unsigned short *rawMemory = new unsigned short[quadrantSize * 4];
+			unsigned short *new_image = new unsigned short[quadrantSize * 4];
 
 			string index, data;
 			int i = 0;
-			while (file >> index >> data && i < quadrantSize) {
+			while (file >> index >> data && i < quadrantSize * 4) {
 				if (scale == 1) rawMemory[i] = (unsigned short)(atoi(data.c_str()) * scale);
 				else rawMemory[i] = (unsigned short)(stod(data) * scale);
 				i++;
 			}
 			file.close();
 
-			message = L"Expected to fill a quadrant.\n";
-			Assert::AreEqual(quadrantSize, i, message);
+			message = L"Expected to fill 4 quadrants.\n";
+			Assert::AreEqual(quadrantSize * 4, i, message);
 
 
 			message = L"Dimensions for a quadrant are incorrect.\n";
 			Assert::AreEqual(quadrantSize, quad_height * quad_width * 2, message);
 
 			// Each PDV Quadrant has a different cam channel interleaving
-			int channelOrder1[] = { 2, 3, 1, 0 };
-			int channelOrder2[] = { 2, 3, 1, 0 };
-			int channelOrder3[] = { 0, 1, 3, 2 };
-			int channelOrder4[] = { 0, 1, 3, 2 };
+
+			int channelOrders[16] =				{ 2, 3, 1, 0, 
+												  1, 0, 2, 3,
+												  2, 3, 1, 0,
+												  1, 0, 2, 3, };
 
 			Camera cam;
 			// There are 4 camera channels within each PDV channel
-			cam.deinterleave(rawMemory, quad_height, quad_width, channelOrder1);
-			if (CDS) cam.subtractCDS(rawMemory, quad_height, quad_width);
+			for (int ipdv = 1; ipdv < 4; ipdv++) {
+				int* chOrd = channelOrders + ipdv * 4;
+				unsigned short *quadPtr = rawMemory + ipdv * quadrantSize;
+				cam.deinterleave(quadPtr, quad_height, quad_width, chOrd);
+			}
+			if (CDS) cam.subtractCDS(rawMemory, quad_height * 4, quad_width);
 
 			// write test data to 
 			std::ofstream outFile;
@@ -90,7 +97,7 @@ namespace UnitTests
 
 			if (CDS) quadrantSize /= 2; // if CDS was applied, only write back the first half.
 
-			for (int i = 0; i < quadrantSize; i++)
+			for (int i = 0; i < quadrantSize * 4; i++)
 				if (scale == 1) outFile << i << "\t" << (unsigned short)rawMemory[i] << "\n";
 				else outFile << i << "\t" << (double)rawMemory[i] / (double)scale << "\n";
 

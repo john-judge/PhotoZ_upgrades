@@ -346,10 +346,16 @@ int Camera::freq() {
 // Apply CDS subtraction and deinterleave to a list of raw images.
 void Camera::reassembleImages(unsigned short *images, int nImages) {
 	size_t imageSize = width() * height();
-	int channelOrder[] = { 2, 3, 1, 0 };
+	int channelOrders[16] = { 2, 3, 1, 0,
+							  1, 0, 2, 3,
+							  2, 3, 1, 0,
+							  1, 0, 2, 3, };
 	for (int i = 0; i < nImages; i++) {
-		subtractCDS(images + imageSize * i, height(), width());
-		deinterleave(images + imageSize * i,height(),width(), channelOrder);
+		unsigned short* img = images + imageSize * i;
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			subtractCDS(img + ipdv * imageSize / 4, height(), width());
+			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
+		}
 	}
 }
 
@@ -357,6 +363,7 @@ void Camera::reassembleImages(unsigned short *images, int nImages) {
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
+// channelOrder: a 4 int array of channel interleave orderings for this quadrant.
 void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth, int* channelOrder) {
 	
 

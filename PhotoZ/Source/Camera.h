@@ -5,6 +5,7 @@
 #define CAMERA_H_
 
 #include "edtinc.h"
+#define NUM_PDV_CHANNELS 4
 
   extern class RecControl *recControl;  // from definitions.h for getting camGain
 // compiler camera switch
