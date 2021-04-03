@@ -16,6 +16,7 @@ PhotoZ/Output*.txt
 PhotoZ/*full*.txt
 PhotoZ/*-0.txt
 PhotoZ/*-out.txt
+UnitTest1/TestData/*.txt
 
 # User-specific files
 *.suo

@@ -34,7 +34,7 @@ namespace UnitTests
 			const char* fileIn, *fileOut;
 			int img_height, img_width;
 
-			fileIn = "RLI-raw-full-out450.txt";
+			fileIn = "raw-full-out450.txt";
 			fileOut = "OutputCDS-raw-full-out450.txt";
 			img_height = 40; // must be divisible by 4
 			img_width = 1024; // Needs to change, incomplete image
@@ -78,14 +78,14 @@ namespace UnitTests
 
 
 			const int channelOrders[16] = { 2, 3, 1, 0,
-												  1, 0, 2, 3,
-												  2, 3, 1, 0,
-												  1, 0, 2, 3, };
+											1, 0, 2, 3,
+											2, 3, 1, 0,
+										    1, 0, 2, 3, };
 
 			Camera cam;
 			// There are 4 camera channels within each PDV channel
 			for (int ipdv = 1; ipdv < 4; ipdv++) {
-				int* chOrd = channelOrders + ipdv * 4;
+				const int* chOrd = channelOrders + ipdv * 4;
 
 				unsigned short* quadPtr = rawMemory + ipdv * quadrantSize;
 

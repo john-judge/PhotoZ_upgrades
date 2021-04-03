@@ -176,11 +176,11 @@ int DapController::acqui(short* memory, Camera& cam)
 	//joe->dave; might need to change it for dave cam
 	//	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 	//Sleep(100);
-	omp_set_num_threads(4);
+	//omp_set_num_threads(4);
 
 	#pragma omp parallel for 
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
+		//cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 		cam.start_images(ipdv);
 
 		int tos = 0;
@@ -203,7 +203,7 @@ int DapController::acqui(short* memory, Camera& cam)
 			if (cam.num_timeouts(ipdv) > 20) {
 				cam.end_images(ipdv);
 				if(ipdv == 0) cam.serial_write("@TXC 0\r"); // only write to channel 0
-				return cam.num_timeouts(ipdv);
+				//return cam.num_timeouts(ipdv); Don't return from a parallel section
 			}
 		}
 		cam.end_images(ipdv);
@@ -668,22 +668,21 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 	// acquire 200 dark frames with LED off
 	#pragma omp parallel for
-	{
-		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			cam.start_images(ipdv);
-			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		cam.start_images(ipdv);
+		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY
 
-			for (int i = 0; i < 200; i++)
-			{
-				// acquire data for this image from the IPDVth channel
-				image = cam.wait_image(ipdv);
+		for (int i = 0; i < 200; i++)
+		{
+			// acquire data for this image from the IPDVth channel
+			image = cam.wait_image(ipdv);
 
-				// Save the image to process later
-				memcpy(privateMem, image, quadrantSize * sizeof(short));
-				privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
-			}
+			// Save the image to process later
+			memcpy(privateMem, image, quadrantSize * sizeof(short));
+			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
 		}
 	}
+	
 	// parallel section pauses, threads sync and close
 
 	NI_openShutter(1);
@@ -693,27 +692,25 @@ int DapController::takeRli(short* memory, Camera& cam)
 	cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 	// parallel acquisition resumes now that light is on
 	#pragma omp parallel for
-	{
-		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			cout << "Number of active threads: " << omp_get_num_threads() << "\n";
-			// pointer to this thread's section of MEMORY
-			short* privateMem = memory +
-				ipdv * quadrantSize +
-				quadrantSize * NUM_PDV_CHANNELS * 200; // offset of where we left off
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
+		// pointer to this thread's section of MEMORY
+		short* privateMem = memory +
+			ipdv * quadrantSize +
+			quadrantSize * NUM_PDV_CHANNELS * 200; // offset of where we left off
 
-			for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
-				// acquire data for this image from the IPDVth channel
+		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
+			// acquire data for this image from the IPDVth channel
 
-				image = cam.wait_image(ipdv);
+			image = cam.wait_image(ipdv);
 
-				// Save the image to process later
-				memcpy(privateMem, image, quadrantSize * sizeof(short));
-				privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
-				/*cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<
-					" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";*/
-			}
-			cam.end_images(ipdv);					// does not seem to matter
+			// Save the image to process later
+			memcpy(privateMem, image, quadrantSize * sizeof(short));
+			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory
+			/*cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<
+				" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";*/
 		}
+		cam.end_images(ipdv);					// does not seem to matter
 	}
 	Sleep(100);
 	NI_openShutter(0); // light off

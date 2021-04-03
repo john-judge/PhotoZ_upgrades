@@ -387,7 +387,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 
 // This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
-// d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
+// d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
 
 void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
@@ -447,18 +447,6 @@ void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_w
 		reset_data += quad_width;
 		old_data += quad_width;
 	}
-}
-
-
-// PDV channels are readout in this order: 
-//  0 - upper left, 
-//  1 - lower left, 
-//  2 - upper right, 
-//  3 - lower right.
-void Camera::remapQuadrants(unsigned short * buf, int quadHeight, int quadWidth) {
-
-// TO DO:  external facing image size should be post CDS subtraction  size
-
 }
 
 void Camera::printFinishedImage(unsigned short* image, const char* filename) {
