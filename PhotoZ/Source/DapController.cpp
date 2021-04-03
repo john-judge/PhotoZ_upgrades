@@ -684,12 +684,13 @@ Error:
 	cam.start_images();
 //	cout<<"\n";
 	NI_openShutter(1);
-
+	// omp_set_num_threads(4);
 	#pragma omp parallel for
 	{
 		for (int ipdv = 0; ipdv < 4; ipdv++) {
 			for (int i = 0; i < rliPts; i++)
 			{
+				cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 				image = cam.wait_image(ipdv);
 				// the integer array_diodes is already scaled to 1/4 for each of the 4 channels
 				memcpy(memory + array_diodes * i + ipdv * array_diodes, image, array_diodes);

@@ -100,6 +100,7 @@ public:
 
 	void deinterleave(unsigned short * buf, int quad_height, int quad_width, int* channelOrder);
 	void subtractCDS(unsigned short *image_data, int quad_height, int quad_width);
+	void remapQuadrants(unsigned short * buf, int quadHeight, int quadWidth);
 
 
 

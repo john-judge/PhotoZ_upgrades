@@ -366,7 +366,6 @@ void Camera::reassembleImages(unsigned short *images, int nImages) {
 // channelOrder: a 4 int array of channel interleave orderings for this quadrant.
 void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth, int* channelOrder) {
 	
-
 	// We say that CDS "doubles" the width
 	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
 	quadHeight *= 2;
@@ -389,7 +388,6 @@ void Camera::deinterleave(unsigned short * buf, int quadHeight, int quadWidth, i
 				= *data_ptr++;
 		}
 	}
-
 	// copy back to output array
 	for (int i = 0; i < quadSize; i++) {
 		buf[i] = tmpBuf[i];
@@ -417,7 +415,14 @@ void Camera::subtractCDS(unsigned short *image_data, int quad_height, int quad_w
 	}
 }
 
+// PDV channels are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
+void Camera::remapQuadrants(unsigned short * buf, int quadHeight, int quadWidth) {
 
+}
 
 
 
