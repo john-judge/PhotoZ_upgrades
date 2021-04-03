@@ -372,6 +372,10 @@ void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verb
 // Apply CDS subtraction and deinterleave to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
 	size_t imageSize = width() * height();
+	int channelOrders[16] = { 2, 3, 1, 0,
+							  1, 0, 2, 3,
+							  2, 3, 1, 0,
+							  1, 0, 2, 3, };
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + imageSize * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
@@ -383,8 +387,9 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 
 // This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
-// d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
+// d1, d64, d128, d192, d2, d65, d129, d192, d3,Â…d256, r1, r64, r128, r192Â… r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
+
 void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
 
 	// We say that CDS "doubles" the width
@@ -409,7 +414,6 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 				= *data_ptr++;
 		}
 	}
-
 	// copy back to output array
 	for (int i = 0; i < quadSize; i++) {
 		buf[i] = tmpBuf[i];
@@ -445,8 +449,17 @@ void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_w
 	}
 }
 
+
+// PDV channels are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
+void Camera::remapQuadrants(unsigned short * buf, int quadHeight, int quadWidth) {
+
 // TO DO:  external facing image size should be post CDS subtraction  size
 
+}
 
 void Camera::printFinishedImage(unsigned short* image, const char* filename) {
 	int full_img_size = NUM_PDV_CHANNELS * width() * height(); // Divide by 2 to account for CDS subtraction
@@ -457,6 +470,7 @@ void Camera::printFinishedImage(unsigned short* image, const char* filename) {
 	outFile.close();
 	cout << "\nWrote full image's raw data to PhotoZ/" << filename << "\n";
 }
+
 
 
 void Camera::printQuadrant(unsigned short* image, const char* filename) {

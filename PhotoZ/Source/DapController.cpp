@@ -687,6 +687,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 	// parallel section pauses, threads sync and close
 
 	NI_openShutter(1);
+
 	Sleep(100);
 	omp_set_num_threads(4);
 	cout << "Number of active threads: " << omp_get_num_threads() << "\n";
@@ -702,6 +703,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 			for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
 				// acquire data for this image from the IPDVth channel
+
 				image = cam.wait_image(ipdv);
 
 				// Save the image to process later
