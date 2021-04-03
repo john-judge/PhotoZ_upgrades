@@ -63,6 +63,7 @@ public:
 	static const int reserve1_lib[];
 	static const int reserve2_lib[];
 	static const int reserve3_lib[];
+	static const int channelOrders[16];
 #endif // LILDAVE*/
 
 	Camera();
@@ -95,10 +96,13 @@ public:
 	int freq();
 
 	void reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose);
+	void reassembleImages(unsigned short* images, int nImages);
 
-	void deinterleave(unsigned short* buf, int quad_height, int quad_width);
+	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder);
 	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
+	void remapQuadrants(unsigned short* buf, int quadHeight, int quadWidth);
 
+	// Debugging
 	void printFinishedImage(unsigned short* image, const char* filename);
 	void printQuadrant(unsigned short* image, const char* filename);
 };

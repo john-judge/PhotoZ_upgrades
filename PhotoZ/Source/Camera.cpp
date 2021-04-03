@@ -80,6 +80,11 @@ const int Camera::NDR_max_lib[] = { 0, 0, 0, 0, 0, 0, 0, 2000 };
 const int Camera::reserve1_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 const int Camera::reserve2_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 const int Camera::reserve3_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+const int Camera::channelOrders[16] = { 2, 3, 1, 0,
+										1, 0, 2, 3,
+										2, 3, 1, 0,
+										1, 0, 2, 3, };
 #endif // LILDAVE
 
 Camera::Camera() {
@@ -323,7 +328,7 @@ void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verb
 		filename = "Output-ch0.txt";
 		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
 
-		deinterleave(image + ipdv * quadrantSize, h, w);
+		deinterleave(image + ipdv * quadrantSize, h, w, channelOrders + ipdv * 4);
 		filename = "OutputCDS-ch0.txt";
 		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
 	}
@@ -364,12 +369,23 @@ void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verb
 	// ============================================================
 }
 
+// Apply CDS subtraction and deinterleave to a list of raw images.
+void Camera::reassembleImages(unsigned short* images, int nImages) {
+	size_t imageSize = width() * height();
+	for (int i = 0; i < nImages; i++) {
+		unsigned short* img = images + imageSize * i;
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			subtractCDS(img + ipdv * imageSize / 4, height(), width());
+			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
+		}
+	}
+}
+
 // This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,…d256, r1, r64, r128, r192… r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
-void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth) {
-	static int channelOrder[] = { 2, 3, 1, 0 };
+void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
 
 	// We say that CDS "doubles" the width
 	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
@@ -398,6 +414,15 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth) {
 	for (int i = 0; i < quadSize; i++) {
 		buf[i] = tmpBuf[i];
 	}
+}
+
+// PDV channels are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
+void Camera::remapQuadrants(unsigned short* buf, int quadHeight, int quadWidth) {
+
 }
 
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.

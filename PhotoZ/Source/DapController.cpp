@@ -176,10 +176,11 @@ int DapController::acqui(short* memory, Camera& cam)
 	//joe->dave; might need to change it for dave cam
 	//	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 	//Sleep(100);
+	omp_set_num_threads(4);
 
 	#pragma omp parallel for 
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-
+		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 		cam.start_images(ipdv);
 
 		int tos = 0;
@@ -687,11 +688,13 @@ int DapController::takeRli(short* memory, Camera& cam)
 
 	NI_openShutter(1);
 	Sleep(100);
-
+	omp_set_num_threads(4);
+	cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 	// parallel acquisition resumes now that light is on
 	#pragma omp parallel for
 	{
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 			// pointer to this thread's section of MEMORY
 			short* privateMem = memory +
 				ipdv * quadrantSize +

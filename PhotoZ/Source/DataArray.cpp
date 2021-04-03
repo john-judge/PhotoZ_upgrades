@@ -393,7 +393,7 @@ void DataArray::binning(int binning)
 //=============================================================================
 int DataArray::num_raw_array_diodes()	
 {
-	return raw_width() * raw_height();		//divide by 4 because each pdv channel has 1/4 of the diodes. Do it here so it gets used everywhere
+	return raw_width() * raw_height();		//divide by 4 because each pdv channel has 1/4 of the diodes. Update: Don't do that.
 }
 
 //=============================================================================
