@@ -22,7 +22,7 @@ string GetDirectoryName(string path) {
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace UnitTests
-{		
+{
 	TEST_CLASS(UnitTestCamera)
 	{
 	public:
@@ -30,6 +30,7 @@ namespace UnitTests
 
 		// open a test raw image RLI-02062021.txt and output a processed image for visual inspection, with CDS
 		TEST_METHOD(reassembleImageRLI) {
+
 			const char* fileIn, *fileOut;
 			int img_height, img_width;
 
@@ -38,7 +39,6 @@ namespace UnitTests
 			img_height = 40; // must be divisible by 4
 			img_width = 1024; // Needs to change, incomplete image
 
-			
 			reassembleImage(fileIn, fileOut, img_height / 4, img_width, 1, true);
 			fileOut = "Output-raw-full-out450.txt";
 			reassembleImage(fileIn, fileOut, img_height / 4, img_width, 1, false);
@@ -51,11 +51,12 @@ namespace UnitTests
 			// Read in test image data (
 			std::ifstream file;
 			file.open(TEST_CASE_DATA_DIRECTORY + fileIn);
-			const wchar_t * message = L"File should be open";
+			const wchar_t* message = L"File should be open";
 			Assert::IsTrue(file.is_open(), message);
 			int quadrantSize = 2 * quad_height * quad_width;
-			unsigned short *rawMemory = new unsigned short[quadrantSize * 4];
-			unsigned short *new_image = new unsigned short[quadrantSize * 4];
+
+			unsigned short* rawMemory = new unsigned short[quadrantSize * 4];
+			unsigned short* new_image = new unsigned short[quadrantSize * 4];
 
 			string index, data;
 			int i = 0;
@@ -75,7 +76,8 @@ namespace UnitTests
 
 			// Each PDV Quadrant has a different cam channel interleaving
 
-			int channelOrders[16] =				{ 2, 3, 1, 0, 
+
+			const int channelOrders[16] = { 2, 3, 1, 0,
 												  1, 0, 2, 3,
 												  2, 3, 1, 0,
 												  1, 0, 2, 3, };
@@ -84,7 +86,9 @@ namespace UnitTests
 			// There are 4 camera channels within each PDV channel
 			for (int ipdv = 1; ipdv < 4; ipdv++) {
 				int* chOrd = channelOrders + ipdv * 4;
-				unsigned short *quadPtr = rawMemory + ipdv * quadrantSize;
+
+				unsigned short* quadPtr = rawMemory + ipdv * quadrantSize;
+
 				cam.deinterleave(quadPtr, quad_height, quad_width, chOrd);
 			}
 			if (CDS) cam.subtractCDS(rawMemory, quad_height * 4, quad_width);
@@ -110,4 +114,3 @@ namespace UnitTests
 
 	};
 }
-
