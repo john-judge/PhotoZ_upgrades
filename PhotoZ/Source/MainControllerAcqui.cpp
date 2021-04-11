@@ -90,11 +90,6 @@ void MainController::takeRli()
 	for (i = 0; i < bufferSizePixels; i++) {
 		for (j = 0; j < 475; j++) {
 			traceData[i][j] = memory[i + j * bufferSizePixels];
-			if (i % 2 == 1) {
-				/*				short tdtemp = traceData[i][j];
-								traceData[i-1][j] -= tdtemp;				//	try CDS subtraction
-								traceData[i][j] = traceData[i-1][j];*/
-			}
 		}
 	}
 	// Release memory
@@ -171,15 +166,43 @@ void MainController::acquiOneRecord()
 	int numPts = dapControl->getNumPts();						// Number of Points per Trace
 	int num_diodes = dataArray->num_raw_diodes();
 
+	Camera cam;
+	cam.setCamProgram(dc->getCameraProgram());	
+	//-------------------------------------------
+	// Attempt channel open before allocating memory
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (cam.open_channel(ipdv)) {
+			fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
+			return;
+		}
+	}
+	// Now that channel(s) are open, read .cfg files and set camera dimensions
+	cam.init_cam();
+
 	//-------------------------------------------
 	// Allocate Memory
 	//
-	short* memory = new(std::nothrow) short[(size_t)num_diodes * numPts];
+	short* memory = new(std::nothrow) short[(size_t)num_diodes * (numPts+1) * NUM_PDV_CHANNELS];
 	if (!memory) {
 		fl_alert("Ran out of memory!\n");
 		return;
 	}
-	memset(memory, 0, num_diodes * numPts * sizeof(short));
+	memset(memory, 0, num_diodes * (numPts+1) * NUM_PDV_CHANNELS * sizeof(short));
+
+	//-------------------------------------------
+	// validate image quadrant size match expected
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		int PDV_size = cam.get_buffer_size(ipdv) / 2;
+		if (num_diodes - dataArray->num_diodes_fp() != PDV_size) {
+			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
+				<< num_diodes - dataArray->num_diodes_fp() << " pixels" \
+				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
+				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
+			fl_alert("Acquisition failed. Please retry once before examining debugging output.\n");
+			return;
+		}
+	}
+
 
 	//-------------------------------------------
 	// Set Stop Flag to 0
@@ -233,16 +256,8 @@ void MainController::acquiOneRecord()
 		dapControl->resetDAPs();
 		dapControl->createAcquiDapFile();
 
-		Camera cam;
-		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			if (cam.open_channel(ipdv)) {
-				fl_alert("MCA line 220 Failed to open the camera channel!\n");
-				goto error;
-			}
-		}
 		cam.program(dc->getCameraProgram());
-		cout << "MainCohntrAcqui AcquiOneRec line 223\n";
-		//		cam.init_cam();
+
 
 		if (trialCount % 1 == 0)
 		{

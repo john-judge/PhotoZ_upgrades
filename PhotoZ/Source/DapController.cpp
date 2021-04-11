@@ -180,11 +180,11 @@ int DapController::acqui(short* memory, Camera& cam)
 
 	#pragma omp parallel for 
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		//cout << "Number of active threads: " << omp_get_num_threads() << "\n";
+		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 		cam.start_images(ipdv);
 
 		int tos = 0;
-		for (int ii = 0; ii < 7; ii++) image = cam.wait_image(0);		// throw away first seven frames to clear camera saturation
+		for (int ii = 0; ii < 7; ii++) image = cam.wait_image(ipdv);		// throw away first seven frames to clear camera saturation
 																	// be sure to add 7 to COUNT in lines 327 and 399
 		for (i = 0; i < numPts; i++) {
 
@@ -349,7 +349,7 @@ void DapController::createAcquiDapFile()
 	int start_offset = (int)((double)(CAM_INPUT_OFFSET + acquiOnset) / intPts);
 	file << "\n TIME " << intPts * 125 << "\n";	// 1000/8
 	//file << " HTrigger Oneshot\n";	// might be able to sync with outputs
-	file << " COUNT " << 8 * (numPts + 7 + start_offset) << "\n";			// added 5 to numPts to compensate for images skipped at beginning (line 171)
+	file << " COUNT " << 8 * (numPts + 7 + start_offset) << "\n";			// added 7 to numPts to compensate for images skipped at beginning of acqui loop (line 171)
 	file << "\nEND\n\n";
 
 	file << ";*****************************************\n";
@@ -696,8 +696,7 @@ int DapController::takeRli(short* memory, Camera& cam)
 		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 		// pointer to this thread's section of MEMORY
 		short* privateMem = memory +
-			ipdv * quadrantSize +
-			quadrantSize * NUM_PDV_CHANNELS * 200; // offset of where we left off
+			(ipdv + NUM_PDV_CHANNELS * 200) * quadrantSize; // offset of where we left off
 
 		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on
 			// acquire data for this image from the IPDVth channel
