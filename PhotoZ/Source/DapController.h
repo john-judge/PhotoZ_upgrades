@@ -21,6 +21,12 @@ private:
 	HDAP dap820Put;
 	HDAP dap820Get;
 
+	TaskHandle taskHandleRLI;
+	TaskHandle taskHandleAcquiDO;
+	TaskHandle taskHandleAcquiAI;
+
+	int numPts;
+
 	int32_t error = 0;
 	char errBuff[2048];
 
