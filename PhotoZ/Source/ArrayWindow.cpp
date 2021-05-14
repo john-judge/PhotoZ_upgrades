@@ -214,8 +214,11 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
-	int mouseButton, dBinning;
-	double scrollAmt, tmpZoomFactor, xOld, yOld;
+	int mouseButton;
+	double dBinning;
+	double scrollAmt, tmpZoomFactor;
+
+	bool verbose = false; // Set to true to receive debugging output to stdout
 
 	switch(event)
 	{
@@ -230,7 +233,7 @@ int ArrayWindow::handle(int event)
 			// drag buffers get cleared in scheduled AW redraw
 			xPan += (Fl::event_x() - xDragLast);
 			yPan += (Fl::event_y() - yDragLast);
-			cout << "dragged to new center: (" << xPan << ", " << yPan << ")\n";
+			if (verbose) cout << "dragged to new center: (" << xPan << ", " << yPan << ")\n";
 
 			resizeDiodes(); // updated xPan and yPan in Diode widget properties
 			redraw();
@@ -241,7 +244,7 @@ int ArrayWindow::handle(int event)
 			if (Fl::event_button() == 1) {
 
 				// save the location where the drag starts
-				if(!isDragActive) cout << "activated drag\n";
+				if(verbose && !isDragActive) cout << "activated drag\n";
 				isDragActive = true;
 
 				return Fl_Double_Window::handle(event);
@@ -330,8 +333,10 @@ int ArrayWindow::handle(int event)
 				if (!Fl::event_state(FL_CTRL))	clearSelected(0);
 				if (Fl::event_state(FL_CTRL))	clearSelected(1);
 
-				cout << "zooming to factor: " << zoomFactor \
-					 << "\tbinning: " << dBinning << "\n";
+				if (verbose) {
+					cout << "zooming to factor: " << zoomFactor \
+						<< "\tbinning: " << dBinning << "\n";
+				}
 				resizeDiodes();
 				redraw();
 				
@@ -734,7 +739,7 @@ void ArrayWindow::drawTrace() {
 		if (get_diode(i)->drawTrace(dataArray->getProDataMem(i)))
 			drawnCount++;
 	}
-	cout << "Number of bin traces rendered in array window: " << drawnCount - NUM_FP_DIODES << " of " << dataArray->num_binned_diodes() << "\n";
+	//cout << "Number of bin traces rendered in array window: " << drawnCount - NUM_FP_DIODES << " of " << dataArray->num_binned_diodes() << "\n";
 }
 
 //=============================================================================
@@ -976,8 +981,8 @@ void ArrayWindow::resizeDiodes()
 	int diode_height = diode_width * zoomFactor;
 
 	// Center the array
-	int array_xoffset = (w() - diode_width*array_width) / 2 + xPan;
-	int array_yoffset = (h() - diode_height*array_height) / 2 + yPan;
+	int array_xoffset = (int)((w() - diode_width*array_width) / 2 + xPan);
+	int array_yoffset = (int)((h() - diode_height*array_height) / 2 + yPan);
 	if (array_yoffset + array_height * diode_height > h())
 		array_yoffset = do_yoffset + do_height;
 
