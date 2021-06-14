@@ -31,7 +31,6 @@ private:
 	char errBuff[2048];
 
 	float acquiOnset;
-	int numPts;
 	double intPts;
 	float duration;
 	int program;
@@ -82,12 +81,16 @@ public:
 	char getScheduleFlag();
 	char getScheduleRliFlag();
 
+	// Buffers for digital output
+	uint8_t *outputs;
+	uint8_t *pseudoOutputs;
+
 	// RLI
 	int takeRli(short*, Camera&);
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
-	void fillPDOut(std::fstream&, char realFlag);
+	void fillPDOut(uint8_t *outputs, char realFlag);
 
 	// Acquisition Control
 	int sendFile2Dap(const char*);

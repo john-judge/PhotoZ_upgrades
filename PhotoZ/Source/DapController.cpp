@@ -162,6 +162,7 @@ int DapController::acqui(short *memory, Camera &cam)
 	unsigned char *image;
 	int width = cam.width();
 	int height = cam.height();
+	int quadrantSize = width * height;
 	if (width != dataArray->raw_width() || height != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
@@ -241,35 +242,37 @@ void DapController::resetDAPs()
 
 void DapController::resetCamera()
 {
-	try {
-		Camera cam;
-		char command1[80];
-		if (cam.open_channel()) {
-			fl_alert("DapC line 229 Failed to open the channel!\n");
+	for (int ipdv = 0; ipdv < 4; ipdv++) {
+		try {
+			Camera cam;
+			char command1[80];
+			if (cam.open_channel(ipdv)) {
+				fl_alert("DapC line 229 Failed to open the channel!\n");
+			}
+			//	if (getStopFlag() == 0) {
+			int	sure = fl_ask("Are you sure you want to reset camera?");
+			//	}
+			if (sure == 1) {
+				//		if (stop()) {
+				cam.end_images(ipdv);
+				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
+				system(command1);
+				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+				system(command1);
+				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+				system(command1);
+				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+				system(command1);
+				//				cam.init_cam();			// replaced for LittleDave
+				//				int program = dc->getCameraProgram();
+				//				cam.program(program);
+				cout << " DapC line 251 reset camera " << endl;
+				//		}
+			}
 		}
-		//	if (getStopFlag() == 0) {
-		int	sure = fl_ask("Are you sure you want to reset camera?");
-		//	}
-		if (sure == 1) {
-			//		if (stop()) {
-			cam.end_images();
-			sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
-			system(command1);
-			sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-			system(command1);
-			sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-			system(command1);
-			sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-			system(command1);
-			//				cam.init_cam();			// replaced for LittleDave
-			//				int program = dc->getCameraProgram();
-			//				cam.program(program);
-			cout << " DapC line 251 reset camera " << endl;
-			//		}
+		catch (exception& e) {
+			cout << e.what() << '\n';
 		}
-	}
-	catch (exception& e) {
-		cout << e.what() << '\n';
 	}
 }
 
@@ -350,17 +353,14 @@ void DapController::fillPDOut(uint8_t *outputs, char realFlag)
 	const uint8_t shutter_mask = (1);		// digital out 0 based on virtual channel
 	const uint8_t sti1_mask = (1 << 1);			// digital out 2
 	const uint8_t sti2_mask = (1 << 2);			// digital out 3
-
 	//--------------------------------------------------------------
 	// Reset the array
 	memset(outputs, 0, sizeof(uint8_t) * (duration + 10));
-
 	//--------------------------------------------------------------
 	// Shutter
 	if (realFlag) {
 		start = shutter->getOnset();
 		end = (start + shutter->getDuration());
-
 		for (i = (int)start; i < end; i++)
 			outputs[i] |= shutter_mask;
 	}
@@ -394,7 +394,9 @@ void DapController::fillPDOut(uint8_t *outputs, char realFlag)
 	// //for (i = acquiOnset; i < acquiOnset + getAcquiDuration() + 0.5; i++)
 	// for (i = (int)acquiOnset; i < duration; i++)
 	// 	pipe[i] |= cam_mask;
+
 }
+
 
 //=============================================================================
 void DapController::setStopFlag(char p)
@@ -697,7 +699,7 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 }
 
 //=============================================================================
-int DapController::NI_openShutter(int on)
+int DapController::NI_openShutter(uInt8 on)
 {
 	int32       error = 0;
 	TaskHandle  taskHandle = 0;
