@@ -1,0 +1,1 @@
+Changing the array_diode size so that the right amount of diodes are skipped over even if there

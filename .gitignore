@@ -5,18 +5,6 @@
 # Sample data
 **/*.zda
 
-# Unit test ancillary data files
-UnitTest1/TestData/*.png
-UnitTest1/TestData/.ipynb_checkpoints/
-UnitTest1/TestData/.ipynb_checkpoints/*
-UnitTest1/TestData/Output*.txt
-UnitTest1/TestData/RLI*.txt
-PhotoZ/RLI*.txt
-PhotoZ/Output*.txt
-PhotoZ/*full*.txt
-PhotoZ/*-0.txt
-PhotoZ/*-out.txt
-UnitTest1/TestData/*.txt
 
 # User-specific files
 *.suo
