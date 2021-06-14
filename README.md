@@ -57,6 +57,8 @@ visual: branch for reworking GUI to be more usable and less memory-hungry
 
 [Cell Detection](https://github.com/ksscheuer/ROI_Identification) Kate's SNR clustering method for identifying ROIs
 
+[ZDA Explorer (Colab Notebook)](https://colab.research.google.com/drive/1DnxhbqRXvHm9yDWLLEMy0WumbNUCM3US?usp=sharing)
+
 ## Other Information
 
 Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) on the Joe computer
