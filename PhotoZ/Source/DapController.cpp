@@ -157,22 +157,20 @@ double DapController::getIntPts()
 //=============================================================================
 int DapController::acqui(unsigned short *memory, Camera &cam)
 {
-	int i;
 	short *buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
-	unsigned char *image;
-	int width = cam.width();
-	int height = cam.height();
-	int quadrantSize = width * height;
-	if (width != dataArray->raw_width() || height != dataArray->raw_height())
+
+	if (cam.width() != dataArray->raw_width() || cam.height() != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
-		cout << " DapController::acqui() cam.width & cam.height " << width << "   " << height << endl;		return 0;
+		cout << " DapController::acqui() cam.width & cam.height " << cam.width() 
+			 << "   " << cam.height() << endl;		
+		return 0;
 	}
 	int num_diodes = dataArray->num_raw_diodes();
 
 	// Start Acquisition
 	//joe->dave; might need to change it for dave cam
-	cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+	//cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 
   //DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
@@ -189,35 +187,11 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	//int32 DAQmxReadBinaryI16 (TaskHandle taskHandle, int32 numSampsPerChan, float64 timeout, bool32 fillMode, int16 readArray[], uInt32 arraySizeInSamps, int32 *sampsPerChanRead, bool32 *reserved);	
 	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcquiAI, (numPts + 7 + start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4 * numPts, successfulSamplesIn, NULL));
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiDO));
-	int tos = 0;
-  
-  omp_set_num_threads(4);	
-	#pragma omp parallel for 	
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {	
-		cout << "Number of active threads: " << omp_get_num_threads() << "\n";	
-		cam.start_images(ipdv);	
-		int tos = 0;	
-		for (int ii = 0; ii < 7; ii++) image = cam.wait_image(ipdv);		// throw away first seven frames to clear camera saturation	
-																	// be sure to add 7 to COUNT in lines 327 and 399	
-		for (i = 0; i < numPts; i++) {	
-			short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
-			// acquire data for this image from the IPDVth channel	
-			image = cam.wait_image(ipdv);
-      // Save the image to process later	
-			memcpy(privateMem + (quadrantSize * i), image, quadrantSize * sizeof(short));	
-			if (cam.num_timeouts(ipdv) != tos) {	
-				printf("DapController line 180 timeout on %d\n", i);	
-				tos = cam.num_timeouts(ipdv);	
-			}	
-			if (cam.num_timeouts(ipdv) > 20) {	
-				cam.end_images(ipdv);	
-				if(ipdv == 0) cam.serial_write("@TXC 0\r"); // only write to channel 0	
-				//return cam.num_timeouts(ipdv); Don't return from a parallel section	
-			}	
-		}	
-		cam.end_images(ipdv);	
-		if (ipdv == 0) cam.serial_write("@TXC 0\r");
-  }
+
+	// Parallel acquistion
+	cam.acquireImages(memory, numPts);
+
+	// TO DO: capture FP analog input into buf
 	free(buf);
 	free(outputs);
 	return 0;
@@ -429,9 +403,8 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	cam.setCamProgram(dc->getCameraProgram());
 	int width = cam.width();
 	int height = cam.height();
-  int quadrantSize = width * height;	
+	int quadrantSize = width * height;	
 	int array_diodes = dataArray->num_raw_array_diodes();
-	short memory1[2560];
 
 	if (width != dataArray->raw_width() || height != dataArray->raw_height())
 	{
@@ -447,10 +420,13 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 
 	// acquire 200 dark frames with LED off	
+	cam.acquireImages(memory, 200); // acquire the last 275 frames with LED on
+
+	/*
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {	
 		cam.start_images(ipdv);	
-		short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
+		unsigned short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
 		for (int i = 0; i < 200; i++)	
 		{	
 			// acquire data for this image from the IPDVth channel	
@@ -460,10 +436,14 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory	
 		}	
 	}	
-		
+	*/	
+
 	// parallel section pauses, threads sync and close	
 	NI_openShutter(1);	
 	Sleep(100);	
+
+	cam.acquireImages(memory, 275); // acquire the last 275 frames with LED on
+	/*
 	omp_set_num_threads(4);	
 	cout << "Number of active threads: " << omp_get_num_threads() << "\n";	
 	// parallel acquisition resumes now that light is on	
@@ -471,7 +451,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {	
 		cout << "Number of active threads: " << omp_get_num_threads() << "\n";	
 		// pointer to this thread's section of MEMORY	
-		short* privateMem = memory +	
+		unsigned short* privateMem = memory +	
 			(ipdv + NUM_PDV_CHANNELS * 200) * quadrantSize; // offset of where we left off	
 		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on	
 			// acquire data for this image from the IPDVth channel	
@@ -479,11 +459,11 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 			// Save the image to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short));	
 			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory	
-			/*cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<	
-				" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";*/	
+			cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<	
+				" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";
 		}	
 		cam.end_images(ipdv);					// does not seem to matter	
-	}	
+	}*/	
 	Sleep(100);	
 	NI_openShutter(0); // light off	
 	//=============================================================================	
@@ -513,144 +493,70 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 }
 
 //=============================================================================
-void DapController::setNumPulses(int ch, int p)
-{
-	if (ch == 1)
-	{
-		numPulses1 = p;
-	}
-	else
-	{
-		numPulses2 = p;
-	}
+void DapController::setNumPulses(int ch, int p) {
+	if (ch == 1) numPulses1 = p;
+	else numPulses2 = p;
 }
 
 //=============================================================================
-void DapController::setNumBursts(int ch, int num)
-{
-	if (ch == 1)
-	{
-		numBursts1 = num;
-	}
-	else
-	{
-		numBursts2 = num;
-	}
+void DapController::setNumBursts(int ch, int num) {
+	if (ch == 1) numBursts1 = num;
+	else numBursts2 = num;
 }
 
 //=============================================================================
-int DapController::getNumBursts(int ch)
-{
-	int num;
-	if (ch == 1)
-	{
-		num = numBursts1;
-	}
-	else
-	{
-		num = numBursts2;
-	}
-
-	return num;
+int DapController::getNumBursts(int ch) {
+	if (ch == 1) return numBursts1;
+	return numBursts2;
 }
 
 //=============================================================================
-int DapController::getNumPulses(int ch)
-{
-	int num;
-	if (ch == 1)
-	{
-		return numPulses1;
-	}
-	else
-	{
-		return numPulses2;
-	}
-
-	return num;
+int DapController::getNumPulses(int ch) {
+	if (ch == 1) return numPulses1;
+	return numPulses2;
 }
 
 //=============================================================================
-void DapController::setIntBursts(int ch, int p)
-{
-	if (ch == 1)
-	{
-		intBursts1 = p;
-	}
-	else
-	{
-		intBursts2 = p;
-	}
+void DapController::setIntBursts(int ch, int p) {
+	if (ch == 1) intBursts1 = p;
+	else intBursts2 = p;
 }
 
 //=============================================================================
-void DapController::setIntPulses(int ch, int p)
-{
-	if (ch == 1)
-	{
-		intPulses1 = p;
-	}
-	else
-	{
-		intPulses2 = p;
-	}
+void DapController::setIntPulses(int ch, int p) {
+	if (ch == 1) intPulses1 = p;
+	else intPulses2 = p;
 }
 
 //=============================================================================
-int DapController::getIntBursts(int ch)
-{
-	int num;
-
-	if (ch == 1)
-	{
-		num = intBursts1;
-	}
-	else
-	{
-		num = intBursts2;
-	}
-
-	return num;
+int DapController::getIntBursts(int ch) {
+	if (ch == 1) return intBursts1;
+	return intBursts2;
 }
 
 //=============================================================================
-int DapController::getIntPulses(int ch)
-{
-	int num;
-
-	if (ch == 1)
-	{
-		num = intPulses1;
-	}
-	else
-	{
-		num = intPulses2;
-	}
-
-	return num;
+int DapController::getIntPulses(int ch) {
+	if (ch == 1) return intPulses1;
+	return intPulses2;
 }
 
 //=============================================================================
-void DapController::setScheduleFlag(char p)
-{
+void DapController::setScheduleFlag(char p) {
 	scheduleFlag = p;
 }
 
 //=============================================================================
-void DapController::setScheduleRliFlag(char p)
-{
+void DapController::setScheduleRliFlag(char p) {
 	scheduleRliFlag = p;
 }
 
 //=============================================================================
-char DapController::getScheduleFlag()
-{
+char DapController::getScheduleFlag() {
 	return scheduleFlag;
 }
 
 //=============================================================================
-char DapController::getScheduleRliFlag()
-{
+char DapController::getScheduleRliFlag() {
 	return scheduleRliFlag;
 }
 

@@ -236,7 +236,7 @@ void Camera::serial_write(const char* buf) {
 	pdv_serial_read(pdv_pt[0], buffer, 512 - 1); // flush camera buffer of lingering data
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
-	pdv_serial_write(pdv_pt[0], buffer, strlen(buffer));
+	pdv_serial_write(pdv_pt[0], buffer, (int)strlen(buffer));
 }
 
 int Camera::num_timeouts(int ipdv) {
@@ -263,10 +263,12 @@ void Camera::program(int p) {
 	}
 }
 
+// width of one quadrant
 int Camera::width() {
 	return WIDTH[m_program];
 }
 
+// height of one quadrant
 int Camera::height() {
 	return HEIGHT[m_program];
 }
@@ -309,9 +311,45 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 	return memory;
 }
 
-// The full camera workflow:  camera start-up, and image reassembly
+// The full parallel acquistion and image reassembly
 // Returns a pointer to a newly-allocated block nImages images
-void Camera::acquireImages(unsigned short* images, int numPts) {
+void Camera::acquireImages(unsigned short* memory, int numPts) {
+	// Start Acquisition
+	//joe->dave; should work for dave cam
+	unsigned char *image;
+	int quadrantSize = width() * height();
+
+	serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+
+	int tos = 0;
+
+	omp_set_num_threads(4);
+	#pragma omp parallel for 	
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
+		start_images(ipdv);
+		int tos = 0;
+		for (int ii = 0; ii < 7; ii++) image = wait_image(ipdv);		// throw away first seven frames to clear camera saturation	
+																	// be sure to add 7 to COUNT in lines 327 and 399	
+		for (int i = 0; i < numPts; i++) {
+			unsigned short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
+			// acquire data for this image from the IPDVth channel	
+			image = wait_image(ipdv);
+			// Save the image to process later	
+			memcpy(privateMem + (quadrantSize * i), image, quadrantSize * sizeof(short));
+			if (num_timeouts(ipdv) != tos) {
+				printf("Camera acquireImages timeout on %d\n", i);
+				tos = num_timeouts(ipdv);
+			}
+			if (num_timeouts(ipdv) > 20) {
+				end_images(ipdv);
+				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
+				//return cam.num_timeouts(ipdv); Don't return from a parallel section	
+			}
+		}
+		end_images(ipdv);
+		if (ipdv == 0) serial_write("@TXC 0\r");
+	}
 
 }
 
@@ -344,6 +382,12 @@ void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verb
 	// to use to arrange the quadrants of the full image
 	//		- space out the rows of quadrants 0 and 2
 	//		- interleave in the rows of quadrants 1 and 3
+
+	// PDV channels are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
 
 	// Even channels (Quadrants 0 and 2) - space out
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
@@ -421,15 +465,6 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 	}
 }
 
-// PDV channels are readout in this order: 
-//  0 - upper left, 
-//  1 - lower left, 
-//  2 - upper right, 
-//  3 - lower right.
-void Camera::remapQuadrants(unsigned short* buf, int quadHeight, int quadWidth) {
-
-}
-
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
 // This halves the number of columns of each raw image
 // quad_width is the final width of the frame
@@ -459,8 +494,6 @@ void Camera::printFinishedImage(unsigned short* image, const char* filename) {
 	outFile.close();
 	cout << "\nWrote full image's raw data to PhotoZ/" << filename << "\n";
 }
-
-
 
 void Camera::printQuadrant(unsigned short* image, const char* filename) {
 	int quadrantSize = width() * height(); // pre-CDS subtracted size
