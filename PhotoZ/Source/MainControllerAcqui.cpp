@@ -40,28 +40,23 @@ void MainController::takeRli()
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
 	cam.init_cam();
 
-	//-------------------------------------------
-	// Allocate image memory 
 	int bufferSizePixels = cam.get_buffer_size(0) / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).
 	int array_diodes = dataArray->num_raw_array_diodes();
-	short* memory = new short[((size_t)bufferSizePixels) * (475+1) * NUM_PDV_CHANNELS];
-	short** traceData = new short* [array_diodes];
-	for (i = 0; i < array_diodes; i++) {
-		traceData[i] = new short[475];
-	}
-
+	int num_RLI_pts = 475;
+	
 	//-------------------------------------------
 	// validate image quadrant size match expected
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		int PDV_size = cam.get_buffer_size(ipdv) / 2;
-		if (array_diodes != PDV_size) {
-			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
-				<< array_diodes << " pixels" \
-				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
-			fl_alert("RLI Acquisition failed. Please retry Take RLI once before examining debugging output.\n");
-			return;
-		}
+	if (!cam.isValidPlannedState(array_diodes)) return;
+
+	//-------------------------------------------
+	// Allocate image memory 
+	unsigned short* memory = cam.allocateImageMemory(array_diodes, num_RLI_pts+1);
+
+	//-------------------------------------------
+	// Allocate trace data
+	short** traceData = new short*[array_diodes];
+	for (i = 0; i < array_diodes; i++) {
+		traceData[i] = new short[475];
 	}
 
 	cam.get_image_info(0);
@@ -69,20 +64,8 @@ void MainController::takeRli()
 	int freq = Camera::FREQ[program];
 	dapControl->setDAPs();			//conveted to DAQmx
 
-	/*dapControl->resetDAPs();
-
-	int status = dapControl->sendFile2Dap(("RLI-820 v5_"+ std::to_string(freq)+".dap").c_str());
-	if (status == 0) {
-		fl_alert("Main Cont Acq line 61 Failed to send DAP files to DAPs!\n");
-		dapControl->releaseDAPs();
-		delete [] memory;
-		for(i=0;i<array_diodes;i++)
-			delete [] traceData[i];
-		delete [] traceData;
-		return;
-	}*/
 	if (dapControl->takeRli(memory, cam))
-		fl_alert(" Main Cont Acq line 70 Timeouts ocurred! Check camera and connections.");
+		fl_alert(" Main Controller::takeRli Timeouts ocurred! Check camera and connections.");
 	dapControl->releaseDAPs();
 
 	// Arrange Data from Memory to traceData
@@ -159,7 +142,6 @@ void MainController::acquiOneRecord()
 
 	//-------------------------------------------
 	// Get Number of Trials and the Interval between two Trials
-	//
 	int numTrials = recControl->getNumTrials();				// Number of Trials
 	//  int numSkippedTrials=recControl->getNumSkippedTrials();	// Number of skipped trials
 	int interval = recControl->getIntTrials() * 1000;			// sec -> msec
@@ -172,7 +154,7 @@ void MainController::acquiOneRecord()
 	// Attempt channel open before allocating memory
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		if (cam.open_channel(ipdv)) {
-			fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
+			fl_alert("Main Cont Acq acquiOneRecord Failed to open the channel!\n");
 			return;
 		}
 	}
@@ -180,33 +162,15 @@ void MainController::acquiOneRecord()
 	cam.init_cam();
 
 	//-------------------------------------------
-	// Allocate Memory
-	//
-	short* memory = new(std::nothrow) short[(size_t)num_diodes * (numPts+1) * NUM_PDV_CHANNELS];
-	if (!memory) {
-		fl_alert("Ran out of memory!\n");
-		return;
-	}
-	memset(memory, 0, num_diodes * (numPts+1) * NUM_PDV_CHANNELS * sizeof(short));
+	// validate image quadrant size match expected
+	if (!cam.isValidPlannedState(num_diodes)) return;
 
 	//-------------------------------------------
-	// validate image quadrant size match expected
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		int PDV_size = cam.get_buffer_size(ipdv) / 2;
-		if (num_diodes - dataArray->num_diodes_fp() != PDV_size) {
-			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
-				<< num_diodes - dataArray->num_diodes_fp() << " pixels" \
-				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
-			fl_alert("Acquisition failed. Please retry once before examining debugging output.\n");
-			return;
-		}
-	}
-
+	// Allocate Memory
+	unsigned short* memory = cam.allocateImageMemory(num_diodes, numPts);
 
 	//-------------------------------------------
 	// Set Stop Flag to 0
-	//
 	dapControl->setStopFlag(0);
 
 	int totalTrials = numTrials;
@@ -266,7 +230,7 @@ void MainController::acquiOneRecord()
 
 			if (status == 0)// Failed to Send Dap File
 			{
-				fl_alert("MCA Line 233 Failed to Send DAP files to DAPs!\n");
+				fl_alert("MCA acquiOneRecord Failed to Send DAP files to DAPs!\n");
 				goto error;
 			}
 

@@ -95,6 +95,12 @@ public:
 	int depth();
 	int freq();
 
+	// Main camera functions
+	bool isValidPlannedState(int num_diodes);
+	unsigned short* allocateImageMemory(int num_diodes, int numPts);
+	void acquireImages(unsigned short* images, int numPts);
+
+	// camera utility functions. Generally drivers should not need to call
 	void reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose);
 	void reassembleImages(unsigned short* images, int nImages);
 

@@ -86,7 +86,7 @@ public:
 	uint8_t *pseudoOutputs;
 
 	// RLI
-	int takeRli(short*, Camera&);
+	int takeRli(unsigned short*, Camera&);
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
@@ -94,7 +94,7 @@ public:
 
 	// Acquisition Control
 	int sendFile2Dap(const char*);
-	int acqui(short*, Camera&);
+	int acqui(unsigned short*, Camera&);
 	void pseudoAcqui();
 	int stop();
 	void resetDAPs();

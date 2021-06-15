@@ -115,8 +115,6 @@ Camera::~Camera() {
 				}
 				if (retry != 1) cout << "Reattempting to close channel " << i << "...\n";
 			}
-
-			//pdv_pt[i] = NULL; // shouldn't be necessary, and may be misleading during memory dumps
 		}
 	}
 }
@@ -138,7 +136,7 @@ int Camera::open_channel(int ipdv) {
 	// allocate ring buffers
 	pdv_multibuf(pdv_pt[ipdv], 4);
 	//		pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
-	cout << " line 115 open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
+	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
 }
 
@@ -154,7 +152,7 @@ unsigned char* Camera::single_image(int ipdv)			//used by LiveFeed.cpp
 void Camera::init_cam()				// entire module based on code from Chun - sm_init_camera.cpp
 {
 	char command[80];
-	cout << "camera line 129 init_cam  program #  " << PROG[m_program] << "  \n";
+	cout << "Camera init_cam  program #  " << PROG[m_program] << "  \n";
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
 	system(command);
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
@@ -163,12 +161,6 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	system(command);
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
 	system(command);
-
-	// Channels are already opened in open_channel
-	//	pdv_pt[0] = pdv_open_channel(EDT_INTERFACE, 0, 0);
-	//	pdv_pt[1] = pdv_open_channel(EDT_INTERFACE, 0, 1);
-	//	pdv_pt[2] = pdv_open_channel(EDT_INTERFACE, 1, 0);
-	//	pdv_pt[3] = pdv_open_channel(EDT_INTERFACE, 1, 1);									// according Chun: pdv_units = [0, 0, 1, 1]   pdv_channels = [0, 1, 0, 1]
 
 	int hbin = 0;
 	if (ccd_lib_bin[m_program] > 1) hbin = 1;
@@ -233,23 +225,12 @@ unsigned char* Camera::wait_image(int ipdv) {
 	unsigned char* image = pdv_wait_image(pdv_pt[ipdv]);
 	if (edt_reg_read(pdv_pt[ipdv], PDV_STAT) & PDV_OVERRUN)
 		++overruns;
-	/* timeouts = pdv_timeouts(pdv_pt[ipdv]);
-	 if (timeouts > last_timeouts) {
-		 pdv_timeout_restart(pdv_pt[ipdv], TRUE);
-		 last_timeouts = timeouts;
-		 m_num_timeouts++;
-		 recovering_timeout = true;
-	 } else if (recovering_timeout) {
-		 pdv_timeout_restart(pdv_pt[ipdv], TRUE);
-		 recovering_timeout = false;
-	 }*/
 	return image;
 }
 
 // Write a command from buf to IPDVth channel
 // Important: Only channel 0 of Little Dave supports serial write
-void Camera::serial_write(const char* buf)
-{
+void Camera::serial_write(const char* buf) {
 	// Writes a commend 
 	char buffer[512];
 	pdv_serial_read(pdv_pt[0], buffer, 512 - 1); // flush camera buffer of lingering data
@@ -258,32 +239,18 @@ void Camera::serial_write(const char* buf)
 	pdv_serial_write(pdv_pt[0], buffer, strlen(buffer));
 }
 
-/*
-void Camera::serial_read(char* buf, int size)
-{
-	pdv_serial_wait(pdv_pt[ipdv], 1000, size - 1);
-	int n = pdv_serial_read(pdv_pt[ipdv], buf, size - 1);
-	if (n < size)
-		buf[n] = '\0';
-	buf[size - 1] = '\0';
-}
-*/
-
 int Camera::num_timeouts(int ipdv) {
 	return timeouts[ipdv];
 }
 
-int Camera::program()
-{
+int Camera::program() {
 	return m_program;
 }
 
-void Camera::setCamProgram(int p)
-{
+void Camera::setCamProgram(int p) {
 	m_program = p;
 }
-void Camera::program(int p)
-{
+void Camera::program(int p) {
 	char buf[80];
 	m_program = p;
 	if (pdv_pt[0]) { 
@@ -310,6 +277,42 @@ int Camera::depth() {
 
 int Camera::freq() {
 	return FREQ[m_program];
+}
+
+// Validate that we are about to allocate the proper amount of memory for a quadrant
+// I.e. we check if PDV's internals match PhotoZ's expectations
+// Displays warnings to user if there are problems
+bool Camera::isValidPlannedState(int num_diodes) {
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		int PDV_size = get_buffer_size(ipdv) / 2;
+		if (num_diodes != PDV_size) {
+			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
+				<< num_diodes << " pixels" \
+				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
+				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
+			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
+			return false;
+		}
+	}
+	return true;
+}
+
+// Properly memory allocation for nImages images in preparation for image acquisition
+// Exposing this functions allows drivers to reuse pointers/buffers more easily
+unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
+	unsigned short* memory = new(std::nothrow) unsigned short[(size_t)num_diodes * (numPts + 1) * NUM_PDV_CHANNELS];
+	if (!memory) {
+		fl_alert("Ran out of memory!\n");
+		return nullptr;
+	}
+	memset(memory, 0, num_diodes * (numPts + 1) * NUM_PDV_CHANNELS * sizeof(short));
+	return memory;
+}
+
+// The full camera workflow:  camera start-up, and image reassembly
+// Returns a pointer to a newly-allocated block nImages images
+void Camera::acquireImages(unsigned short* images, int numPts) {
+
 }
 
 // Apply CDS subtraction and deinterleave to one raw image
@@ -366,7 +369,6 @@ void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verb
 			srcRow += w;
 		}
 	}
-	// ============================================================
 }
 
 // Apply CDS subtraction and deinterleave to a list of raw images.
@@ -389,7 +391,6 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 // Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
-
 void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
 
 	// We say that CDS "doubles" the width

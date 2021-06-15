@@ -155,7 +155,7 @@ double DapController::getIntPts()
 //=============================================================================
 // Acquisition
 //=============================================================================
-int DapController::acqui(short *memory, Camera &cam)
+int DapController::acqui(unsigned short *memory, Camera &cam)
 {
 	int i;
 	short *buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
@@ -166,7 +166,7 @@ int DapController::acqui(short *memory, Camera &cam)
 	if (width != dataArray->raw_width() || height != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
-    cout << " DapController::acqui() cam.width & cam.height " << width << "   " << height << endl;		return 0;
+		cout << " DapController::acqui() cam.width & cam.height " << width << "   " << height << endl;		return 0;
 	}
 	int num_diodes = dataArray->num_raw_diodes();
 
@@ -177,8 +177,10 @@ int DapController::acqui(short *memory, Camera &cam)
   //DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
-	int32 defaultSuccess = -1; int32* successfulSamples = &defaultSuccess;
-	int32 defaultReadSuccess = -1; int32* successfulSamplesIn = &defaultReadSuccess;
+	int32 defaultSuccess = -1; 
+	int32* successfulSamples = &defaultSuccess;
+	int32 defaultReadSuccess = -1; 
+	int32* successfulSamplesIn = &defaultReadSuccess;
 
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiAI));
 
@@ -411,7 +413,7 @@ char DapController::getStopFlag()
 }
 
 //=============================================================================
-int DapController::takeRli(short *memory, Camera &cam)
+int DapController::takeRli(unsigned short *memory, Camera &cam)
 {
 	int32       error = 0;
 	TaskHandle  taskHandle = 0;
@@ -669,26 +671,11 @@ int DapController::setDAPs(float64 SamplingRate) //creates tasks
 
 	DAQmxErrChk(DAQmxCreateTask("Acqui AI Task", &taskHandleAcquiAI));
 	DAQmxErrChk(DAQmxCreateTask("Acqui DO Task", &taskHandleAcquiDO));
-	//old idea
-	// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));	
-	// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
-	// DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcqui, "Dev1/port1/line3", "ledOutSt1", DAQmx_Val_ChanForAllLines));	
+	
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcquiDO, "Dev1/port0/line1", "led_St1_St2", DAQmx_Val_ChanForAllLines));
 
-
-// Commenting out this channel creation resolves the multiple channel types per task error. JMJ 12/6/2020
-// 12/17 - discussed with Sarwagya. we can possibly run an input and output task parallely if we send them the same start command and configure them with the same clock.
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcquiDO, "Dev1/port0/line1", "led_St1_St2", DAQmx_Val_ChanForAllLines));//new idea//might not work
-
-	//int32 DAQmxCreateAOVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
-		//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
-	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line1", "ledOutSt1", -10, 10, DAQmx_Val_Volts, NULL));
-	// DAQmxErrChk(DAQmxCreateAOVoltageChan((taskHandleAcqui, "Dev1/port1/line3", "ledOutSt2", -10, 10, DAQmx_Val_Volts, NULL));
-	//configure in acqui
-
-//	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleAcquiIn));
-	//1, 4, 7, and 10
-	//int32 DAQmxCreateAIVoltageChan (TaskHandle taskHandle, const char physicalChannel[], const char nameToAssignToChannel[], int32 terminalConfig, float64 minVal, float64 maxVal, int32 units, const char customScaleName[]);
-
+	//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
+	
 	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai0", "acquiInput0", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
 	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai1", "acquiInput1", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
 	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai2", "acquiInput2", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));

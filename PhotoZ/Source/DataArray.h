@@ -99,10 +99,9 @@ public:
 	const short* getTrialMem(int trial, int diode);		//new
 	void assignTrialData(short *trial_data, int len, int trial, int diode);			//new
 	void loadTrialData(int trialNo);
+	void arrangeData(int trialNo, unsigned short * input);
 	void average();
 	void resetData();
-
-	void arrangeData(int,short*);
 
 	// RLI
 	void calRli();

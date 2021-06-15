@@ -948,7 +948,7 @@ void DataArray::loadTrialData(int trialNo)
 }
 
 //=============================================================================
-void DataArray::arrangeData(int trialNo, short* input)		// used in DapControllerAcqui with input from camera (memory)
+void DataArray::arrangeData(int trialNo, unsigned short* input)		// used in DapControllerAcqui with input from camera (memory)
 {
 	int i,j;
 
