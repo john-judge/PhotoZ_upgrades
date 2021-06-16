@@ -174,7 +174,7 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 
   //DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
-		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
+	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
 	int32 defaultSuccess = -1; 
 	int32* successfulSamples = &defaultSuccess;
 	int32 defaultReadSuccess = -1; 
@@ -189,15 +189,21 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiDO));
 
 	// Parallel acquistion
-	cam.acquireImages(memory, numPts);
+	cam.acquireImages(memory, numPts, true);
+
+	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
+	cam.reassembleImages(memory, numPts);
 
 	// TO DO: capture FP analog input into buf
+
 	free(buf);
 	free(outputs);
 	return 0;
 }
 
 //=============================================================================
+// No longer needed now that numSkippedTrials is disabled
+/*
 void DapController::pseudoAcqui()
 {
 	int32 defaultSuccess = -1; int32* successfulSamples = &defaultSuccess;
@@ -205,7 +211,7 @@ void DapController::pseudoAcqui()
 	//wait till complete
 	DAQmxErrChk(DAQmxWaitUntilTaskDone(taskHandleAcquiDO, 30));
 
-}
+}*/
 
 //=============================================================================
 void DapController::resetDAPs()
@@ -225,11 +231,8 @@ void DapController::resetCamera()
 			if (cam.open_channel(ipdv)) {
 				fl_alert("DapC resetCamera Failed to open the channel!\n");
 			}
-			//	if (getStopFlag() == 0) {
 			int	sure = fl_ask("Are you sure you want to reset camera?");
-			//	}
 			if (sure == 1) {
-				//		if (stop()) {
 				cam.end_images(ipdv);
 				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
 				system(command1);
@@ -239,11 +242,7 @@ void DapController::resetCamera()
 				system(command1);
 				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
 				system(command1);
-				//				cam.init_cam();			// replaced for LittleDave
-				//				int program = dc->getCameraProgram();
-				//				cam.program(program);
 				cout << " DapC resetCamera reset camera " << endl;
-				//		}
 			}
 		}
 		catch (exception& e) {
@@ -280,7 +279,8 @@ void DapController::createAcquiDapFile()//set outputs samples array here//config
 	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiAI, "", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
 	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleAcquiDO, "", Camera::FREQ[program], DAQmx_Val_RisingSlope, DAQmx_Val_FiniteSamps, duration + 10));
 
-	fillPDOut(pseudoOutputs, 1);
+	// No longer needed now that numSkippedTrials is disabled
+	//fillPDOut(pseudoOutputs, 1);
 }
 
 //=============================================================================
@@ -393,7 +393,19 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	uInt8       data[4] = { 0,1,0,0 };
 	char        errBuff[2048] = { '\0' };
 
-	uint8_t samplesForRLI[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t samplesForRLI[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	uInt8 data0[4] = { 0,0,0,0 };
 	int32 defaultSuccess = -1; int32* successfulSamples = &defaultSuccess;
@@ -419,23 +431,30 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 
 	// acquire 200 dark frames with LED off	
-	cam.acquireImages(memory, 200); // acquire the last 275 frames with LED on
+	cam.acquireImages(memory, 200, true); // acquire the first 200 frames with LED on
 
 	// ==== parallel section pauses, threads sync and close	====
 
 	NI_openShutter(1);	
 	Sleep(100);	
 
-	cam.acquireImages(memory, 275); // acquire the last 275 frames with LED on
+	cam.acquireImages(memory, rliPts - 200); // acquire the last 275 frames with LED on
 
 	Sleep(100);	
 	NI_openShutter(0); // light off	
+
 	//=============================================================================	
 	// Image reassembly	
+	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
+	cam.reassembleImages(memory, rliPts);
+
+	// ============================================================================
+	// Debugging: output images to file
+	/*
 	unordered_map<int, std::string> framesToDebug;	
 	framesToDebug[300] = "300";	
 	framesToDebug[450] = "450";
-  unsigned short* img = (unsigned short*)(memory);	
+	unsigned short* img = (unsigned short*)(memory);	
 	for (int i = 0; i < rliPts; i++) {	
 		bool debug = framesToDebug.find(i) != framesToDebug.end();	
 		if (debug) {	
@@ -452,7 +471,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";	
 		}	
 		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image start		
-	}
+	}*/
 	return 0;
 }
 

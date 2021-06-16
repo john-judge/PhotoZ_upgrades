@@ -27,7 +27,6 @@ void MainController::takeRli()
 {
 	int i, j;		// i is array index; j = time index
 
-
 	Camera cam;
 	//-------------------------------------------
 	// Attempt channel open before allocating memory
@@ -143,10 +142,10 @@ void MainController::acquiOneRecord()
 	//-------------------------------------------
 	// Get Number of Trials and the Interval between two Trials
 	int numTrials = recControl->getNumTrials();				// Number of Trials
-	//  int numSkippedTrials=recControl->getNumSkippedTrials();	// Number of skipped trials
 	int interval = recControl->getIntTrials() * 1000;			// sec -> msec
 	int numPts = dapControl->getNumPts();						// Number of Points per Trace
 	int num_diodes = dataArray->num_raw_diodes();
+	// Note: previously, OG PhotoZ had a feature for number of "skipped trials"
 
 	Camera cam;
 	cam.setCamProgram(dc->getCameraProgram());	
@@ -162,7 +161,7 @@ void MainController::acquiOneRecord()
 	cam.init_cam();
 
 	//-------------------------------------------
-	// validate image quadrant size match expected
+	// validate image quadrant size match expected, informs user of issues
 	if (!cam.isValidPlannedState(num_diodes)) return;
 
 	//-------------------------------------------
@@ -170,8 +169,8 @@ void MainController::acquiOneRecord()
 	unsigned short* memory = cam.allocateImageMemory(num_diodes, numPts);
 
 	//-------------------------------------------
-	// Set Stop Flag to 0
-	dapControl->setStopFlag(0);
+	// Trial Acquisition Loop
+	dapControl->setStopFlag(0); // Set Stop Flag to 0
 
 	int totalTrials = numTrials;
 	int trialCount = 0;
@@ -182,8 +181,10 @@ void MainController::acquiOneRecord()
 	for (; trialCount < totalTrials && !dapControl->getStopFlag(); trialCount++)
 	{
 		printf("Trial %d\n", trialCount);
+
+		//-------------------------------------------
 		// Time Management
-		if (trialCount == 0)// First Trial
+		if (trialCount == 0)// start clock on first Trial
 		{
 			start = clock();
 
@@ -191,7 +192,7 @@ void MainController::acquiOneRecord()
 			time(&t);
 			recControl->setTime(t);
 		}
-		else// Second Trial and so forth
+		else // Check time on second trial and so forth
 		{
 			now = clock();
 			Fl::check();
@@ -208,11 +209,7 @@ void MainController::acquiOneRecord()
 			}
 		}
 
-		//-------------------------------------------
-		if (dapControl->getStopFlag())
-		{
-			break;
-		}
+		if (dapControl->getStopFlag()) break;
 
 		//-------------------------------------------
 		// Recording
@@ -223,40 +220,38 @@ void MainController::acquiOneRecord()
 		cam.program(dc->getCameraProgram());
 
 
-		if (trialCount % 1 == 0)
-		{
-			// Send Dap File to the DAP board
-			int status = dapControl->sendFile2Dap("Record-820 v5.dap");
+		// Send "Dap" File to the "DAP" board (the NI-DAQ)
+		int status = dapControl->sendFile2Dap("Record-820 v5.dap");
 
-			if (status == 0)// Failed to Send Dap File
-			{
-				fl_alert("MCA acquiOneRecord Failed to Send DAP files to DAPs!\n");
-				goto error;
-			}
-
-			fr_st = clock();
-			int timeouts = dapControl->acqui(memory, cam);
-			fr_end = clock();
-
-			double runtime = (double)(fr_end - fr_st) / CLOCKS_PER_SEC;
-			printf("runtime: %f\n", runtime);
-			if (timeouts)
-				fl_alert("Main Cont Acq line 244 Timeouts ocurred! Check camera and connections.");
-
-			// Arrange Data
-			dataArray->arrangeData(trialNo, memory);
-			dataArray->loadTrialData(trialNo + 1);
-			dataArray->process();
-
-			// Set User Interface
-			recControl->setTrialNo(trialNo + 1);
-			ui->trialNo->value(i2txt(recControl->getTrialNo()));
-
-			// Redraw
-			redraw();
-
-			trialNo++;
+		if (status == 0) {// Failed to Send Dap File
+			fl_alert("MCA acquiOneRecord Failed to Send \"DAP\" files to NI-USB!\n");
+			goto error;
 		}
+
+		fr_st = clock();
+		int timeouts = dapControl->acqui(memory, cam);
+		fr_end = clock();
+
+		double runtime = (double)(fr_end - fr_st) / CLOCKS_PER_SEC;
+		printf("runtime: %f\n", runtime);
+		if (timeouts)
+			fl_alert("Main Cont Acq line 244 Timeouts ocurred! Check camera and connections.");
+
+		// Arrange Data
+		dataArray->arrangeData(trialNo, memory);
+		dataArray->loadTrialData(trialNo + 1);
+		dataArray->process();
+
+		// Set User Interface
+		recControl->setTrialNo(trialNo + 1);
+		ui->trialNo->value(i2txt(recControl->getTrialNo()));
+
+		// Redraw
+		redraw();
+
+		trialNo++;
+
+		/* Now that numSkippedTrials is disabled, "Pseudo-Recording" is also disabled 
 		else // Pseudo-Recording
 		{
 			// Send Dap File to the DAP board
@@ -269,7 +264,7 @@ void MainController::acquiOneRecord()
 			}
 
 			dapControl->pseudoAcqui();
-		}
+		}*/
 
 		dapControl->releaseDAPs();
 	}

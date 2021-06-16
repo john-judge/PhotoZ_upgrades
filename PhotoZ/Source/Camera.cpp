@@ -133,9 +133,10 @@ int Camera::open_channel(int ipdv) {
 	pdv_set_timeout(pdv_pt[ipdv], 1000);
 	pdv_flush_fifo(pdv_pt[ipdv]);
 	m_depth = pdv_get_depth(pdv_pt[ipdv]);
-	// allocate ring buffers
+	// allocate ring buffers, 4 (per channel) is EDT's recommendation
 	pdv_multibuf(pdv_pt[ipdv], 4);
-	//		pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
+
+	// The following is never needed, instead use cfg file to change img dimension (Chun): pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
 	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
 }
@@ -311,14 +312,18 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 	return memory;
 }
 
+// FIRST: set to True if this camera session has not acquired images yet
+void Camera::acquireImages(unsigned short* memory, int numPts, int first) {
+	if (first) serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+	acquireImages(memory, numPts);
+}
+
 // The full parallel acquistion WITHOUT image reassembly
 void Camera::acquireImages(unsigned short* memory, int numPts) {
 	// Start Acquisition
 	//joe->dave; should work for dave cam
 	unsigned char *image;
 	int quadrantSize = width() * height();
-
-	serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 
 	int tos = 0;
 
@@ -352,69 +357,7 @@ void Camera::acquireImages(unsigned short* memory, int numPts) {
 
 }
 
-// Apply CDS subtraction and deinterleave to one raw image
-// TO DO: reverse order of operations for efficiency (less swapping in deinterleave).
-// mapQuadrants: whether to remap quadrants to full image view
-// verbose: whether to print out the image data to file at intermediate stages
-void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose) {
-	int w = width();
-	int h = height();
-	size_t quadrantSize = (size_t)w * (size_t)h;
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		std::string filename = "RLI-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-		
-		subtractCDS(image + ipdv * quadrantSize, h, w);
-		filename = "Output-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-
-		deinterleave(image + ipdv * quadrantSize, h, w, channelOrders + ipdv * 4);
-		filename = "OutputCDS-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-	}
-
-	if (!mapQuadrants) return;
-
-	// ============================================================
-	// Quadrant Mapping
-	// Since CDS subtraction halved the image size, we now have auxiliary space
-	// to use to arrange the quadrants of the full image
-	//		- space out the rows of quadrants 0 and 2
-	//		- interleave in the rows of quadrants 1 and 3
-
-	// PDV channels are readout in this order: 
-//  0 - upper left, 
-//  1 - lower left, 
-//  2 - upper right, 
-//  3 - lower right.
-
-	// Even channels (Quadrants 0 and 2) - space out
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
-		unsigned short* srcRow = image + quadrantSize * ipdv + quadrantSize / 2 - w;
-		unsigned short* dstRow = image + quadrantSize * ipdv + quadrantSize - w;
-		
-		for (int row = int(h/2) - 1; row >= 0; row--) {
-			memcpy(dstRow, srcRow, w * sizeof(unsigned short));
-			dstRow -= 2 * w;
-			srcRow -= w;
-		}
-	}
-
-	// Odd channels (Quadrants 1 and 3) - intereave-in rows into the previous channel's rows
-	for (int ipdv = 1; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
-
-		unsigned short* srcRow = image + quadrantSize * ipdv;
-		unsigned short* dstRow = image + quadrantSize * (ipdv-1) + w;
-		// Quadrant 1
-		for (int row = 0; row < int(h / 2); row++) {
-			memcpy(dstRow, srcRow, w * sizeof(unsigned short));
-			dstRow += 2 * w;
-			srcRow += w;
-		}
-	}
-}
-
-// Apply CDS subtraction and deinterleave to a list of raw images.
+// Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
 	size_t imageSize = width() * height();
 	int channelOrders[16] = { 2, 3, 1, 0,
@@ -426,6 +369,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 			subtractCDS(img + ipdv * imageSize / 4, height(), width());
 			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
+			remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
 	}
 }
@@ -484,6 +428,50 @@ void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_w
 	}
 }
 
+// Quadrant Mapping
+// Since CDS subtraction halved the image size, we now have auxiliary space
+// to use to arrange the quadrants of the full image
+//		- space out the rows of quadrants 0 and 2
+//		- interleave in the rows of quadrants 1 and 3
+
+// PDV channels for little Dave are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
+
+void Camera::remapQuadrantsOneImage(unsigned short* image, int quadHeight, int quadWidth) {
+
+	int quadrantSize = quadHeight * quadWidth;
+
+	// Even channels (Quadrants 0 and 2) - space out
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
+		unsigned short* srcRow = image + quadrantSize * ipdv + quadrantSize / 2 - quadWidth;
+		unsigned short* dstRow = image + quadrantSize * ipdv + quadrantSize - quadWidth;
+
+		for (int row = int(quadHeight / 2) - 1; row >= 0; row--) {
+			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
+			dstRow -= 2 * quadWidth;
+			srcRow -= quadWidth;
+		}
+	}
+
+	// Odd channels (Quadrants 1 and 3) - intereave-in rows into the previous channel's rows
+	for (int ipdv = 1; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
+
+		unsigned short* srcRow = image + quadrantSize * ipdv;
+		unsigned short* dstRow = image + quadrantSize * (ipdv - 1) + quadWidth;
+		// Quadrant 1
+		for (int row = 0; row < int(quadHeight / 2); row++) {
+			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
+			dstRow += 2 * quadWidth;
+			srcRow += quadWidth;
+		}
+	}
+}
+
+
+// Utilities for debugging
 void Camera::printFinishedImage(unsigned short* image, const char* filename) {
 	int full_img_size = NUM_PDV_CHANNELS * width() * height(); // Divide by 2 to account for CDS subtraction
 	std::ofstream outFile;

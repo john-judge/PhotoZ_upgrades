@@ -948,6 +948,8 @@ void DataArray::loadTrialData(int trialNo)
 }
 
 //=============================================================================
+// The specification for the format of INPUT is determined in Camera.cpp
+// They are read out in image-major order, i.e. quadrants of img0, quadrants of img1, ... 
 void DataArray::arrangeData(int trialNo, unsigned short* input)		// used in DapControllerAcqui with input from camera (memory)
 {
 	int i,j;
