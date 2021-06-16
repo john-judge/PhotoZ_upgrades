@@ -311,8 +311,7 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 	return memory;
 }
 
-// The full parallel acquistion and image reassembly
-// Returns a pointer to a newly-allocated block nImages images
+// The full parallel acquistion WITHOUT image reassembly
 void Camera::acquireImages(unsigned short* memory, int numPts) {
 	// Start Acquisition
 	//joe->dave; should work for dave cam
