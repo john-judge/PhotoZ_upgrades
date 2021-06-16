@@ -223,7 +223,7 @@ void DapController::resetCamera()
 			Camera cam;
 			char command1[80];
 			if (cam.open_channel(ipdv)) {
-				fl_alert("DapC line 229 Failed to open the channel!\n");
+				fl_alert("DapC resetCamera Failed to open the channel!\n");
 			}
 			//	if (getStopFlag() == 0) {
 			int	sure = fl_ask("Are you sure you want to reset camera?");
@@ -242,7 +242,7 @@ void DapController::resetCamera()
 				//				cam.init_cam();			// replaced for LittleDave
 				//				int program = dc->getCameraProgram();
 				//				cam.program(program);
-				cout << " DapC line 251 reset camera " << endl;
+				cout << " DapC resetCamera reset camera " << endl;
 				//		}
 			}
 		}
@@ -311,7 +311,7 @@ void DapController::setDuration()
 
 	if (duration > 60000)
 	{
-		fl_alert("DC line 451 The total duration of the acquisition can not exceed 1 min! Please adjust DAP settings.");
+		fl_alert("DC setDuration The total duration of the acquisition can not exceed 1 min! Please adjust DAP settings.");
 		return;
 	}
 }
@@ -373,7 +373,6 @@ void DapController::fillPDOut(uint8_t *outputs, char realFlag)
 
 }
 
-
 //=============================================================================
 void DapController::setStopFlag(char p)
 {
@@ -422,48 +421,13 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	// acquire 200 dark frames with LED off	
 	cam.acquireImages(memory, 200); // acquire the last 275 frames with LED on
 
-	/*
-	#pragma omp parallel for	
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {	
-		cam.start_images(ipdv);	
-		unsigned short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
-		for (int i = 0; i < 200; i++)	
-		{	
-			// acquire data for this image from the IPDVth channel	
-			image = cam.wait_image(ipdv);	
-			// Save the image to process later	
-			memcpy(privateMem, image, quadrantSize * sizeof(short));	
-			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory	
-		}	
-	}	
-	*/	
+	// ==== parallel section pauses, threads sync and close	====
 
-	// parallel section pauses, threads sync and close	
 	NI_openShutter(1);	
 	Sleep(100);	
 
 	cam.acquireImages(memory, 275); // acquire the last 275 frames with LED on
-	/*
-	omp_set_num_threads(4);	
-	cout << "Number of active threads: " << omp_get_num_threads() << "\n";	
-	// parallel acquisition resumes now that light is on	
-	#pragma omp parallel for	
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {	
-		cout << "Number of active threads: " << omp_get_num_threads() << "\n";	
-		// pointer to this thread's section of MEMORY	
-		unsigned short* privateMem = memory +	
-			(ipdv + NUM_PDV_CHANNELS * 200) * quadrantSize; // offset of where we left off	
-		for (int i = 200; i < rliPts; i++) {			// acquire 275 frames with LED on	
-			// acquire data for this image from the IPDVth channel	
-			image = cam.wait_image(ipdv);	
-			// Save the image to process later	
-			memcpy(privateMem, image, quadrantSize * sizeof(short));	
-			privateMem += quadrantSize * NUM_PDV_CHANNELS; // stride to the next destination for this channel's memory	
-			cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<	
-				" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";
-		}	
-		cam.end_images(ipdv);					// does not seem to matter	
-	}*/	
+
 	Sleep(100);	
 	NI_openShutter(0); // light off	
 	//=============================================================================	

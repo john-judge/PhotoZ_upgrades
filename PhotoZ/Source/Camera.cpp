@@ -100,7 +100,7 @@ Camera::Camera() {
 	m_depth = -1;
 	overruns = 0;
 	recovering_timeout = false;
-	m_program = 7;                // the camera always boots up with prg0
+	m_program = 7;                // default camera program
 }
 
 Camera::~Camera() {
