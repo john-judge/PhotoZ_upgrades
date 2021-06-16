@@ -162,7 +162,7 @@ void MainController::acquiOneRecord()
 
 	//-------------------------------------------
 	// validate image quadrant size match expected, informs user of issues
-	if (!cam.isValidPlannedState(num_diodes)) return;
+	if (!cam.isValidPlannedState(num_diodes, dataArray->num_diodes_fp())) return;
 
 	//-------------------------------------------
 	// Allocate Memory

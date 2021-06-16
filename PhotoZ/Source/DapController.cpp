@@ -192,7 +192,9 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	cam.acquireImages(memory, numPts, true);
 
 	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
+	cout << "Images acquired. Reassembling images...\n";
 	cam.reassembleImages(memory, numPts);
+	cout << "Reassembly completed.\n";
 
 	// TO DO: capture FP analog input into buf
 
@@ -446,8 +448,9 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	//=============================================================================	
 	// Image reassembly	
 	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
+	cout << "Images acquired. Reassembling images...\n";
 	cam.reassembleImages(memory, rliPts);
-
+	cout << "Reassembly completed.\n";
 	// ============================================================================
 	// Debugging: output images to file
 	/*

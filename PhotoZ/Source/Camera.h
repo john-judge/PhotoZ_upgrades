@@ -97,6 +97,8 @@ public:
 
 	// Main camera functions
 	bool isValidPlannedState(int num_diodes);
+	bool isValidPlannedState(int num_diodes, int num_fp_diodes);
+
 	unsigned short* allocateImageMemory(int num_diodes, int numPts);
 	void acquireImages(unsigned short* memory, int numPts, int first);
 	void acquireImages(unsigned short* images, int numPts);

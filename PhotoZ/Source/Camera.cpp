@@ -282,13 +282,17 @@ int Camera::freq() {
 	return FREQ[m_program];
 }
 
+bool Camera::isValidPlannedState(int num_diodes) {
+	return isValidPlannedState(num_diodes, 0);
+}
+
 // Validate that we are about to allocate the proper amount of memory for a quadrant
 // I.e. we check if PDV's internals match PhotoZ's expectations
 // Displays warnings to user if there are problems
-bool Camera::isValidPlannedState(int num_diodes) {
+bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		int PDV_size = get_buffer_size(ipdv) / 2;
-		if (num_diodes != PDV_size) {
+		int PDV_size = get_buffer_size(ipdv);
+		if (num_diodes - num_fp_diodes != PDV_size / 2) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< num_diodes << " pixels" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
@@ -371,6 +375,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
 			remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
+		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
 }
 
