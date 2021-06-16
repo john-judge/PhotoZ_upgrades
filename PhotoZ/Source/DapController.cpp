@@ -525,33 +525,19 @@ char DapController::getScheduleRliFlag() {
 }
 
 //=============================================================================
-int DapController::setDAPs(float64 SamplingRate) //creates tasks
+int DapController::setDAPs(float64 SamplingRate)
 {
-	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleRLI));
-	//two tasks RLI and acqui
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleGet));
+	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandlePut));
 	//int32 DAQmxCreateDOChan (TaskHandle taskHandle, const char lines[], const char nameToAssignToLines[], int32 lineGrouping);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreatedochan/
 		//Channel names: http://zone.ni.com/reference/en-XX/help/370466AH-01/mxcncpts/physchannames/
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandleRLI, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));
+//	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));	//			this one did not work and was changed to the line below
+	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));
 	//Set timing.
 	//int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
 		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
-	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandleRLI, NULL, SamplingRate, DAQmx_Val_Rising, DAQmx_Val_FiniteSamps, 348));
-
-
-	DAQmxErrChk(DAQmxCreateTask("Acqui AI Task", &taskHandleAcquiAI));
-	DAQmxErrChk(DAQmxCreateTask("Acqui DO Task", &taskHandleAcquiDO));
-	
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandleAcquiDO, "Dev1/port0/line1", "led_St1_St2", DAQmx_Val_ChanForAllLines));
-
-	//https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaovoltagechan/
-	
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai0", "acquiInput0", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai1", "acquiInput1", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai2", "acquiInput2", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
-	DAQmxErrChk(DAQmxCreateAIVoltageChan(taskHandleAcquiAI, "Dev1/ai3", "acquiInput3", DAQmx_Val_Cfg_Default, -10, 10, DAQmx_Val_Volts, NULL));
-	//TO DO: configure elsewhere
-	cout << "line 815  " << SamplingRate << "\n";
+	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandlePut, NULL, SamplingRate, DAQmx_Val_Rising, DAQmx_Val_FiniteSamps, 348));
 	return 0;
 }
 
