@@ -189,7 +189,7 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiDO));
 
 	// Parallel acquistion
-	cam.acquireImages(memory, numPts, true);
+	cam.acquireImages(memory, numPts, true, false);
 
 	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
 	cout << "Images acquired. Reassembling images...\n";
@@ -433,14 +433,14 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 
 	// acquire 200 dark frames with LED off	
-	cam.acquireImages(memory, 200, true); // acquire the first 200 frames with LED on
+	if(cam.acquireImages(memory, 200, true, true)) return 1; // acquire the first 200 frames with LED on
 
 	// ==== parallel section pauses, threads sync and close	====
 
 	NI_openShutter(1);	
 	Sleep(100);	
 
-	cam.acquireImages(memory, rliPts - 200); // acquire the last 275 frames with LED on
+	cam.acquireImages(memory, rliPts - 200, false, false); // acquire the last 275 frames with LED on
 
 	Sleep(100);	
 	NI_openShutter(0); // light off	

@@ -100,8 +100,8 @@ public:
 	bool isValidPlannedState(int num_diodes, int num_fp_diodes);
 
 	unsigned short* allocateImageMemory(int num_diodes, int numPts);
-	void acquireImages(unsigned short* memory, int numPts, int first);
-	void acquireImages(unsigned short* images, int numPts);
+	bool acquireImages(unsigned short* memory, int numPts, int first, int notLast);
+	bool acquireImages(unsigned short* images, int numPts);
 
 	// camera utility functions. Generally drivers should not need to call
 	void remapQuadrantsOneImage(unsigned short* buf, int quadHeight, int quadWidth);

@@ -300,6 +300,18 @@ bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
+		if (width() != pdv_get_cam_width(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects width " << width() << \
+				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n";
+			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
+			return false;
+		}
+		if (height() != pdv_get_cam_height(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects height " << width() << \
+				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
+			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
+			return false;
+		}
 	}
 	return true;
 }
@@ -317,19 +329,32 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 }
 
 // FIRST: set to True if this camera session has not acquired images yet
-void Camera::acquireImages(unsigned short* memory, int numPts, int first) {
+// NOTLAST: set to True if this camera session will continue after this acquisition (i.e. for RLI)
+// Returns: whether there was an error
+bool Camera::acquireImages(unsigned short* memory, int numPts, int first, int notLast) {
 	if (first) serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
-	acquireImages(memory, numPts);
+
+	if(acquireImages(memory, numPts)) return true;
+
+	if (!notLast) {
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			end_images(ipdv);
+		}
+		serial_write("@TXC 0\r");
+	}
+	return false;
 }
 
 // The full parallel acquistion WITHOUT image reassembly
-void Camera::acquireImages(unsigned short* memory, int numPts) {
+// Returns: whether there was an error
+bool Camera::acquireImages(unsigned short* memory, int numPts) {
 	// Start Acquisition
 	//joe->dave; should work for dave cam
 	unsigned char *image;
 	int quadrantSize = width() * height();
 
 	int tos = 0;
+	bool failed = false;
 
 	omp_set_num_threads(4);
 	#pragma omp parallel for 	
@@ -352,12 +377,11 @@ void Camera::acquireImages(unsigned short* memory, int numPts) {
 			if (num_timeouts(ipdv) > 20) {
 				end_images(ipdv);
 				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
-				//return cam.num_timeouts(ipdv); Don't return from a parallel section	
+				failed = true; //Don't return from a parallel section	
 			}
 		}
-		end_images(ipdv);
-		if (ipdv == 0) serial_write("@TXC 0\r");
 	}
+	return failed;
 
 }
 
