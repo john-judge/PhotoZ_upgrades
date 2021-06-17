@@ -43,18 +43,18 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 
 	fg=FL_WHITE;
 	bg=FL_BLACK;
-	background=BG_None;
+	background = BG_SIGNAL_TO_NOISE; // JMJ updated default to SNR background
 	showTrace=1;
 	showRliValue=0;
 	showDiodeNum=0;
 
-	yScale  = pow((0.2*log2(1 + 1)),1); // pow means x to power of y; yScale and yScale2 = 100 in photoz 3.0
+	yScale  = pow((0.2*log2(1 + 1)),1); // yScale and yScale2 = 100 in photoz 3.0
 	yScale2 = pow((0.2*log2(1 + 1)),1);
 	xScale=1;
 	xShift=0;
 	continuous = 0;							//new
 
-	// 12/12/2020 JMJ
+	// 12/12/2020 JMJ +6 lines
 	zoomFactor = 1;
 	xPan = 0;
 	yPan = 0;
