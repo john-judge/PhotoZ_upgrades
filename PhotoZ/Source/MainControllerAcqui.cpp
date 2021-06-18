@@ -59,8 +59,8 @@ void MainController::takeRli()
 	}
 
 	cam.get_image_info(0);
-	int program = dc->getCameraProgram();
-	int freq = Camera::FREQ[program];
+
+	cam.setCamProgram(dc->getCameraProgram());
 	dapControl->setDAPs();			//conveted to DAQmx
 
 	if (dapControl->takeRli(memory, cam))

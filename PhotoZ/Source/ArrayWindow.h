@@ -10,8 +10,8 @@
 
 // Diode definitions
 #define NUM_FP_DIODES 8
-#define DEFAULT_ARRAY_WIDTH 256
-#define DEFAULT_ARRAY_HEIGHT 40
+#define DEFAULT_ARRAY_WIDTH 2048//256
+#define DEFAULT_ARRAY_HEIGHT 40 //40
 #define NUM_BINNED_DIODES 10240
 
 // Background for Array Window

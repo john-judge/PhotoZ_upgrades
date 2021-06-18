@@ -39,13 +39,17 @@ const char* Camera::LABEL[] = {
 	"5000 Hz  256x60",
 	"7500 Hz  256x40" };
 
+// These are the original sizes:
 //const int Camera::WIDTH[]  = {2048,	2048,	1024,	1024,	512,	512,	256,	256};
 //const int Camera::HEIGHT[] = {1024,	100,	320,	160,	160,	80,		60,		40}; 
 
 // JMJ 2/6/21 -- For testing, these are sizes based on of .cfg files:
-const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
-const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
+//const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
+//const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
 
+// JMJ 6/18/21 -- For more testing, these are sizes based on PDV readout:
+const int Camera::WIDTH[] = { 1024,	1024,	1024,	1024,	1024,	1024,	1024,	1024 };
+const int Camera::HEIGHT[] = { 20,	20,	20,	20,	20,	20,		20,		20 };
 
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
 const char* Camera::PROG[] = {
@@ -296,7 +300,9 @@ bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< num_diodes << " pixels" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
+				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n" \
+				<< "\tPDV width: " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n" \
+				<< "\tPDV height: " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
@@ -379,6 +385,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
 				failed = true; //Don't return from a parallel section	
 			}
+			cout << "Channel " << ipdv << " acquired its portion of image " << i << "\n";
 		}
 	}
 	return failed;

@@ -158,7 +158,6 @@ double DapController::getIntPts()
 int DapController::acqui(unsigned short *memory, Camera &cam)
 {
 	short *buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
-
 	if (cam.width() != dataArray->raw_width() || cam.height() != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
@@ -172,6 +171,10 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	//joe->dave; might need to change it for dave cam
 	//cam.serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 
+
+	/* NI-DAQmx errors were causing the slow image acquisition apparently!!
+	*  We will need to reinstate the following commented out section for NI:
+	* 
   //DapLinePut(dap820Put,"START Send_Pipe_Output,Start_Output,Define_Input,Send_Data");
 	//	int32 DAQmxWriteDigitalLines (TaskHandle taskHandle, int32 numSampsPerChan, bool32 autoStart, float64 timeout, bool32 dataLayout, uInt8 writeArray[], int32 *sampsPerChanWritten, bool32 *reserved);
 	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
@@ -188,6 +191,8 @@ int DapController::acqui(unsigned short *memory, Camera &cam)
 	DAQmxErrChk(DAQmxReadBinaryI16(taskHandleAcquiAI, (numPts + 7 + start_offset), 0, DAQmx_Val_GroupByScanNumber, buf, 4 * numPts, successfulSamplesIn, NULL));
 	DAQmxErrChk(DAQmxStartTask(taskHandleAcquiDO));
 
+
+	*/
 	// Parallel acquistion
 	cam.acquireImages(memory, numPts, true, false);
 
@@ -413,7 +418,6 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	int32 defaultSuccess = -1; int32* successfulSamples = &defaultSuccess;
 	int rliPts = 475; //default length of samples for RLI
 	unsigned char *image;
-	cam.setCamProgram(dc->getCameraProgram());
 	int width = cam.width();
 	int height = cam.height();
 	int quadrantSize = width * height;	
