@@ -115,6 +115,13 @@ public:
 	void changeNumDiodes();
 
 	//-------------------------------------
+	// Public functions for drag to pan
+	void set_drag_active();
+	void set_drag_inactive();
+	bool get_drag_active();
+	void release_drag();
+
+	//-------------------------------------
 	// Inherited from Fl_Double_Window
 	int handle(int) override;
 	void resize(int, int, int, int) override;
