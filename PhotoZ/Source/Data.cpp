@@ -422,7 +422,9 @@ double Data::getSD()
 	double sum2=0,sum1=0;
 	double data;
 
-	for(i=startPt;i<startPt+num;i++)
+	int numPts = dc->getNumPts();
+
+	for (i = startPt; i < max(numPts, startPt + num); i++)
 	{
 		data=proData[i];
 		sum1+=data;
