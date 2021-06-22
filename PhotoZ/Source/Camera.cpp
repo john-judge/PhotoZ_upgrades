@@ -385,7 +385,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
 				failed = true; //Don't return from a parallel section	
 			}
-			cout << "Channel " << ipdv << " acquired its portion of image " << i << "\n";
+			//cout << "Channel " << ipdv << " acquired its portion of image " << i << "\n";
 		}
 	}
 	return failed;
@@ -394,16 +394,21 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 
 // Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
-	size_t imageSize = width() * height();
+	
 	int channelOrders[16] = { 2, 3, 1, 0,
 							  1, 0, 2, 3,
 							  2, 3, 1, 0,
 							  1, 0, 2, 3, };
+
+	// CDS subtraction for entire image
+	subtractCDS(images, height() * nImages, width());
+
+	size_t imageSize = width() * height() / 2; // div by 2 now that CDS subtracted ...
+
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + imageSize * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			subtractCDS(img + ipdv * imageSize / 4, height(), width());
-			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
+			deinterleave(img + (ipdv * imageSize / 4), height(), width(), channelOrders + ipdv * 4);
 			remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
