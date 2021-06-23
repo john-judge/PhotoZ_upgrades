@@ -492,6 +492,8 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 			cout << "\t This full image was located in MEMORY at offset " <<
 				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
 		}
+		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image 
+
 	}
 
 	//=============================================================================	
@@ -500,6 +502,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 
 	//=============================================================================	
 	// Debug: print reassembled images out
+	img = (unsigned short*)(memory);
 	for (int i = 0; i < rliPts; i++) {
 		bool debug = framesToDebug.find(i) != framesToDebug.end();
 

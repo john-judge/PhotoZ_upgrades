@@ -37,7 +37,10 @@ void MainController::takeRli()
 		}
 	}
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
+	cam.setCamProgram(dc->getCameraProgram()); 
 	cam.init_cam();
+	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings
+
 
 	int bufferSizePixels = cam.get_buffer_size(0) / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).
 	int array_diodes = dataArray->num_raw_array_diodes();
@@ -60,7 +63,6 @@ void MainController::takeRli()
 
 	cam.get_image_info(0);
 
-	cam.setCamProgram(dc->getCameraProgram());
 	dapControl->setDAPs();			//conveted to DAQmx
 
 	if (dapControl->takeRli(memory, cam))

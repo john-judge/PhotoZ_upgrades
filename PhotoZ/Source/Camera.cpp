@@ -48,8 +48,12 @@ const char* Camera::LABEL[] = {
 //const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
 
 // JMJ 6/18/21 -- For more testing, these are sizes based on PDV readout:
-const int Camera::WIDTH[] = { 1024,	1024,	1024,	1024,	1024,	1024,	1024,	1024 };
-const int Camera::HEIGHT[] = { 20,	20,	20,	20,	20,	20,		20,		20 };
+//const int Camera::WIDTH[] = { 1024,	1024,	1024,	1024,	1024,	1024,	1024,	1024 };
+//const int Camera::HEIGHT[] = { 20,	20,	20,	20,	20,	20,		20,		20 };
+
+// JMJ 6/23/2021 -- these are from TurboSM (sm.cpp) for 2kx2k_NEURO_BINNED_d_
+const int Camera::WIDTH[] = { 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 };
+const int Camera::HEIGHT[] = { 512, 200, 50, 160, 32, 15, 128, 20 };
 
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
 const char* Camera::PROG[] = {
@@ -258,12 +262,14 @@ void Camera::setCamProgram(int p) {
 void Camera::program(int p) {
 	char buf[80];
 	m_program = p;
-	if (pdv_pt[0]) { 
-		int prog = m_program;
-		if (pdv_pt[0]) {
-			sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
-			serial_write(buf);
-			pdv_setsize(pdv_pt[0], WIDTH[p], HEIGHT[p]);
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (pdv_pt[ipdv]) {
+			int prog = m_program;
+			if (pdv_pt[ipdv]) {
+				sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
+				serial_write(buf);
+				pdv_setsize(pdv_pt[ipdv], width(), height());
+			}
 		}
 	}
 }
@@ -306,18 +312,22 @@ bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
-		if (width() != pdv_get_cam_width(pdv_pt[ipdv])) {
-			cout << "\nAborting acquisition. PhotoZ expects width " << width() << \
+		/*
+		// Wdith of quadrant is image half width
+		if (width() / 2 != pdv_get_cam_width(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects width " << width() / 2 << \
 				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n";
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
-		if (height() != pdv_get_cam_height(pdv_pt[ipdv])) {
-			cout << "\nAborting acquisition. PhotoZ expects height " << width() << \
+		// Height of quadrant is image half height
+		if (height() / 2 != pdv_get_cam_height(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects height " << height() / 2<< \
 				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
+		*/
 	}
 	return true;
 }
@@ -424,9 +434,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
 void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
 
-	// We say that CDS "doubles" the width
-	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
-	quadHeight *= 2;
+	// quadHeight *= 2; // Use this if we haven't yet done CDS subtraction
 
 	int quadSize = quadWidth * quadHeight;
 	// Idea: do this in place for mem efficiency if needed
