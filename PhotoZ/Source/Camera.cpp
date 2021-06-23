@@ -268,12 +268,12 @@ void Camera::program(int p) {
 	}
 }
 
-// width of one quadrant
+// width of one quadrant BEFORE CDS subtraction
 int Camera::width() {
 	return WIDTH[m_program];
 }
 
-// height of one quadrant
+// height of one quadrant BEFORE CDS subtraction
 int Camera::height() {
 	return HEIGHT[m_program];
 }
@@ -394,6 +394,9 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 
 // Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
+
+	// NOTE: cam.height and cam.width are the RAW QUADRANT sizes
+	// i.e. the size of a quadrant BEFORE CDS subtraction
 	
 	int channelOrders[16] = { 2, 3, 1, 0,
 							  1, 0, 2, 3,
@@ -401,14 +404,13 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 							  1, 0, 2, 3, };
 
 	// CDS subtraction for entire image
-	//subtractCDS(images, height() * nImages * 2, width()); // multiply by 2 pre-CDS subtracted ...
+	subtractCDS(images, height() * nImages, width()); // multiply by 2 pre-CDS subtracted ...
 
 	size_t imageSize = width() * height(); 
 
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + imageSize * i;
+		unsigned short* img = images + imageSize / 2 * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			subtractCDS(images, height(), width());
 			deinterleave(img + (ipdv * imageSize / 4), height(), width(), channelOrders + ipdv * 4);
 			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
