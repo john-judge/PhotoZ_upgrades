@@ -401,15 +401,16 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 							  1, 0, 2, 3, };
 
 	// CDS subtraction for entire image
-	subtractCDS(images, height() * nImages, width());
+	//subtractCDS(images, height() * nImages * 2, width()); // multiply by 2 pre-CDS subtracted ...
 
-	size_t imageSize = width() * height() / 2; // div by 2 now that CDS subtracted ...
+	size_t imageSize = width() * height(); 
 
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + imageSize * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			subtractCDS(images, height(), width());
 			deinterleave(img + (ipdv * imageSize / 4), height(), width(), channelOrders + ipdv * 4);
-			remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
+			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}

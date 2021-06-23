@@ -435,50 +435,6 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	//Sends the digital samples to port 0 line 0 (connected to LED)
 	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
-	/*
-	// acquire 200 dark frames with LED off	
-	if(cam.acquireImages(memory, 200, true, true)) return 1; // acquire the first 200 frames with LED on
-
-	// ==== parallel section pauses, threads sync and close	====
-
-	NI_openShutter(1);	
-	Sleep(100);	
-
-	cam.acquireImages(memory + 200 * (quadrantSize * NUM_PDV_CHANNELS), rliPts - 200, false, false); // acquire the last 275 frames with LED on
-
-	Sleep(100);	
-	NI_openShutter(0); // light off	
-
-	//=============================================================================	
-	// Image reassembly	
-	// Acquisition done, so efficiency doesn't matter. Camera-specific image processing (slow)
-	//cout << "Images acquired. Reassembling images...\n";
-	//cam.reassembleImages(memory, rliPts);
-	//cout << "Reassembly completed.\n";
-	// ============================================================================
-	// Debugging: output images to files "full-out"
-	
-	unordered_map<int, std::string> framesToDebug;	
-	framesToDebug[300] = "300";	
-	framesToDebug[450] = "450";
-	unsigned short* img = (unsigned short*)(memory);	
-	for (int i = 0; i < rliPts; i++) {	
-		bool debug = framesToDebug.find(i) != framesToDebug.end();	
-		if (debug) {	
-			std::string filename = "raw-full-out" + framesToDebug[i] + ".txt";	
-			cam.printFinishedImage(img, filename.c_str());	
-			cout << "\t This full image was located in MEMORY at offset " <<	
-				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";	
-		}	
-		//cam.reassembleImage(img, false, (i == 450)); // deinterleaves, CDS subtracts, and arranges quadrants	
-		if (debug) {	
-			std::string filename = "full-out" + framesToDebug[i] + ".txt";	
-			cam.printFinishedImage(img, filename.c_str());	
-			cout << "\t This full image was located in MEMORY at offset " <<	
-				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";	
-		}	
-		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image start		
-	}*/
 
 	// acquire 200 dark frames with LED off	
 	#pragma omp parallel for	
@@ -523,7 +479,9 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 	//=============================================================================	
 	// Debug: print raw images out
 	unordered_map<int, std::string> framesToDebug;
+	framesToDebug[0] = "0";
 	framesToDebug[150] = "150";
+	framesToDebug[350] = "350";
 	framesToDebug[450] = "450";
 	unsigned short* img = (unsigned short*)(memory);
 	for (int i = 0; i < rliPts; i++) {

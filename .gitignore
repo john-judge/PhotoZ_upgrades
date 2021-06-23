@@ -4,6 +4,7 @@
 
 # Sample data
 **/*.zda
+**/*.dat
 
 # Unit test ancillary data files
 UnitTest1/TestData/*.png
