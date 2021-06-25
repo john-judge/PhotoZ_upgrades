@@ -6,6 +6,10 @@
 **/*.zda
 **/*.dat
 
+# TurboSM docs
+documentation/*.cpp
+documentation/*SM_take_tb*
+
 # Unit test ancillary data files
 UnitTest1/TestData/*.png
 UnitTest1/TestData/.ipynb_checkpoints/

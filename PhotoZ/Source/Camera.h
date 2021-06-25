@@ -64,6 +64,8 @@ public:
 	static const int reserve2_lib[];
 	static const int reserve3_lib[];
 	static const int channelOrders[16];
+	char cameraType[80], cameraStr[256];
+
 #endif // LILDAVE*/
 
 	Camera();
@@ -107,12 +109,64 @@ public:
 	void remapQuadrantsOneImage(unsigned short* buf, int quadHeight, int quadWidth);
 	void reassembleImages(unsigned short* images, int nImages);
 
-	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder);
+	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder, bool flipVertically);
 	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
 
 	// Debugging
 	void printFinishedImage(unsigned short* image, const char* filename);
 	void printQuadrant(unsigned short* image, const char* filename);
+
+	// From TurboSM
+	/*
+	int SM_initCamera(int load_config_flag, int close_flag, int load_pro_flag);
+	int SM_pdv_open();
+	void SM_pdv_close();
+	int checkCfgLUT();
+	*/
 };
+
+/*
+typedef struct SM_CONFIGINFO {
+	const char *cfg_str;
+	int width[8];
+	int height[8];
+} SM_CONFIGTYPE, *SM_CONFIG_PTR;
+
+SM_CONFIGTYPE configLUT[] = {
+{ "CCID79-PCD",				{ 128, 256, 2304, 1024, 1024, 1024 },					//width
+							{ 128, 128, 912, 160, 32, 15, 128, 40 } },				//height
+{ "2kx2k_NEURO_BINNED_d_",	{ 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 },		//width
+							{ 512, 200, 50, 160, 32, 15, 128, 40 } },				//height
+{ "2kx2kCARDIO_s2K_",		{ 2048, 2048, 1024, 1024, 1024, 1024, 1024, 1024 },
+							{ 1024, 200, 512, 320, 160, 80, 256, 128 } },
+{ "2kx2k_NEURO_BINNED_s_",	{ 2048, 2048, 1024, 1024, 1024, 1024, 1024, 1024 },
+							{ 512, 200, 256, 160, 80, 32, 128, 80 } },
+{ "2kx2k_NEURO_BINNED_",	{ 2048, 2048, 1024, 1024, 1024, 1024, 1024, 1024 },		//Manuela used the same name, need to rename
+							{ 512, 50, 160, 80, 80, 40, 30, 20 } },
+{ "2kx2k_NEURO_BINNED2_",	{ 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 },
+							{ 512, 200, 100, 256, 160, 80, 128, 112 } },
+{ "2kx2k_NEURO_BINNED3_",	{ 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 },
+							{ 512, 100, 50, 160, 80, 32, 80, 31 } },
+{ "2kx2k_NEURO_BINNED4_",	{ 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 },
+							{ 1024, 100, 50, 160, 80, 80, 31, 128 } },
+{ "2kx2k_NEURO_v",			{ 2048, 2048, 2048, 2048, 2048, 1024, 1024, 1024 },
+							{ 1024, 512, 200, 100, 50, 320, 160, 80 } },
+{ "2kx2k_marco_",			{ 2048, 2048, 2048, 2048, 1024, 1024, 1024, 512 },
+							{ 512, 256, 50, 19, 32, 15, 7, 22 } },
+{ "2kx2k_v4.0.vNDR",		{ 2048, 2048, 1024, 1024, 1024, 1024, 1024, 1024 },
+							{ 1024, 512, 512, 460, 256, 228, 112, 90 } },
+{ "2kx2k_FASTNEURO_",		{ 2048, 1024, 1024, 1024, 512, 512, 512, 2048 },
+							{ 512, 160, 15, 7, 23, 10, 4, 9 } },
+{ "2kx2k_FASTNEURO2_",		{ 2048, 1024, 1024, 1024, 1024, 512, 512, 512 },
+							{ 512, 160, 80, 32, 15, 23, 10, 4 } },
+{ "2kx2k_FASTNEURO3_",		{ 2048, 1024, 1024, 1024, 512, 512, 512, 512 },
+							{ 512, 160, 80, 32, 47, 23, 10, 4 } },
+{ "2k_CARDIO_BINNED_1024_",	{ 2048, 1024, 1024, 1024, 1024, 1024, 1024, 1024 },
+							{ 512, 256, 160, 80, 128, 80, 64, 39 } },
+{ "2k_CARDIO_BINNED_v",		{ 2048, 1024, 1024, 1024, 1024, 1024, 1024, 1024 },
+							{ 640, 320, 160, 80, 160, 80, 79, 39 } },
+{ "2k_NEURO_s2K_",			{ 2048, 2048, 2048, 2048, 1024, 1024, 1024, 1024 },
+							{ 1024, 200, 100, 50, 320, 160, 80, 32 } },
+};*/
 
 #endif // CAMERA_H_
