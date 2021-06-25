@@ -413,19 +413,19 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 							  2, 3, 1, 0,
 							  1, 0, 2, 3, };
 
-	// CDS subtraction for entire image
-	subtractCDS(images, height() * nImages, width()); // multiply by 2 pre-CDS subtracted ...
+	// CDS subtraction for entire image (halves total memory needed for images)
+	subtractCDS(images, height() * nImages, width()); 
 
 	size_t imageSize = width() * height(); 
 
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + imageSize / 2 * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			deinterleave(img + (ipdv * imageSize / 4), 
-						 height(), 
-						 width(), 
-						 channelOrders + ipdv * 4, 
-						 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
+			//deinterleave(img + (ipdv * imageSize / 4), 
+			//			 height(), 
+			//			 width(), 
+			//			 channelOrders + ipdv * 4, 
+			//			 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
 			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
@@ -462,7 +462,7 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 	for (int row = 0; row < quadHeight; row++) {
 		for (int col = 0; col < quadWidth; col++) {
 			if (flipVertically) {
-				buf[row * quadWidth + col] = tmpBuf[row * quadWidth + (quadHeight - 1 - col)];
+				buf[row * quadWidth + col] = tmpBuf[(quadHeight - 1 - row) * quadWidth + col];
 			}
 			else {
 				buf[row * quadWidth + col] = tmpBuf[row * quadWidth + col];
@@ -478,17 +478,19 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_width)
 {
 	int CDS_add = 2048;
+	int CDS_width_fixed = 1024; // 6/25/21 - empirically, seems like this never changes
+	int CDS_height = (quad_width / CDS_width_fixed) / 2 * quad_height * NUM_PDV_CHANNELS; // div by 2 since loop skips 2 CDS-size rows per iter
 
 	unsigned short* new_data = image_data;
-	unsigned short* reset_data = image_data + quad_width;
+	unsigned short* reset_data = image_data + CDS_width_fixed;
 	unsigned short* old_data = image_data;
 
-	for (int i = 0; i < quad_height; i++) {
-		for (int j = 0; j < quad_width; j++) {
+	for (int i = 0; i < CDS_height; i++) {
+		for (int j = 0; j < CDS_width_fixed; j++) {
 			*new_data++ = CDS_add + *old_data++ - *reset_data++;
 		}
-		reset_data += quad_width;
-		old_data += quad_width;
+		reset_data += CDS_width_fixed;
+		old_data += CDS_width_fixed;
 	}
 }
 
