@@ -10,8 +10,8 @@
 
 // Diode definitions
 #define NUM_FP_DIODES 8
-#define DEFAULT_ARRAY_WIDTH 256
-#define DEFAULT_ARRAY_HEIGHT 40
+#define DEFAULT_ARRAY_WIDTH 2048//256
+#define DEFAULT_ARRAY_HEIGHT 40 //40
 #define NUM_BINNED_DIODES 10240
 
 // Background for Array Window
@@ -113,6 +113,13 @@ public:
 	//-------------------------------------
 	// Array resizing
 	void changeNumDiodes();
+
+	//-------------------------------------
+	// Public functions for drag to pan
+	void set_drag_active();
+	void set_drag_inactive();
+	bool get_drag_active();
+	void release_drag();
 
 	//-------------------------------------
 	// Inherited from Fl_Double_Window

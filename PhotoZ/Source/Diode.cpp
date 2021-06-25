@@ -182,8 +182,24 @@ int Diode::handle(int event)
 	{
 		//case FL_KEYUP:
 			//if(event_key)
+		case FL_RELEASE:
+			if (Fl::event_button() == 1) {
 
+				if (!aw->get_drag_active()) return Fl_Widget::handle(event);
+
+				aw->release_drag();
+				//clearSelected(); // if just finished dragging, probably didn't want to select
+
+				return Fl_Widget::handle(event);
+			}
+		case FL_DRAG:
+			if (Fl::event_button() == 1) {
+				aw->set_drag_active();
+				return Fl_Widget::handle(event);
+			}
 		case FL_PUSH:
+			if (Fl::event_state(FL_CTRL)) return Fl_Widget::handle(event);
+
 			if (aw->getContinuous()) {
 				//if (mouseButton == 1)	// Left Button is Down
 				//{
@@ -204,7 +220,7 @@ int Diode::handle(int event)
 				//==============
 				// Ignornance
 				//==============
-				if (Fl::event_state(FL_SHIFT))	// Shift key is down.
+				if (Fl::event_state(FL_SHIFT))	// Shift or Ctrl key is down.
 				{
 					if (mouseButton == 1)			// Left Button is Down
 					{
@@ -216,7 +232,7 @@ int Diode::handle(int event)
 				//==============
 				// Selection
 				//==============
-				else
+				else 
 				{
 					if (mouseButton == 1)	// Left Button is Down
 					{

@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{9A449C55-A95F-4A53-8661-BDBC4D06118C}</ProjectGuid>
     <RootNamespace>PhotoZ</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
     <ProjectName>PhotoZ_LilDave</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -43,7 +43,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include\EDT\pdv</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include\EDT\pdv;$ (IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)Lib;$(LibraryPath);$(ProjectDir)Include\EDT\pdv;$(ProjectDir)Source</LibraryPath>
     <SourcePath>$(VC_SourcePath);$(ProjectDir)Source</SourcePath>
   </PropertyGroup>
@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Dave.cpp" />
     <ClCompile Include="Source\ImageEncoder.cpp" />
     <ClCompile Include="Source\ArrayWindow.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
@@ -180,6 +181,7 @@
     <ClCompile Include="Source\WindowExporter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Dave.h" />
     <ClInclude Include="Source\ImageEncoder.h" />
     <ClInclude Include="Include\NIDAQmx.h">
       <DeploymentContent>true</DeploymentContent>

@@ -27,6 +27,39 @@ namespace UnitTests
 	{
 	public:
 
+		// open a test raw image RLI-02062021.txt and output a processed image for visual inspection, with CDS
+		TEST_METHOD(testSubtractCDS) {
+
+
+			int quad_height = 20; // final width of image quadrant
+			int quad_width = 1024;
+			int quadrantSize = 2 * quad_height * quad_width;
+			unsigned short* rawMemory = new unsigned short[quadrantSize * 4]; // 4 PDV channels
+
+			for (int ipdv = 0; ipdv < 4; ipdv++) {
+				for (int i = 0; i < quad_height * 2; i++) {
+					for (int j = 0; j < quad_width; j++) {
+						// put in 13 for real data rows and 7 for reset data rows
+						rawMemory[quadrantSize * ipdv + i * quad_width + j] = 13 - (i % 2) * 6;
+					}
+				}
+			}
+			Camera cam;
+
+			cam.subtractCDS(rawMemory, quad_height, quad_width);
+
+			// Validate
+			for (int ipdv = 0; ipdv < 4; ipdv++) {
+				for (int i = 0; i < quad_height; i++) {
+					for (int j = 0; j < quad_width; j++) {
+						// put in 13 for real data rows and 7 for reset data rows
+						Assert::AreEqual((int)rawMemory[quadrantSize * ipdv + i * quad_width + j], 7);
+					}
+				}
+			}
+			delete[] rawMemory;
+
+		}
 
 		// open a test raw image RLI-02062021.txt and output a processed image for visual inspection, with CDS
 		TEST_METHOD(reassembleImageRLI) {
@@ -80,7 +113,7 @@ namespace UnitTests
 			const int channelOrders[16] = { 2, 3, 1, 0,
 											1, 0, 2, 3,
 											2, 3, 1, 0,
-										    1, 0, 2, 3, };
+											1, 0, 2, 3, };
 
 			Camera cam;
 			// There are 4 camera channels within each PDV channel

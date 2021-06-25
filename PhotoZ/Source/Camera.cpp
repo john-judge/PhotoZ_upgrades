@@ -39,13 +39,21 @@ const char* Camera::LABEL[] = {
 	"5000 Hz  256x60",
 	"7500 Hz  256x40" };
 
+// These are the original sizes:
 //const int Camera::WIDTH[]  = {2048,	2048,	1024,	1024,	512,	512,	256,	256};
 //const int Camera::HEIGHT[] = {1024,	100,	320,	160,	160,	80,		60,		40}; 
 
 // JMJ 2/6/21 -- For testing, these are sizes based on of .cfg files:
-const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
-const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
+//const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
+//const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
 
+// JMJ 6/18/21 -- For more testing, these are sizes based on PDV readout:
+//const int Camera::WIDTH[] = { 1024,	1024,	1024,	1024,	1024,	1024,	1024,	1024 };
+//const int Camera::HEIGHT[] = { 20,	20,	20,	20,	20,	20,		20,		20 };
+
+// JMJ 6/23/2021 -- these are from TurboSM (sm.cpp) for 2kx2k_NEURO_BINNED_d_
+const int Camera::WIDTH[] = { 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 };
+const int Camera::HEIGHT[] = { 512, 200, 50, 160, 32, 15, 128, 20 };
 
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
 const char* Camera::PROG[] = {
@@ -100,7 +108,7 @@ Camera::Camera() {
 	m_depth = -1;
 	overruns = 0;
 	recovering_timeout = false;
-	m_program = 7;                // the camera always boots up with prg0
+	m_program = 7;                // default camera program
 }
 
 Camera::~Camera() {
@@ -133,9 +141,10 @@ int Camera::open_channel(int ipdv) {
 	pdv_set_timeout(pdv_pt[ipdv], 1000);
 	pdv_flush_fifo(pdv_pt[ipdv]);
 	m_depth = pdv_get_depth(pdv_pt[ipdv]);
-	// allocate ring buffers
+	// allocate ring buffers, 4 (per channel) is EDT's recommendation
 	pdv_multibuf(pdv_pt[ipdv], 4);
-	//		pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
+
+	// The following is never needed, instead use cfg file to change img dimension (Chun): pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
 	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
 }
@@ -253,22 +262,24 @@ void Camera::setCamProgram(int p) {
 void Camera::program(int p) {
 	char buf[80];
 	m_program = p;
-	if (pdv_pt[0]) { 
-		int prog = m_program;
-		if (pdv_pt[0]) {
-			sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
-			serial_write(buf);
-			pdv_setsize(pdv_pt[0], WIDTH[p], HEIGHT[p]);
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (pdv_pt[ipdv]) {
+			int prog = m_program;
+			if (pdv_pt[ipdv]) {
+				sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
+				serial_write(buf);
+				pdv_setsize(pdv_pt[ipdv], width(), height());
+			}
 		}
 	}
 }
 
-// width of one quadrant
+// width of one quadrant BEFORE CDS subtraction
 int Camera::width() {
 	return WIDTH[m_program];
 }
 
-// height of one quadrant
+// height of one quadrant BEFORE CDS subtraction
 int Camera::height() {
 	return HEIGHT[m_program];
 }
@@ -281,20 +292,42 @@ int Camera::freq() {
 	return FREQ[m_program];
 }
 
+bool Camera::isValidPlannedState(int num_diodes) {
+	return isValidPlannedState(num_diodes, 0);
+}
+
 // Validate that we are about to allocate the proper amount of memory for a quadrant
 // I.e. we check if PDV's internals match PhotoZ's expectations
 // Displays warnings to user if there are problems
-bool Camera::isValidPlannedState(int num_diodes) {
+bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		int PDV_size = get_buffer_size(ipdv) / 2;
-		if (num_diodes != PDV_size) {
+		int PDV_size = get_buffer_size(ipdv);
+		if (num_diodes - num_fp_diodes != PDV_size / 2) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< num_diodes << " pixels" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
-				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n\n";
+				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n" \
+				<< "\tPDV width: " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n" \
+				<< "\tPDV height: " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
+		/*
+		// Wdith of quadrant is image half width
+		if (width() / 2 != pdv_get_cam_width(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects width " << width() / 2 << \
+				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n";
+			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
+			return false;
+		}
+		// Height of quadrant is image half height
+		if (height() / 2 != pdv_get_cam_height(pdv_pt[ipdv])) {
+			cout << "\nAborting acquisition. PhotoZ expects height " << height() / 2<< \
+				" for quadrant " << ipdv << " but PDV is set to " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
+			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
+			return false;
+		}
+		*/
 	}
 	return true;
 }
@@ -311,17 +344,33 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 	return memory;
 }
 
-// The full parallel acquistion and image reassembly
-// Returns a pointer to a newly-allocated block nImages images
-void Camera::acquireImages(unsigned short* memory, int numPts) {
+// FIRST: set to True if this camera session has not acquired images yet
+// NOTLAST: set to True if this camera session will continue after this acquisition (i.e. for RLI)
+// Returns: whether there was an error
+bool Camera::acquireImages(unsigned short* memory, int numPts, int first, int notLast) {
+	if (first) serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+
+	if(acquireImages(memory, numPts)) return true;
+
+	if (!notLast) {
+		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+			end_images(ipdv);
+		}
+		serial_write("@TXC 0\r");
+	}
+	return false;
+}
+
+// The full parallel acquistion WITHOUT image reassembly
+// Returns: whether there was an error
+bool Camera::acquireImages(unsigned short* memory, int numPts) {
 	// Start Acquisition
 	//joe->dave; should work for dave cam
 	unsigned char *image;
 	int quadrantSize = width() * height();
 
-	serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
-
 	int tos = 0;
+	bool failed = false;
 
 	omp_set_num_threads(4);
 	#pragma omp parallel for 	
@@ -344,90 +393,38 @@ void Camera::acquireImages(unsigned short* memory, int numPts) {
 			if (num_timeouts(ipdv) > 20) {
 				end_images(ipdv);
 				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
-				//return cam.num_timeouts(ipdv); Don't return from a parallel section	
+				failed = true; //Don't return from a parallel section	
 			}
+			//cout << "Channel " << ipdv << " acquired its portion of image " << i << "\n";
 		}
-		end_images(ipdv);
-		if (ipdv == 0) serial_write("@TXC 0\r");
 	}
+	return failed;
 
 }
 
-// Apply CDS subtraction and deinterleave to one raw image
-// TO DO: reverse order of operations for efficiency (less swapping in deinterleave).
-// mapQuadrants: whether to remap quadrants to full image view
-// verbose: whether to print out the image data to file at intermediate stages
-void Camera::reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose) {
-	int w = width();
-	int h = height();
-	size_t quadrantSize = (size_t)w * (size_t)h;
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		std::string filename = "RLI-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-		
-		subtractCDS(image + ipdv * quadrantSize, h, w);
-		filename = "Output-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-
-		deinterleave(image + ipdv * quadrantSize, h, w, channelOrders + ipdv * 4);
-		filename = "OutputCDS-ch0.txt";
-		if (verbose && ipdv == 1) printQuadrant(image + ipdv * quadrantSize, filename.c_str());
-	}
-
-	if (!mapQuadrants) return;
-
-	// ============================================================
-	// Quadrant Mapping
-	// Since CDS subtraction halved the image size, we now have auxiliary space
-	// to use to arrange the quadrants of the full image
-	//		- space out the rows of quadrants 0 and 2
-	//		- interleave in the rows of quadrants 1 and 3
-
-	// PDV channels are readout in this order: 
-//  0 - upper left, 
-//  1 - lower left, 
-//  2 - upper right, 
-//  3 - lower right.
-
-	// Even channels (Quadrants 0 and 2) - space out
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
-		unsigned short* srcRow = image + quadrantSize * ipdv + quadrantSize / 2 - w;
-		unsigned short* dstRow = image + quadrantSize * ipdv + quadrantSize - w;
-		
-		for (int row = int(h/2) - 1; row >= 0; row--) {
-			memcpy(dstRow, srcRow, w * sizeof(unsigned short));
-			dstRow -= 2 * w;
-			srcRow -= w;
-		}
-	}
-
-	// Odd channels (Quadrants 1 and 3) - intereave-in rows into the previous channel's rows
-	for (int ipdv = 1; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
-
-		unsigned short* srcRow = image + quadrantSize * ipdv;
-		unsigned short* dstRow = image + quadrantSize * (ipdv-1) + w;
-		// Quadrant 1
-		for (int row = 0; row < int(h / 2); row++) {
-			memcpy(dstRow, srcRow, w * sizeof(unsigned short));
-			dstRow += 2 * w;
-			srcRow += w;
-		}
-	}
-}
-
-// Apply CDS subtraction and deinterleave to a list of raw images.
+// Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
-	size_t imageSize = width() * height();
+
+	// NOTE: cam.height and cam.width are the RAW QUADRANT sizes
+	// i.e. the size of a quadrant BEFORE CDS subtraction
+	
 	int channelOrders[16] = { 2, 3, 1, 0,
 							  1, 0, 2, 3,
 							  2, 3, 1, 0,
 							  1, 0, 2, 3, };
+
+	// CDS subtraction for entire image
+	subtractCDS(images, height() * nImages, width()); // multiply by 2 pre-CDS subtracted ...
+
+	size_t imageSize = width() * height(); 
+
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + imageSize * i;
+		unsigned short* img = images + imageSize / 2 * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			subtractCDS(img + ipdv * imageSize / 4, height(), width());
-			deinterleave(img + ipdv * imageSize / 4, height(), width(), channelOrders + ipdv * 4);
+			deinterleave(img + (ipdv * imageSize / 4), height(), width(), channelOrders + ipdv * 4);
+			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
+		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
 }
 
@@ -437,9 +434,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
 void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder) {
 
-	// We say that CDS "doubles" the width
-	// Alternative, treat the 1-D array as if we are processing 2x the number of rows
-	quadHeight *= 2;
+	// quadHeight *= 2; // Use this if we haven't yet done CDS subtraction
 
 	int quadSize = quadWidth * quadHeight;
 	// Idea: do this in place for mem efficiency if needed
@@ -485,6 +480,50 @@ void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_w
 	}
 }
 
+// Quadrant Mapping
+// Since CDS subtraction halved the image size, we now have auxiliary space
+// to use to arrange the quadrants of the full image
+//		- space out the rows of quadrants 0 and 2
+//		- interleave in the rows of quadrants 1 and 3
+
+// PDV channels for little Dave are readout in this order: 
+//  0 - upper left, 
+//  1 - lower left, 
+//  2 - upper right, 
+//  3 - lower right.
+
+void Camera::remapQuadrantsOneImage(unsigned short* image, int quadHeight, int quadWidth) {
+
+	int quadrantSize = quadHeight * quadWidth;
+
+	// Even channels (Quadrants 0 and 2) - space out
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
+		unsigned short* srcRow = image + quadrantSize * ipdv + quadrantSize / 2 - quadWidth;
+		unsigned short* dstRow = image + quadrantSize * ipdv + quadrantSize - quadWidth;
+
+		for (int row = int(quadHeight / 2) - 1; row >= 0; row--) {
+			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
+			dstRow -= 2 * quadWidth;
+			srcRow -= quadWidth;
+		}
+	}
+
+	// Odd channels (Quadrants 1 and 3) - intereave-in rows into the previous channel's rows
+	for (int ipdv = 1; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
+
+		unsigned short* srcRow = image + quadrantSize * ipdv;
+		unsigned short* dstRow = image + quadrantSize * (ipdv - 1) + quadWidth;
+		// Quadrant 1
+		for (int row = 0; row < int(quadHeight / 2); row++) {
+			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
+			dstRow += 2 * quadWidth;
+			srcRow += quadWidth;
+		}
+	}
+}
+
+
+// Utilities for debugging
 void Camera::printFinishedImage(unsigned short* image, const char* filename) {
 	int full_img_size = NUM_PDV_CHANNELS * width() * height(); // Divide by 2 to account for CDS subtraction
 	std::ofstream outFile;

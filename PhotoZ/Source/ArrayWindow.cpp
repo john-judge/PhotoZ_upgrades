@@ -43,18 +43,18 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 
 	fg=FL_WHITE;
 	bg=FL_BLACK;
-	background=BG_None;
+	background = BG_SIGNAL_TO_NOISE; // JMJ updated default to SNR background
 	showTrace=1;
 	showRliValue=0;
 	showDiodeNum=0;
 
-	yScale  = pow((0.2*log2(1 + 1)),1); // pow means x to power of y; yScale and yScale2 = 100 in photoz 3.0
+	yScale  = pow((0.2*log2(1 + 1)),1); // yScale and yScale2 = 100 in photoz 3.0
 	yScale2 = pow((0.2*log2(1 + 1)),1);
 	xScale=1;
 	xShift=0;
 	continuous = 0;							//new
 
-	// 12/12/2020 JMJ
+	// 12/12/2020 JMJ +6 lines
 	zoomFactor = 1;
 	xPan = 0;
 	yPan = 0;
@@ -208,8 +208,30 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 	resizeDiodes();
 }
 
+void ArrayWindow::set_drag_active() {
+	isDragActive = true;
+}
 
+void ArrayWindow::set_drag_inactive() {
+	isDragActive = false;
+}
 
+bool ArrayWindow::get_drag_active() {
+	return isDragActive;
+}
+
+void ArrayWindow::release_drag() {
+
+	// clear drag location
+	set_drag_inactive();
+
+	// drag buffers get cleared in scheduled AW redraw
+	xPan += (Fl::event_x() - xDragLast);
+	yPan += (Fl::event_y() - yDragLast);
+
+	resizeDiodes(); // updated xPan and yPan in Diode widget properties
+	redraw();
+}
 
 //=============================================================================
 int ArrayWindow::handle(int event)
@@ -224,126 +246,115 @@ int ArrayWindow::handle(int event)
 	{
 	case FL_RELEASE: // JMJ 12/12/2020
 		if (Fl::event_button() == 1) {
-
-			if(!isDragActive) return Fl_Double_Window::handle(event);
-
-			// clear drag location
-			isDragActive = false;
-
-			// drag buffers get cleared in scheduled AW redraw
-			xPan += (Fl::event_x() - xDragLast);
-			yPan += (Fl::event_y() - yDragLast);
+			if (!get_drag_active()) return Fl_Double_Window::handle(event);
+			release_drag();
 			if (verbose) cout << "dragged to new center: (" << xPan << ", " << yPan << ")\n";
+			return Fl_Double_Window::handle(event);
+		}
+	case FL_DRAG: // JMJ 12/12/2020
+		if (Fl::event_button() == 1) {
 
-			resizeDiodes(); // updated xPan and yPan in Diode widget properties
-			redraw();
+			// save the location where the drag starts
+			if(verbose && !isDragActive) cout << "activated drag\n";
+			set_drag_active();
 
 			return Fl_Double_Window::handle(event);
 		}
-		case FL_DRAG: // JMJ 12/12/2020
-			if (Fl::event_button() == 1) {
-
-				// save the location where the drag starts
-				if(verbose && !isDragActive) cout << "activated drag\n";
-				isDragActive = true;
-
-				return Fl_Double_Window::handle(event);
-			}
-		case FL_PUSH:
+	case FL_PUSH:
 			
-			xDragLast = Fl::event_x();
-			yDragLast = Fl::event_y();
+		xDragLast = Fl::event_x();
+		yDragLast = Fl::event_y();
 
-			mouseButton=Fl::event_button();
-			//cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
-			//==============
-			// Ignornance
-			//==============
-			if(Fl::event_state(FL_SHIFT))	// Shift Key is Down
+		mouseButton=Fl::event_button();
+		//cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
+		//==============
+		// Ignornance
+		//==============
+		if(Fl::event_state(FL_SHIFT))	// Shift Key is Down
+		{
+			if(mouseButton==1)		// Ignore
 			{
-				if(mouseButton==1)		// Ignore
-				{
-					redraw();
-					tw->redraw();
-					if(ui->mapGroup->visible())
-					{
-						cw->redraw();
-					}
-					
-					return Fl_Double_Window::handle(event);
-				}
-				else if(mouseButton==3)	// Clear ignored list with shift right click
-				{
-					dataArray->clearIgnoredFlag();
-					dataArray->process();
-					redraw();
-					tw->redraw();
-					if(ui->mapGroup->visible())
-					{
-						cw->redraw();
-					}
-					return 1;
-				}				 
-			}
-			/*
-			else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
-			{
-				cout << "resetting array window \n";
-				zoomFactor = 1;
-				xPan = 0;
-				yPan = 0;
-				xDragLast = 0;
-				yDragLast = 0;
-
-				redraw();
-				return Fl_Double_Window::handle(event);
-			}*/
-			//==============
-			// Selection
-			//==============
-			if(mouseButton==1)
-			{
-					redraw();
-					tw->redraw();
-					Fl_Double_Window::handle(event);
-					return 1;
-			}
-
-			else if(mouseButton==3)		// Clear selected
-			{
-				if(!Fl::event_state(FL_CTRL))	clearSelected(0);
-				if (Fl::event_state(FL_CTRL))	clearSelected(1);
 				redraw();
 				tw->redraw();
-				return 1;
-			}
-			return Fl_Double_Window::handle(event);
-		case FL_MOUSEWHEEL: // JMJ 12/12/2020
-			scrollAmt = Fl::event_dy() > 0 ? -0.2 : 0.2;
-			tmpZoomFactor = zoomFactor;
-			zoomFactor = min(50, max(0.8, zoomFactor + scrollAmt));
-
-			if (zoomFactor != tmpZoomFactor) {
-				// As we zoom, automatically adjust binning ~ # raw / zoom
-				dBinning = max(1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
-
-				mc->set_digital_binning(dBinning);
-
-				// clear selected. TO DO: save selected, but separate at each zoom level
-				if (!Fl::event_state(FL_CTRL))	clearSelected(0);
-				if (Fl::event_state(FL_CTRL))	clearSelected(1);
-
-				if (verbose) {
-					cout << "zooming to factor: " << zoomFactor \
-						<< "\tbinning: " << dBinning << "\n";
+				if(ui->mapGroup->visible())
+				{
+					cw->redraw();
 				}
-				resizeDiodes();
-				redraw();
-				
+					
+				return Fl_Double_Window::handle(event);
 			}
-			return Fl_Double_Window::handle(event);
-		default:
-			return Fl_Double_Window::handle(event);
+			else if(mouseButton==3)	// Clear ignored list with shift right click
+			{
+				dataArray->clearIgnoredFlag();
+				dataArray->process();
+				redraw();
+				tw->redraw();
+				if(ui->mapGroup->visible())
+				{
+					cw->redraw();
+				}
+				return 1;
+			}				 
+		}
+		else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
+		{
+			cout << "resetting array window \n";
+			zoomFactor = 1;
+			xPan = 0;
+			yPan = 0;
+			xDragLast = 0;
+			yDragLast = 0;
+
+			redraw();
+			Fl_Double_Window::handle(event);
+			return 1;
+		}
+		//==============
+		// Selection
+		//==============
+		if(mouseButton==1) // left-click
+		{
+			redraw();
+			tw->redraw();
+			Fl_Double_Window::handle(event);
+			return 1;
+		}
+
+		else if(mouseButton==3)		// right-click: Clear selected
+		{
+			if(!Fl::event_state(FL_CTRL))	clearSelected(0);
+			if (Fl::event_state(FL_CTRL))	clearSelected(1);
+			redraw();
+			tw->redraw();
+			return 1;
+		}
+		return Fl_Double_Window::handle(event);
+	case FL_MOUSEWHEEL: // JMJ 12/12/2020
+		scrollAmt = Fl::event_dy() > 0 ? -0.2 : 0.2;
+		tmpZoomFactor = zoomFactor;
+		zoomFactor = min(50, max(0.8, zoomFactor + scrollAmt));
+
+		if (zoomFactor != tmpZoomFactor) {
+			// As we zoom, automatically adjust binning ~ # raw / zoom
+			dBinning = max(1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
+
+			mc->set_digital_binning(dBinning);
+
+			// clear selected. TO DO: save selected, but separate at each zoom level
+			if (!Fl::event_state(FL_CTRL))	clearSelected(0);
+			if (Fl::event_state(FL_CTRL))	clearSelected(1);
+
+			if (verbose) {
+				cout << "zooming to factor: " << zoomFactor \
+					<< "\tbinning: " << dBinning << "\n";
+			}
+			resizeDiodes();
+			redraw();
+				
+		}
+		return Fl_Double_Window::handle(event);
+	default:
+		return Fl_Double_Window::handle(event);
 	}
 }
 

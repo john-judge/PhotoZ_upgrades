@@ -83,7 +83,7 @@ public:
 
 	// Buffers for digital output
 	uint8_t *outputs;
-	uint8_t *pseudoOutputs;
+	//uint8_t *pseudoOutputs;
 
 	// RLI
 	int takeRli(unsigned short*, Camera&);

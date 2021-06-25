@@ -97,16 +97,18 @@ public:
 
 	// Main camera functions
 	bool isValidPlannedState(int num_diodes);
+	bool isValidPlannedState(int num_diodes, int num_fp_diodes);
+
 	unsigned short* allocateImageMemory(int num_diodes, int numPts);
-	void acquireImages(unsigned short* images, int numPts);
+	bool acquireImages(unsigned short* memory, int numPts, int first, int notLast);
+	bool acquireImages(unsigned short* images, int numPts);
 
 	// camera utility functions. Generally drivers should not need to call
-	void reassembleImage(unsigned short* image, bool mapQuadrants, bool verbose);
+	void remapQuadrantsOneImage(unsigned short* buf, int quadHeight, int quadWidth);
 	void reassembleImages(unsigned short* images, int nImages);
 
 	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder);
 	void subtractCDS(unsigned short* image_data, int quad_height, int quad_width);
-	void remapQuadrants(unsigned short* buf, int quadHeight, int quadWidth);
 
 	// Debugging
 	void printFinishedImage(unsigned short* image, const char* filename);

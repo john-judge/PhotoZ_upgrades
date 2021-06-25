@@ -215,7 +215,7 @@ void DataArray::get_binned_diode_trace(int bin_diode, int trial_start,	int trial
 	int count = 0;
 	double rwh = m_raw_height;				//these 3 lines round row_length so that binning works for n = 3 and 6 
 	double binning = digital_binning;
-	int row_length = 0.7 + (rwh / binning);		//	int row_length = m_raw_height / digital_binning;  //	previous version before fix
+	int row_length = max(1, 0.7 + (rwh / binning));		//	int row_length = m_raw_height / digital_binning;  //	previous version before fix
 	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;		//	int raw_diode = bin_diode * digital_binning; this version is incorrect (MJ) 
 	int x = raw_diode % m_raw_width;
 	int y = raw_diode / m_raw_height;
@@ -258,7 +258,7 @@ void DataArray::get_binned_rli(int bin_diode, short &low, short &high, short &ma
 	l = h = m = 0;
 	double rwh = m_raw_height;				//these 3 lines round  row_length so that binning works for n = 3 and 6 
 	double binning = digital_binning;
-	int row_length = 0.7 + (rwh / binning);
+	int row_length = max(1, 0.7 + (rwh / binning));
 	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;// key fix of bug from undergrad version
 	int x = raw_diode % m_raw_width;
 	int y = raw_diode / m_raw_height;
@@ -948,6 +948,8 @@ void DataArray::loadTrialData(int trialNo)
 }
 
 //=============================================================================
+// The specification for the format of INPUT is determined in Camera.cpp
+// They are read out in image-major order, i.e. quadrants of img0, quadrants of img1, ... 
 void DataArray::arrangeData(int trialNo, unsigned short* input)		// used in DapControllerAcqui with input from camera (memory)
 {
 	int i,j;
