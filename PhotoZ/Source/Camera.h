@@ -113,7 +113,7 @@ public:
 	void subtractCDS(unsigned short* image_data, int, int);
 
 	// Debugging
-	void printFinishedImage(unsigned short* image, const char* filename);
+	void printFinishedImage(unsigned short* image, const char* filename, bool CDS_done);
 	void printQuadrant(unsigned short* image, const char* filename);
 
 	// From TurboSM

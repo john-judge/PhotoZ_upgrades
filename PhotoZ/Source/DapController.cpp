@@ -488,7 +488,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 		bool debug = framesToDebug.find(i) != framesToDebug.end();
 		if (debug) {
 			std::string filename = "raw-full-out" + framesToDebug[i] + ".txt";
-			cam.printFinishedImage(img, filename.c_str());
+			cam.printFinishedImage(img, filename.c_str(), false);
 			cout << "\t This full image was located in MEMORY at offset " <<
 				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
 		}
@@ -508,7 +508,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam)
 
 		if (debug) {
 			std::string filename = "full-out" + framesToDebug[i] + ".txt";
-			cam.printFinishedImage(img, filename.c_str());
+			cam.printFinishedImage(img, filename.c_str(), true);
 			cout << "\t This full image was located in MEMORY at offset " <<
 				(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
 		}

@@ -53,7 +53,8 @@ const char* Camera::LABEL[] = {
 
 // JMJ 6/23/2021 -- these are from TurboSM (sm.cpp) for 2kx2k_NEURO_BINNED_d_
 const int Camera::WIDTH[] = { 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 };
-const int Camera::HEIGHT[] = { 512, 200, 50, 160, 32, 15, 128, 20 };
+//const int Camera::HEIGHT[] = { 512, 200,  50,   160,  32,   15,   128,  20 };
+const int Camera::HEIGHT[] = { 512, 50,  160,   80,  80,   40,   30,  20 };
 
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
 const char* Camera::PROG[] = {
@@ -416,16 +417,16 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 	// CDS subtraction for entire image (halves total memory needed for images)
 	subtractCDS(images, height() * nImages, width()); 
 
-	size_t imageSize = width() * height(); 
+	size_t imageSize = width() * height() / 2; 
 
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + imageSize / 2 * i;
+		unsigned short* img = images + imageSize * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			//deinterleave(img + (ipdv * imageSize / 4), 
-			//			 height(), 
-			//			 width(), 
-			//			 channelOrders + ipdv * 4, 
-			//			 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
+			deinterleave(img + (ipdv * imageSize / 4), 
+						 height(), 
+						 width(), 
+						 channelOrders + ipdv * 4, 
+						 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
 			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
 		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
@@ -538,8 +539,10 @@ void Camera::remapQuadrantsOneImage(unsigned short* image, int quadHeight, int q
 
 
 // Utilities for debugging
-void Camera::printFinishedImage(unsigned short* image, const char* filename) {
-	int full_img_size = NUM_PDV_CHANNELS * width() * height(); // Divide by 2 to account for CDS subtraction
+void Camera::printFinishedImage(unsigned short* image, const char* filename, bool CDS_done) {
+	int full_img_size = NUM_PDV_CHANNELS * width() * height(); 
+	if (CDS_done) full_img_size /= 2; // Divide by 2 if you need to account for CDS subtraction
+
 	std::ofstream outFile;
 	outFile.open(filename, std::ofstream::out | std::ofstream::trunc);
 	for (int k = 0; k < full_img_size; k++)
