@@ -30,43 +30,39 @@ const int Camera::FREQ[] = { 1000,	500,	125,	40,		10000,	3000,	5000,	2000 };
 
 #ifdef LILDAVE
 const char* Camera::LABEL[] = {
-	"200 Hz   2048x1024",
-	"2000 Hz  2048x100",
-	"1000 Hz  1024x320",
-	"2000 Hz  1024x160",
-	"2000 Hz  512x160",
-	"4000 Hz  512x80",
-	"5000 Hz  256x60",
-	"7500 Hz  256x40" };
+	"200 Hz   2048x1024", // = 2097152 px
+	"2000 Hz  2048x100",  // = 204800 px
+	"1000 Hz  1024x320",  // = 327680 px
+	"2000 Hz  1024x160",  // = 163840 px
+	"2000 Hz  512x160",   // = 81920 px
+	"4000 Hz  512x80",    // = 40960 px
+	"5000 Hz  256x60",    // = 15360 px
+	"7500 Hz  256x40" };  // = 10240 px
 
-// These are the original sizes:
-//const int Camera::WIDTH[]  = {2048,	2048,	1024,	1024,	512,	512,	256,	256};
-//const int Camera::HEIGHT[] = {1024,	100,	320,	160,	160,	80,		60,		40}; 
+// The final widths to display
+const int Camera::DISPLAY_WIDTH[] =  { 2048, 2048, 1024, 1024, 512, 512, 256, 256 };
+const int Camera::DISPLAY_HEIGHT[] = { 1024, 100,  320,  160,  160, 80,  60,  40 };
 
-// JMJ 2/6/21 -- For testing, these are sizes based on of .cfg files:
-//const int Camera::WIDTH[] = { 2048,	2048,	1024,	1024,	1024,	1024,	1024,	1024 };
-//const int Camera::HEIGHT[] = { 512,	50,	320,	160,	80,	40,		30,		20 };
-
-// JMJ 6/18/21 -- For more testing, these are sizes based on PDV readout:
-//const int Camera::WIDTH[] = { 1024,	1024,	1024,	1024,	1024,	1024,	1024,	1024 };
-//const int Camera::HEIGHT[] = { 20,	20,	20,	20,	20,	20,		20,		20 };
-
-// JMJ 6/23/2021 -- these are from TurboSM (sm.cpp) for 2kx2k_NEURO_BINNED_d_
-const int Camera::WIDTH[] = { 2048, 2048, 2048, 1024, 1024, 1024, 1024, 1024 };
-//const int Camera::HEIGHT[] = { 512, 200,  50,   160,  32,   15,   128,  20 };
+// The internal quadrant widths based on .cfg files
+const int Camera::WIDTH[] = { 2048, 2048, 1024, 1024, 1024, 1024, 1024, 1024 };
 const int Camera::HEIGHT[] = { 512, 50,  160,   80,  80,   40,   30,  20 };
 
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
-const char* Camera::PROG[] = {
-	"DM2K_2048x512.cfg",
-	"DM2K_2048x50.cfg",
-	"DM2K_1024x160.cfg",
-	"DM2K_1024x80.cfg",
-	"DM2K_1024x80.cfg",
-	"DM2K_1024x40.cfg",
-	"DM2K_1024x30.cfg",
-	"DM2K_1024x20.cfg"
+const char* Camera::PROG[] = { //size		size factor to display size
+	"DM2K_2048x512.cfg", // = 1048576 px	1x width	2x height
+	"DM2K_2048x50.cfg",  // = 102400 px		1x width	2x height
+	"DM2K_1024x160.cfg", // = 163840 px		1x width	2x height
+	"DM2K_1024x80.cfg",  // = 81920 px		1x width	2x height
+	"DM2K_1024x80.cfg",  // = 81920 px		1/2x width	2x height
+	"DM2K_1024x40.cfg",  // = 40960 px		1/2x width	2x height
+	"DM2K_1024x30.cfg",  // = 30720 px		1/4x width	2x height
+	"DM2K_1024x20.cfg"   // = 20480 px		1/4x width	2x height
 };
+
+// CDS subtraction => width is divided by a factor of 2
+// Quadrants (4 PDV channels) => width and height are multiplied by a factor of 2
+// Then all heights match final heights. However, there's a remaining width factor by which to divide:
+const int Camera::WIDTH_DIVISIVE_FACTOR[] = { 1, 1, 1, 1, 2, 2, 4, 4 };
 
 const double Camera::sm_lib_rates[] = { 0.20, 0.50, 1.0, 0.64, 1.0, 2.0, 1.25, 2.0 };
 const double Camera::sm_cam_lib_rates[] = { 0.2016948, 0.5145356, 1.02354144, 0.6480876, 1.03412632, 2.05128256, 1.27713928, 2.0 };
@@ -285,6 +281,16 @@ int Camera::height() {
 	return HEIGHT[m_program];
 }
 
+// width of full image to display
+int Camera::get_display_width() {
+	return DISPLAY_WIDTH[m_program];
+}
+
+// height of full image to display
+int Camera::get_display_height() {
+	return DISPLAY_HEIGHT[m_program];
+}
+
 int Camera::depth() {
 	return m_depth;
 }
@@ -379,7 +385,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
 		start_images(ipdv);
 		int tos = 0;
-		for (int ii = 0; ii < 7; ii++) image = wait_image(ipdv);		// throw away first seven frames to clear camera saturation	
+		//for (int ii = 0; ii < 7; ii++) image = wait_image(ipdv);		// throw away first seven frames to clear camera saturation	
 																	// be sure to add 7 to COUNT in lines 327 and 399	
 		for (int i = 0; i < numPts; i++) {
 			unsigned short* privateMem = memory + ipdv * quadrantSize; // pointer to this thread's section of MEMORY	
@@ -415,19 +421,19 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 							  1, 0, 2, 3, };
 
 	// CDS subtraction for entire image (halves total memory needed for images)
-	subtractCDS(images, height() * nImages, width()); 
+	subtractCDS(images, nImages, height(), width()); 
 
-	size_t imageSize = width() * height() / 2; 
+	size_t quadSize = width() * height() / 2; 
 
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + imageSize * i;
+		unsigned short* img = images + quadSize * i;
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			deinterleave(img + (ipdv * imageSize / 4), 
-						 height(), 
-						 width(), 
+			deinterleave(img + (ipdv * quadSize / 4),
+						 height() * 4, 
+						 width() / 4, 
 						 channelOrders + ipdv * 4, 
 						 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
-			//remapQuadrantsOneImage(img + ipdv * imageSize / 4, height(), width());
+			//remapQuadrantsOneImage(img + ipdv * quadSize / 4, height(), width());
 		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
@@ -476,23 +482,62 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
 // This halves the number of columns of each raw image
 // quad_width is the final width of the frame
-void Camera::subtractCDS(unsigned short* image_data, int quad_height, int quad_width)
+void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_height, int quad_width)
 {
 	int CDS_add = 2048;
 	int CDS_width_fixed = 1024; // 6/25/21 - empirically, seems like this never changes
-	int CDS_height = (quad_width / CDS_width_fixed) / 2 * quad_height * NUM_PDV_CHANNELS; // div by 2 since loop skips 2 CDS-size rows per iter
+	int CDS_height_total = nImages * (quad_width / CDS_width_fixed) / 2 * quad_height * NUM_PDV_CHANNELS; // div by 2 since loop skips 2 CDS-size rows per iter
 
 	unsigned short* new_data = image_data;
 	unsigned short* reset_data = image_data + CDS_width_fixed;
 	unsigned short* old_data = image_data;
 
-	for (int i = 0; i < CDS_height; i++) {
+	for (int i = 0; i < CDS_height_total; i++) {
 		for (int j = 0; j < CDS_width_fixed; j++) {
 			*new_data++ = CDS_add + *old_data++ - *reset_data++;
 		}
 		reset_data += CDS_width_fixed;
 		old_data += CDS_width_fixed;
 	}
+
+	// We need to "deinterlace" CDS-sized rows -- they are read out top and bottom first, and middle rows last
+	int quadSize = quad_height * quad_width / 2; // Now only half the size since CDS subtracted
+	int CDS_height = quadSize / CDS_width_fixed;
+	vector<unsigned short> tmpBuf(quadSize, 0);
+
+	for (int k = 0; k < nImages; k++) {
+
+		unsigned short* quad_start = image_data + k * quadSize; // begininng of the kth image
+		int iTopNext = 0;
+		int iBottomNext = CDS_height - 1;
+		int iRowTarget;
+
+		for (int iSrc = 0; iSrc < CDS_height; iSrc++) {
+
+			// select the next deinterlaced row destination
+			if (iSrc % 2 == 0) {
+				iRowTarget = iTopNext;
+				iTopNext++;
+			}
+			else {
+				iRowTarget = iBottomNext;
+				iBottomNext--;
+			}
+
+			// move the row into tmpBuf
+			for (int j = 0; j < CDS_width_fixed; j++) {
+				tmpBuf[iRowTarget * CDS_width_fixed + j] = quad_start[iSrc * CDS_width_fixed + j];
+			}
+		}
+
+		// move back to in-place memory
+		for (int i = 0; i < CDS_height; i++) {
+			for (int j = 0; j < CDS_width_fixed; j++) {
+				*quad_start++ = tmpBuf[i * CDS_width_fixed + j];
+			}
+		}
+	}
+
 }
 
 // Quadrant Mapping

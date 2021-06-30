@@ -41,6 +41,9 @@ public:
 	static const char* LABEL[];
 	static const int WIDTH[];
 	static const int HEIGHT[];
+	static const int DISPLAY_WIDTH[];
+	static const int DISPLAY_HEIGHT[];
+	static const int WIDTH_DIVISIVE_FACTOR[];
 	static const char* PROG[];
 	static const int FREQ[];
 	static const double sm_lib_rates[];
@@ -94,6 +97,8 @@ public:
 
 	int width();
 	int height();
+	int get_display_width();
+	int get_display_height();
 	int depth();
 	int freq();
 
@@ -110,7 +115,7 @@ public:
 	void reassembleImages(unsigned short* images, int nImages);
 
 	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder, bool flipVertically);
-	void subtractCDS(unsigned short* image_data, int, int);
+	void subtractCDS(unsigned short* image_data, int nImages, int quad_height, int quad_width);
 
 	// Debugging
 	void printFinishedImage(unsigned short* image, const char* filename, bool CDS_done);
