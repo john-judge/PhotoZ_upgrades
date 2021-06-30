@@ -106,6 +106,12 @@ Camera::Camera() {
 	overruns = 0;
 	recovering_timeout = false;
 	m_program = 7;                // default camera program
+
+	// Initialize lookup table for deinterleaving
+	size_t lut_size = height() * width() * sizeof(lut[0]);
+	lut = (unsigned int *)_aligned_malloc(lut_size, 2);
+
+	makeLookUpTable(lut, get_display_width(), get_display_height(), width(), height());
 }
 
 Camera::~Camera() {
@@ -427,6 +433,12 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + quadSize * i;
+		size_t buffer_size = quadSize * NUM_PDV_CHANNELS;
+		unsigned short* buffer = new(std::nothrow) unsigned short[buffer_size];
+
+		frame_deInterleave(width() * height(), lut, img, buffer);
+		memcpy(img, buffer, buffer_size);
+		/*
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 			deinterleave(img + (ipdv * quadSize / 4),
 						 height() * 4, 
@@ -434,7 +446,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 						 channelOrders + ipdv * 4, 
 						 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
 			//remapQuadrantsOneImage(img + ipdv * quadSize / 4, height(), width());
-		}
+		}*/
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
 }
@@ -605,447 +617,86 @@ void Camera::printQuadrant(unsigned short* image, const char* filename) {
 	outFile.close();
 	cout << "\nWrote quadrant raw data to PhotoZ/" << filename << "\n";
 }
-
-/*
-int Camera::checkCfgLUT()
+int Camera::makeLookUpTable(unsigned int *Lut, int image_width, int image_height, int file_width, int file_height)
 {
-	int i;
+	// These are Chun's variables that get pulled from 'lib' global arrays, but for Lil Dave they are constant
+	int stripes = 4;
+	int layers = 1;
+	bool CDS = true;
 
-	for (i = 0; i < sizeof(configLUT) / sizeof(configLUT[0]); i++) {
-		if (strstr(cameraStr, configLUT[i].cfg_str))
-			return i + 1;
+	int SEGS, image_length, file_length;
+	//	int frame, segment, row, rowIndex, destIndex, rows, cols, swid, dwid, srcIndex;
+	int segment, row, rowIndex, destIndex, rows, cols, swid, dwid, srcIndex;
+	static int twokchannel[] = { 3, 2, 0, 1, 7, 6, 4, 5, 9, 8, 10, 11, 13, 12, 14, 15 };
+	static int onekchannel[] = { 3, 2, 0, 1, 5, 4, 6, 7 };
+	int *channelOrder = NULL;
+	int num_pdvChan;
+
+	SEGS = stripes * layers;
+	image_length = image_width * image_height;
+	file_length = file_width * file_height;
+	rows = file_height / layers;
+
+
+	if (stripes == 8) {
+		channelOrder = twokchannel;
+		num_pdvChan = 4;
 	}
+	else {
+		channelOrder = onekchannel;
+		num_pdvChan = 2;
+	}
+
+	swid = image_width / stripes;
+	dwid = file_width / stripes;
+
+	omp_set_num_threads(4);
+#pragma omp parallel
+	{
+		int segment;
+
+#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
+		// Appears that 'segments' are what I call 'quadrants' ?
+		// dwid = file_width / stripes, and 'stripes' is half the number of segments
+		for (segment = 0; segment < stripes; ++segment) { // going through segments in range [0,stripes]
+			srcIndex = channelOrder[segment] % 4;
+			//if (num_pdvChan == 4)
+			srcIndex += (image_length / 4)*(channelOrder[segment] / 4); // jump to the quadrant start 
+			for (row = 0, rowIndex = 0; row < rows; ++row, rowIndex += file_width) {
+				destIndex = rowIndex + dwid * segment; // jumps to the correct row for destination?
+				for (cols = dwid; cols > 0; --cols, ++destIndex) {
+					Lut[destIndex] = srcIndex;
+					srcIndex += SEGS / num_pdvChan;
+				}
+				if (CDS)
+					srcIndex += dwid * SEGS / num_pdvChan;
+			}
+		}
+#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
+		for (segment = stripes; segment < SEGS; ++segment) { // going through segments in range [stripes,SEGS]
+			srcIndex = channelOrder[segment] % 4;
+			// if (num_pdvChan == 4)
+			srcIndex += (image_length / 4)*(channelOrder[segment] / 4); // jump to the quadrant start 
+			// Now we are going down in file width -- back up? due to CDS reset row interlacing?
+			for (row = 0, rowIndex = file_length - file_width; row < rows; ++row, rowIndex -= file_width) {
+				destIndex = rowIndex + dwid * (segment - SEGS / 2);
+				for (cols = dwid; cols > 0; --cols, ++destIndex) {
+					Lut[destIndex] = srcIndex;
+					srcIndex += SEGS / num_pdvChan;
+				}
+				if (CDS)
+					srcIndex += dwid * SEGS / num_pdvChan;
+			}
+		}
+	}
+
 	return 0;
 }
 
-
-int Camera::SM_initCamera(int load_config_flag, int close_flag, int load_pro_flag)
+void Camera::frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_images, unsigned short *new_images)
 {
-	char command[256];
-	int prog;
-	char *p;
-	char home_drive[256];
-	int config_id = 0;
 
-	extern char home_dir[MAX_PATH];
-	int pdv_chan_num = 4;
-	int image_chan_order[16]; // [MAXOFFSETS];
-	int seqROI_flag;
-	int seqROI_ar[20][8];
+	for (int i = 0; i < length; ++i)
+		*(new_images++) = old_images[*(lookuptable++)];
 
-	bool TwoK_flag = true;
-	int demoFlag;
-	char liveConfig_list[8][80];
-
-	int curConfig = 7 - m_program;
-	static int config_loaded = 0;
-	int pcdFlag = 0;
-
-	// if (close_flag > 0) SM_pdv_close();
-
-	char buf[256], tmp_str[256];
-	int m, i;
-	FILE *fp;
-	char flagFname[MAX_PATH];
-	//Read Image Chan_order
-	strcat(strcpy(flagFname, home_dir), "\\SMSYSDAT\\image_chan_order.txt");
-	if (fopen_s(&fp, flagFname, "r")) {
-		for (int i = 0; i < layers_lib[0] * stripes_lib[0] * pdv_chan_num; i++) {
-			if (!fgets(buf, 255, fp))
-				goto exit;
-			sscanf(buf, "%d", &image_chan_order[i]);
-		}
-	}
-
-	strcpy(home_drive, home_dir);
-	if (p = strstr(home_drive, ":"))
-		*p = '\0';
-
-	//read sub format for 2K
-	seqROI_flag = 0;
-	strcat(strcpy(flagFname, home_dir), "\\SMSYSDAT\\draw_seqROIs.txt");
-	if (fopen_s(&fp, flagFname, "r")) {
-		memset(seqROI_ar, 0, sizeof(seqROI_ar));
-		if (!fgets(buf, 255, fp))
-			goto exit;
-		for (i = 0; i < 8; i++) {
-			if (!fgets(buf, 255, fp))
-				goto exit;
-			if (!strcmp(buf, ""))
-				goto exit;
-			strcpy(tmp_str, buf);
-			m = 0;
-			while (p = strstr(tmp_str, ",")) {
-				strcpy(buf, p + 1);
-				*p = '\0';
-				sscanf(tmp_str, "%d", &seqROI_ar[m][i]);
-				strcpy(tmp_str, buf);
-				m++;
-			}
-			seqROI_flag = m;
-		}
-	exit:
-		fclose(fp);
-	}
-
-	//read Disk Data flag
-	bool writeToDisk_flag;
-	strcat(strcpy(flagFname, home_dir), "\\SMSYSDAT\\DiskData_flag.txt");
-	if (fopen_s(&fp, flagFname, "r")) {
-		writeToDisk_flag = true;
-		fclose(fp);
-	}
-	else
-		writeToDisk_flag = false;
-
-	if (load_config_flag && !demoFlag) {
-		char edt_cfg_name[_MAX_PATH];
-		sprintf(edt_cfg_name, "%s:\\EDT\\pdv\\camera_config\\%s", home_drive, liveConfig_list[curConfig]);
-		if (TwoK_flag) {
-			config_id = checkCfgLUT();
-			if (!config_loaded || !config_id) {
-				if (fopen_s(&fp, edt_cfg_name, "r"))
-					fclose(fp);
-				else {
-					sprintf(command, "%s does not exist.", edt_cfg_name);
-					return false;
-				}
-				sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv0_0 -f %s", home_drive, edt_cfg_name);
-				system(command);
-				sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv0_1 -f %s", home_drive, edt_cfg_name);
-				system(command);
-				if (pdv_chan_num > 2) {
-					sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv1_0 -f %s", home_drive, edt_cfg_name);
-					system(command);
-					sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv1_1 -f %s", home_drive, edt_cfg_name);
-					system(command);
-				}
-				config_loaded = 1;
-			}
-		}
-		else {
-			if (fopen_s(&fp, edt_cfg_name, "r"))
-				fclose(fp);
-			else {
-				sprintf(command, "%s does not exist.", edt_cfg_name);
-				return false;
-			}
-			if (pcdFlag == 1)
-				sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv%d -f %s", home_drive, 1, edt_cfg_name);
-			else
-				sprintf(command, "%s:\\EDT\\pdv\\initcam -u pdv%d -f %s", home_drive, pdv_dev_unit, edt_cfg_name);
-			system(command);
-		}
-	}
-
-	if (demoFlag) {
-		if (darkImage != NULL)
-			_aligned_free(darkImage);
-		darkImage = (signed short int *)_aligned_malloc(cam_num_col*cam_num_row * sizeof(signed short int), 2);
-		resetZoom(1);
-		return TRUE;	//	no cam
-	}
-
-	if (close_flag >= 0) {
-		if (!SM_pdv_open(0))
-			return FALSE;
-	}
-
-	if (load_pro_flag) {
-		// determin if needed to stream to disk
-		setStream_outputs();
-
-		long repetitions = 0L;
-
-		if (curCamGain >= 0)
-			prog = 8 * curCamGain + curConfig;
-		else
-			prog = curConfig;
-		sprintf(command, "@RCL %d", prog);
-		SM_serial_command(command);
-
-		sprintf(command, "@SEQ 0");
-		SM_serial_command(command);
-
-		if (AD_flag && !demoFlag) {
-			// Set EventMode
-			sprintf(command, "@ICW $CC; 3; $21; 0; 2");
-			SM_serial_command(command);
-			//Close shutter
-			sprintf(command, "@ICW $CC; 3; $25; 1; 1");
-			SM_serial_command(command);
-			//Set ADAC rate
-			if (strstr(cameraType, "DW")) {
-				long AD_rate = (long)(50000.0*frame_interval / (8.2*BNC_ratio));
-				sprintf(command, "@ICW $CC; 4; $14; $%02lx; $%02lx; $%02lx", (AD_rate & 0xff0000L) >> 16, (AD_rate & 0xff00L) >> 8, (AD_rate & 0xffL));
-			}
-			else if (strstr(cameraType, "CCD67")) {
-				long AD_rate = (long)(50000.0 / 8.2);
-				if (win64_flag)
-					BNC_ratio = min((int)frame_interval, cam_num_col / 4);
-				else
-					BNC_ratio = 1;
-				sprintf(command, "@ICW $CC; 4; $14; $%02lx; $%02lx; $%02lx", (AD_rate & 0xff0000L) >> 16, (AD_rate & 0xff00L) >> 8, (AD_rate & 0xffL));
-			}
-			else {
-				if (curConfig == 4)
-					sprintf(command, "@ICW $CC; 4; $14; 0; 2; 97");
-				else if (curConfig == 5)
-					sprintf(command, "@ICW $CC; 4; $14; 0; 7; 216");
-				else if (curConfig == 6)
-					sprintf(command, "@ICW $CC; 4; $14; 0; 4; 198");
-				else if (curConfig == 0 || curConfig == 7)
-					sprintf(command, "@ICW $CC; 4; $14; 0; 11; 214");
-				else {
-					long AD_rate = (long)(50000.0*frame_interval / (8.0*BNC_ratio));
-					sprintf(command, "@ICW $CC; 4; $14; $%02lx; $%02lx; $%02lx", (AD_rate & 0xff0000L) >> 16, (AD_rate & 0xff00L) >> 8, (AD_rate & 0xffL));
-				}
-			}
-			strcpy(AD_rate_command, command);
-			SM_serial_command(_strupr(command));
-			//set BNC 1-4 to bipolar
-			sprintf(command, "@ICW $CC; 9; $13; 16; 16; 16; 16; 0; 0; 0; 0");
-			SM_serial_command(command);
-		}
-
-		if (strstr(cameraType, "DW")) {
-			SM_SetHourCursor();
-			if (chipgainSave != curChipGain) {
-				switch (curChipGain) {
-				case 0:
-					sprintf(command, "@ICW $48; 9; 0;1;0; 0;1;0; 0;1;0");
-					break;
-				case 1:
-					sprintf(command, "@ICW $48; 9; 0;1;0; 0;1;0; 2;3;2");
-					break;
-				case 2:
-					sprintf(command, "@ICW $48; 9; 2;3;2; 2;3;2; 2;3;2");
-					break;
-				}
-				for (int i = 1; i < 132; i++)
-					SM_serial_command(command);
-			}
-			sprintf(command, "@AAM %d", curCamGain);
-			SM_serial_command(command);
-			SM_SetNonHourCursor(crossCursorOn ? crossCursor : arrowCursor);
-		}
-		else if (strstr(cameraType, "CCID83")) {
-			if (start_line_lib[curConfig])
-				noise_seq_flag = TRUE;
-			else
-				noise_seq_flag = FALSE;
-		}
-		else if (TwoK_flag) {
-			if (config_loaded && config_id) {
-				for (int i = 0; i < pdv_chan_num; ++i)
-					pdv_setsize(pdv_pt[i], configLUT[config_id - 1].width[curConfig], configLUT[config_id - 1].height[curConfig]);
-			}
-
-			int hbin = 0;
-			if (ccd_lib_bin[curConfig] > 1)
-				hbin = 1;
-			int start_line;
-			if (start_line_lib[curConfig])
-				start_line = start_line_lib[curConfig];
-			else
-				start_line = 65 + (1024 - cam_num_row * ccd_lib_bin[curConfig]);
-
-			sprintf(command, "@SPI 0; 2");
-			SM_serial_command(command);
-			Sleep(20);
-			sprintf(command, "@SPI 0; 0");
-			SM_serial_command(command);
-			Sleep(20);
-			sprintf(command, "@SPI 0; 4");
-			SM_serial_command(command);
-			Sleep(20);
-			sprintf(command, "@PSR %d; %d", ccd_lib_bin[curConfig], start_line);
-			SM_serial_command(command);
-			Sleep(20);
-			sprintf(command, "@SPI 0; %d", hbin);
-			SM_serial_command(command);
-			Sleep(20);
-
-			if (pdv_chan_num > 2)
-				sprintf(command, "%s:\\EDT\\pdv\\setgap2k", home_drive);
-			else
-				sprintf(command, "%s:\\EDT\\pdv\\setgap1k", home_drive);
-			system(command);
-
-		}
-
-		else if (strstr(cameraType, "128X")) {
-			if (strstr(cameraType, "128X-V2")) {
-				int psr_ar[] = { 1, 49, 57, 57, 1, 49, 57, 57 };
-				if (start_line_lib[curConfig])
-					sprintf(command, "@PSR 1; %d", start_line_lib[curConfig]);
-				else
-					sprintf(command, "@PSR 1; %d", psr_ar[curConfig]);
-				Sleep(50);
-				SM_serial_command(command);
-				Sleep(20);
-				sprintf(command, "@BIN %d", ccd_lib_bin[curConfig] - 1);
-				SM_serial_command(command);
-			}
-			if (ndr_lib[curConfig] > 1)
-				sprintf(command, "%s:\\EDT\\pdv\\setgap_c3", home_drive);
-			else
-				sprintf(command, "%s:\\EDT\\pdv\\setgap_80", home_drive);
-			system(command);
-		}
-
-		if (ndr_lib[curConfig] == 1)
-			repetitions = 0;
-		else if (ndr_lib[curConfig] > 1) {
-			if (curConfig == 7)
-				repetitions = max(0, ndr_lib[curConfig] - 1);
-			else
-				repetitions = max(0, ndr_lib[curConfig] - 2);
-		}
-		else if (!ndr_lib[curConfig])
-			repetitions = set_repetition();
-
-		if (TwoK_flag && cds_lib[curConfig]) {
-			setFocusRep(focusMode);
-			OM[SM_FOCUSBOX].opt->grey = FALSE;
-			OM[SM_FOCUS].opt->grey = FALSE;
-		}
-		else {
-			if (pcdFlag) {		// This is to get rid of funny characters
-				char ret_c[256];
-				sprintf(command, "@REP?");
-				SM_pdv_query_command(command, ret_c, 256);
-			}
-
-			sprintf(command, "@REP %ld", repetitions);
-			SM_serial_command(command);
-
-			OM[SM_FOCUSBOX].opt->grey = TRUE;
-			OM[SM_FOCUS].opt->grey = TRUE;
-		}
-		if (!TwoK_flag && !strstr(cameraType, "128X"))
-			loadCamOffsets();
-
-		Sleep(50);
-		sprintf(command, "@TXC 0");
-		SM_serial_command(command);
-		sprintf(command, "@SEQ 1");
-		SM_serial_command(command);
-		SM_pdv_vals();
-
-		if (offset_chan_order[0] < 0 || cds_lib[curConfig] || TwoK_flag)
-			OM[SM_AUTOOFFSET].opt->grey = TRUE;
-		else
-			OM[SM_AUTOOFFSET].opt->grey = FALSE;
-
-		cam_num_col = config_num_col;
-		cam_num_row = config_num_row;
-		if (TwoK_flag) {
-			if (!auto_scale_w_acq)
-				auto_scale_w_acq = (pdv_chan_num / 2) * cam_num_col / ((1 + cds_lib[curConfig])*max(1, ccd_lib_bin[curConfig] / 2));
-			auto_scale_w = auto_scale_w_acq;
-
-			if (!file_frame_w)
-				file_frame_w = (pdv_chan_num >> 1)*cam_num_col / ((1 + cds_lib[curConfig])*max(1, ccd_lib_bin[curConfig] / 2));
-			else {
-				if (file_frame_w < 10)
-					file_frame_w = 10;
-				else if (file_frame_w > (pdv_chan_num >> 1)*cam_num_col / (1 + cds_lib[curConfig]))
-					file_frame_w = (pdv_chan_num >> 1)*cam_num_col / (1 + cds_lib[curConfig]);
-			}
-			if (file_frame_w < cam_num_row*(pdv_chan_num >> 1))
-				cam_num_col = cam_num_row * (pdv_chan_num >> 1);
-		}
-		if (cam_num_col_last != cam_num_col || cam_num_row_last != cam_num_row) {
-			clearTracePix();
-			cam_num_row_last = cam_num_row;
-			cam_num_col_last = cam_num_col;
-			if (darkImage != NULL)
-				_aligned_free(darkImage);
-			darkImage = (signed short int *)_aligned_malloc(cam_num_col*cam_num_row*pdv_chan_num * sizeof(signed short int) / (1 + cds_lib[curConfig]), 2);
-		}
-
-		if (pcdFlag)
-			live_factor = 2;
-		else if (TwoK_flag) {
-			live_factor = max(1, 1024 / config_num_row);
-			if (ndr_lib[curConfig])
-				live_factor *= 2;
-		}
-		else if (ndr_lib[curConfig] > 1)
-			live_factor = ndr_lib[curConfig];
-		else
-			live_factor = (int)max(1, (1 + cds_lib[curConfig]) / frame_interval);
-
-		// for CCID79 multiple pixel read
-		if (strstr(cameraType, "CCID")) {
-			multi_pix_read = super_frame_lib[curConfig];
-			if (multi_pix_read > 0)
-				multi_pix_av = 1;
-			else {
-				multi_pix_read = -multi_pix_read;
-				multi_pix_av = 0;
-			}
-		}
-		else {
-			multi_pix_read = 0;
-			multi_pix_av = 0;
-		}
-
-		single_img_size = (unsigned long)cam_num_col*cam_num_row*(1 + cds_lib[curConfig])*(1 + ndr_lib[curConfig])*pdv_chan_num*live_factor;
-		if (single_img_data != NULL)
-			_aligned_free(single_img_data);
-		single_img_data = (signed short int *)_aligned_malloc(single_img_size * sizeof(signed short int) * 2, 2);
-		if (single_img_float != NULL)
-			_aligned_free(single_img_float);
-		single_img_float = (float *)_aligned_malloc(single_img_size * sizeof(float), 2);
-		if (!initLive(pdv_chan_num, cds_lib[curConfig], 1, layers_lib[curConfig], stripes_lib[curConfig], cameraType, QuadFlag, rotate_lib[curConfig], bad_pix_lib[curConfig]))
-			return FALSE;
-		if (newDarkFlag) {
-			char ref_name[MAX_PATH];
-			DeleteFile(strcat(strcpy(ref_name, tmp_file_dir), "\\record_ref.tsm"));
-			dataExist = FALSE;
-			darkExist = FALSE;
-			d_darkExist = FALSE;
-			deactivateImgMenu();
-			darkSubFlag = FALSE;
-			if (OM[SM_DKSUBBOX].attr && !d_darkExist)
-				setChckBox(SM_DKSUBBOX);
-		}
-
-	}
-	return TRUE;
 }
-
-
-int Camera::SM_pdv_open()
-{
-	int i;
-	int pdv_units[NUM_PDV_CHANNELS] = { 0, 0, 1, 1 };
-	int pdv_channels[NUM_PDV_CHANNELS] = { 0, 1, 0, 1 };
-
-
-	for (i = 0; i < NUM_PDV_CHANNELS; i++)
-		pdv_pt[i] = pdv_open_channel(EDT_INTERFACE, pdv_units[i], pdv_channels[i]);
-
-
-	for (i = 0; i < NUM_PDV_CHANNELS; i++) {
-		if (pdv_pt[i] == NULL) {
-			SM_pdv_close();
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-
-void Camera::SM_pdv_close()
-{
-	int i;
-
-	for (i = 0; i < NUM_PDV_CHANNELS; i++) {
-		if (pdv_pt[i] != NULL)
-			pdv_close(pdv_pt[i]);
-	}
-}*/

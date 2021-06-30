@@ -39,7 +39,7 @@ void MainController::takeRli()
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
 	cam.setCamProgram(dc->getCameraProgram()); 
 	cam.init_cam();
-	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings
+	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
 
 	int bufferSizePixels = cam.get_buffer_size(0) / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).

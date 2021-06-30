@@ -22,6 +22,8 @@ class Camera {
 	bool recovering_timeout;
 	int m_program;				// which program is loaded currently
 
+	unsigned int* lut;
+
 public:
 
 #ifdef LILJOE
@@ -120,6 +122,9 @@ public:
 	// Debugging
 	void printFinishedImage(unsigned short* image, const char* filename, bool CDS_done);
 	void printQuadrant(unsigned short* image, const char* filename);
+
+	int makeLookUpTable(unsigned int * Lut, int image_width, int image_height, int file_width, int file_height);
+	void frame_deInterleave(int length, unsigned * lookuptable, unsigned short * old_images, unsigned short * new_images);
 
 	// From TurboSM
 	/*
