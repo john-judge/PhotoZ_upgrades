@@ -107,11 +107,6 @@ Camera::Camera() {
 	recovering_timeout = false;
 	m_program = 7;                // default camera program
 
-	// Initialize lookup table for deinterleaving
-	size_t lut_size = height() * width() * sizeof(lut[0]);
-	lut = (unsigned int *)_aligned_malloc(lut_size, 2);
-
-	makeLookUpTable(lut, get_display_width(), get_display_height(), width(), height());
 }
 
 Camera::~Camera() {
@@ -429,26 +424,33 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 	// CDS subtraction for entire image (halves total memory needed for images)
 	subtractCDS(images, nImages, height(), width()); 
 
+	// Initialize lookup table for deinterleaving - Chun's code
+	//size_t lut_size = height() * width() * sizeof(lut[0]);
+	//lut = (unsigned int*)_aligned_malloc(lut_size, 2);
+	//makeLookUpTable(lut, get_display_width(), get_display_height(), width(), height() );
+	//size_t buffer_size = quadSize * NUM_PDV_CHANNELS;
+	//unsigned short* buffer = new(std::nothrow) unsigned short[buffer_size];
+
 	size_t quadSize = width() * height() / 2; 
 
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + quadSize * i;
-		size_t buffer_size = quadSize * NUM_PDV_CHANNELS;
-		unsigned short* buffer = new(std::nothrow) unsigned short[buffer_size];
-
-		frame_deInterleave(width() * height(), lut, img, buffer);
-		memcpy(img, buffer, buffer_size);
-		/*
+		unsigned short* img = images + quadSize * NUM_PDV_CHANNELS * i;
+		
+		//frame_deInterleave(width() * height(), lut, img, buffer);
+		//memcpy(img, buffer, buffer_size);
+		
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			deinterleave(img + (ipdv * quadSize / 4),
-						 height() * 4, 
-						 width() / 4, 
-						 channelOrders + ipdv * 4, 
-						 (ipdv % 2 == 1)); // channels 1 and 3 are lower-half quadrants, must flip across horizontal axis
+			deinterleave(img + (ipdv * quadSize),
+				height(),
+				width() / 2,
+				channelOrders + (ipdv * 4),
+				(ipdv % 2 == 1), // lower-half quadrants, must flip across horizontal axis
+				false); // ipdv == 2 || ipdv == 1); //  flip left-right
 			//remapQuadrantsOneImage(img + ipdv * quadSize / 4, height(), width());
-		}*/
+		}
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
+	//if (lut != NULL) _aligned_free(lut);
 }
 
 // This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
@@ -456,7 +458,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 // d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
 // Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
 // flipVertically: set to true for 
-void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder, bool flipVertically) {
+void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder, bool flipVertically, bool flipHorizontally) {
 
 	// quadHeight *= 2; // Use this if we haven't yet done CDS subtraction
 
@@ -480,13 +482,10 @@ void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, co
 	// copy back to output array
 	for (int row = 0; row < quadHeight; row++) {
 		for (int col = 0; col < quadWidth; col++) {
-			if (flipVertically) {
-				buf[row * quadWidth + col] = tmpBuf[(quadHeight - 1 - row) * quadWidth + col];
-			}
-			else {
-				buf[row * quadWidth + col] = tmpBuf[row * quadWidth + col];
-			}
-			
+			int r = flipVertically ? (quadHeight - 1 - row) : row;
+			int c = flipHorizontally ? (quadWidth - 1 - col) : col;
+
+			buf[row * quadWidth + col] = tmpBuf[r * quadWidth + c];
 		}
 	}
 }
@@ -511,7 +510,8 @@ void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_heigh
 		reset_data += CDS_width_fixed;
 		old_data += CDS_width_fixed;
 	}
-
+	/*
+	*  Doesn't seem necessary based on results.
 	// We need to "deinterlace" CDS-sized rows -- they are read out top and bottom first, and middle rows last
 	int quadSize = quad_height * quad_width / 2; // Now only half the size since CDS subtracted
 	int CDS_height = quadSize / CDS_width_fixed;
@@ -548,7 +548,7 @@ void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_heigh
 				*quad_start++ = tmpBuf[i * CDS_width_fixed + j];
 			}
 		}
-	}
+	}*/
 
 }
 

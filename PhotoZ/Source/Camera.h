@@ -116,7 +116,7 @@ public:
 	void remapQuadrantsOneImage(unsigned short* buf, int quadHeight, int quadWidth);
 	void reassembleImages(unsigned short* images, int nImages);
 
-	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder, bool flipVertically);
+	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder, bool flipVertically, bool flipHorizontally);
 	void subtractCDS(unsigned short* image_data, int nImages, int quad_height, int quad_width);
 
 	// Debugging
