@@ -46,7 +46,7 @@ namespace UnitTests
 			}
 			Camera cam;
 
-			cam.subtractCDS(rawMemory, quad_height, quad_width);
+			//cam.subtractCDS(rawMemory, quad_height, quad_width);
 
 			// Validate
 			for (int ipdv = 0; ipdv < 4; ipdv++) {
@@ -122,9 +122,9 @@ namespace UnitTests
 
 				unsigned short* quadPtr = rawMemory + ipdv * quadrantSize;
 
-				cam.deinterleave(quadPtr, quad_height, quad_width, chOrd);
+				//cam.deinterleave(quadPtr, quad_height, quad_width, chOrd);
 			}
-			if (CDS) cam.subtractCDS(rawMemory, quad_height * 4, quad_width);
+			//if (CDS) cam.subtractCDS(rawMemory, quad_height * 4, quad_width);
 
 			// write test data to 
 			std::ofstream outFile;

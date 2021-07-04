@@ -114,7 +114,7 @@
     <ClCompile Include="Source\ImageEncoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Dave.cpp">
+    <ClCompile Include="Source\OpenCVImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -197,7 +197,7 @@
     <ClInclude Include="Source\ImageEncoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Dave.h">
+    <ClInclude Include="Source\OpenCVImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

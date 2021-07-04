@@ -10,6 +10,10 @@
 # TurboSM docs
 documentation/*.cpp
 documentation/*SM_take_tb*
+documentation/sm.h
+
+# Large dlls (need to manually copy to PhotoZ_upgrades/PhotoZ)
+PhotoZ/opencv_world452d.dll
 
 # Unit test ancillary data files
 UnitTest1/TestData/*.png
