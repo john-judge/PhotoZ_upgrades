@@ -1,3 +1,10 @@
+## Installation (Building from Source in Debug Mode)
+Use VS Code 2017 or 2019 and see the [common install/compile issues](https://github.com/john-judge/PhotoZ_upgrades/issues/14)
+
+Most dependencies are locally installed to the solution and automatically come included with this repository
+
+Large dependencies from [this Drive folder](https://drive.google.com/drive/folders/1sUNvC4TwXBPeE7je68-wm7P-gSD8vRd3?usp=sharing) must be copied into `PhotoZ/` (I know, not ideal)
+
 
 ## References
 
