@@ -77,7 +77,17 @@ const int Camera::layers_lib[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
 const int Camera::rotate_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 const int Camera::bad_pix_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 const int Camera::start_line_lib[] = { 576, 888, 988, 574, 766, 926, 574, 976 };
-const int Camera::super_frame_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+// Based on experimenting on 7/5/21, it appears only the 200 Hz works without superframing
+// From Chun on 1/18/21:
+// However, for high-speed configurations (all config of DaVinci), 
+// we need:
+//			pdv_setsize(pdv_ptr, width, height*factor) 
+// to make it super-frame, meaning the frame grabber will get, say 10 frames 
+// (factor=10 for first config, and proportional more>10 for other configs ) as one super frame. 
+//This is to reduce the interrupts.Otherwise the computer can’t keep up.
+const int Camera::super_frame_lib[] = { 1, 10, 10, 10, 10, 10, 10, 10 };
+
 const int Camera::NDR_start_lib[] = { 0, 0, 0, 0, 0, 0, 0, 11 };
 const int Camera::NDR_inc_lib[] = { 0, 0, 0, 0, 0, 0, 0, 8 };
 const int Camera::NDR_code_lib[] = { 0, 0, 0, 0, 0, 0, 0, 64 };
@@ -142,7 +152,6 @@ int Camera::open_channel(int ipdv) {
 	// allocate ring buffers, 4 (per channel) is EDT's recommendation
 	pdv_multibuf(pdv_pt[ipdv], 4);
 
-	// The following is never needed, instead use cfg file to change img dimension (Chun): pdv_setsize(pdv_pt[ipdv], WIDTH[m_program]/2, HEIGHT[m_program] / 2);
 	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
 }
@@ -257,6 +266,7 @@ int Camera::program() {
 void Camera::setCamProgram(int p) {
 	m_program = p;
 }
+
 void Camera::program(int p) {
 	char buf[80];
 	m_program = p;
@@ -266,10 +276,15 @@ void Camera::program(int p) {
 			if (pdv_pt[ipdv]) {
 				sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
 				serial_write(buf);
-				pdv_setsize(pdv_pt[ipdv], width(), height());
+				if (pdv_setsize(pdv_pt[ipdv], width(), height() * get_superframe_factor()) < 0)
+					cout << "Enabling superframing failed! Camera::open_channel()\n";
 			}
 		}
 	}
+}
+
+int Camera::get_superframe_factor() {
+	return super_frame_lib[m_program];
 }
 
 // width of one quadrant BEFORE CDS subtraction
@@ -309,7 +324,7 @@ bool Camera::isValidPlannedState(int num_diodes) {
 // Displays warnings to user if there are problems
 bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		int PDV_size = get_buffer_size(ipdv);
+		int PDV_size = get_buffer_size(ipdv) / get_superframe_factor();
 		if (num_diodes - num_fp_diodes != PDV_size / 2) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< num_diodes << " pixels" \
@@ -343,12 +358,13 @@ bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 // Properly memory allocation for nImages images in preparation for image acquisition
 // Exposing this functions allows drivers to reuse pointers/buffers more easily
 unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
-	unsigned short* memory = new(std::nothrow) unsigned short[(size_t)num_diodes * (numPts + 1) * NUM_PDV_CHANNELS];
+	//unsigned short* memory = new(std::nothrow) unsigned short[(size_t)num_diodes * (numPts + 1) * NUM_PDV_CHANNELS];
+	unsigned short* memory = new(std::nothrow) unsigned short[(size_t)(width() * height()) * (numPts + 1) * NUM_PDV_CHANNELS];
 	if (!memory) {
 		fl_alert("Ran out of memory!\n");
 		return nullptr;
 	}
-	memset(memory, 0, num_diodes * (numPts + 1) * NUM_PDV_CHANNELS * sizeof(short));
+	memset(memory, 0, (width() * height()) * (numPts + 1) * NUM_PDV_CHANNELS * sizeof(short));
 	return memory;
 }
 
@@ -444,7 +460,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 		//memcpy(img, buffer, buffer_size);
 		
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			deinterleave(img + (ipdv * quadSize),
+			deinterleave(img + (ipdv * quadSize * nImages / NUM_PDV_CHANNELS), // adopted new raw image format, skip channel blocks
 				tmpBuf + (ipdv * quadSize),
 				height(),
 				width() / 2,

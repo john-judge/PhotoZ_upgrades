@@ -37,14 +37,12 @@ void MainController::takeRli()
 		}
 	}
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
-	cam.setCamProgram(dc->getCameraProgram()); 
+	cam.program(dc->getCameraProgram()); 
 	cam.init_cam();
 	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
-
-	int bufferSizePixels = cam.get_buffer_size(0) / 2; //array size of one quadrant with CDS values, in pixels (Each pixel is 2 bytes).
 	int array_diodes = dataArray->num_raw_array_diodes();
-	int num_RLI_pts = 475;
+	int num_RLI_pts = 480;
 	
 	//-------------------------------------------
 	// validate image quadrant size match expected
@@ -58,22 +56,22 @@ void MainController::takeRli()
 	// Allocate trace data
 	short** traceData = new short*[array_diodes];
 	for (i = 0; i < array_diodes; i++) {
-		traceData[i] = new short[475];
+		traceData[i] = new short[num_RLI_pts];
 	}
 
 	cam.get_image_info(0);
 
 	dapControl->setDAPs();			//conveted to DAQmx
 
-	if (dapControl->takeRli(memory, cam))
+	if (dapControl->takeRli(memory, cam, num_RLI_pts))
 		fl_alert(" Main Controller::takeRli Timeouts ocurred! Check camera and connections.");
 	dapControl->releaseDAPs();
 
 	// Arrange Data from Memory to traceData
 
-	for (i = 0; i < bufferSizePixels; i++) {
-		for (j = 0; j < 475; j++) {
-			traceData[i][j] = memory[i + j * bufferSizePixels];
+	for (i = 0; i < array_diodes; i++) {
+		for (j = 0; j < num_RLI_pts; j++) {
+			traceData[i][j] = memory[i + j * array_diodes];
 		}
 	}
 	// Release memory
@@ -85,7 +83,7 @@ void MainController::takeRli()
 	long low, high;
 	short max;
 
-	for (i = 0; i < bufferSizePixels; i++) {				//	high and low refer to early and late in the acquisition time - must be before the light is on!!
+	for (i = 0; i < array_diodes; i++) {				//	high and low refer to early and late in the acquisition time - must be before the light is on!!
 		// Low : 100~150
 		for (low = 0, j = 100; j < 150; j++) {
 			low += traceData[i][j];
@@ -111,7 +109,7 @@ void MainController::takeRli()
 
 	// Release Memory
 	//
-	for (i = 0; i < bufferSizePixels; i++) {
+	for (i = 0; i < array_diodes; i++) {
 		delete[] traceData[i];
 	}
 	delete[] traceData;

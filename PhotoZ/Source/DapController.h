@@ -86,7 +86,7 @@ public:
 	//uint8_t *pseudoOutputs;
 
 	// RLI
-	int takeRli(unsigned short*, Camera&);
+	int takeRli(unsigned short*, Camera&, int);
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
