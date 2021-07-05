@@ -433,6 +433,10 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 
 	size_t quadSize = width() * height() / 2; 
 
+	unsigned short* tmpBuf = new(std::nothrow) unsigned short[quadSize * NUM_PDV_CHANNELS];
+
+
+	//#pragma omp parallel for	 // tack this on, reorder loops, and maybe we will see >4x speedup
 	for (int i = 0; i < nImages; i++) {
 		unsigned short* img = images + quadSize * NUM_PDV_CHANNELS * i;
 		
@@ -441,54 +445,20 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 		
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 			deinterleave(img + (ipdv * quadSize),
+				tmpBuf + (ipdv * quadSize),
 				height(),
 				width() / 2,
-				channelOrders + (ipdv * 4),
-				(ipdv % 2 == 1), // lower-half quadrants, must flip across horizontal axis
-				false); // ipdv == 2 || ipdv == 1); //  flip left-right
-			//remapQuadrantsOneImage(img + ipdv * quadSize / 4, height(), width());
+				channelOrders + (ipdv * 4)); 
 		}
+
+		// Operates on all 4 PDV quadrants, overwriting orig image
+		remapQuadrantsOneImage(tmpBuf, img, height(), width() / 2);
+
 		if (i % 100 == 0) cout << "Image " << i << " of " << nImages << " done.\n";
 	}
 	//if (lut != NULL) _aligned_free(lut);
 }
 
-// This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
-// Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
-// d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
-// Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
-// flipVertically: set to true for 
-void Camera::deinterleave(unsigned short* buf, int quadHeight, int quadWidth, const int* channelOrder, bool flipVertically, bool flipHorizontally) {
-
-	// quadHeight *= 2; // Use this if we haven't yet done CDS subtraction
-
-	int quadSize = quadWidth * quadHeight;
-	// Idea: do this in place for mem efficiency if needed
-	vector<unsigned short> tmpBuf(quadSize, 0);
-	int numCamChannels = 4; // each PDV channel (quadrant) has 4 camera channels
-
-	unsigned short* data_ptr = buf;
-	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
-	int camChannelWidth = quadWidth / numCamChannels;
-
-	for (int row = 0; row < quadHeight; row++) {
-		for (int col = 0; col < quadWidth; col++) {
-			int chOrd = channelOrder[col % numCamChannels];
-			int camChOffset = chOrd * camChannelWidth;
-			tmpBuf[row * quadWidth + (col / numCamChannels) + camChOffset]
-				= *data_ptr++;
-		}
-	}
-	// copy back to output array
-	for (int row = 0; row < quadHeight; row++) {
-		for (int col = 0; col < quadWidth; col++) {
-			int r = flipVertically ? (quadHeight - 1 - row) : row;
-			int c = flipHorizontally ? (quadWidth - 1 - col) : col;
-
-			buf[row * quadWidth + col] = tmpBuf[r * quadWidth + c];
-		}
-	}
-}
 
 // Subtract reset data (stripes) for correlated double sampling (CDS) for a single image.
 // This halves the number of columns of each raw image
@@ -510,47 +480,42 @@ void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_heigh
 		reset_data += CDS_width_fixed;
 		old_data += CDS_width_fixed;
 	}
-	/*
-	*  Doesn't seem necessary based on results.
-	// We need to "deinterlace" CDS-sized rows -- they are read out top and bottom first, and middle rows last
-	int quadSize = quad_height * quad_width / 2; // Now only half the size since CDS subtracted
-	int CDS_height = quadSize / CDS_width_fixed;
-	vector<unsigned short> tmpBuf(quadSize, 0);
+}
 
-	for (int k = 0; k < nImages; k++) {
+// This deinterleave follows Chun's specs over email (row-by-row) instead of quadrant_readout.docx
+// Before deinterleaving, the raw data order for each row comes in like this (d for pixel data, r for pixel reset, which would be used for the next frame):
+// d1, d64, d128, d192, d2, d65, d129, d192, d3,d256, r1, r64, r128, r192 r256 (total 512)
+// Note quadWidth is the width NOT doubled for CDS, i.e. the final image width
+void Camera::deinterleave(unsigned short* srcBuf, unsigned short* dstBuf, int quadHeight, int quadWidth, const int* channelOrder) {
 
-		unsigned short* quad_start = image_data + k * quadSize; // begininng of the kth image
-		int iTopNext = 0;
-		int iBottomNext = CDS_height - 1;
-		int iRowTarget;
+	int quadSize = quadWidth * quadHeight;
 
-		for (int iSrc = 0; iSrc < CDS_height; iSrc++) {
+	int numCamChannels = 4; // each PDV channel (quadrant) has 4 camera channels
 
-			// select the next deinterlaced row destination
-			if (iSrc % 2 == 0) {
-				iRowTarget = iTopNext;
-				iTopNext++;
-			}
-			else {
-				iRowTarget = iBottomNext;
-				iBottomNext--;
-			}
+	unsigned short* data_ptr = srcBuf;
+	// This is the width spanned by the pixels from 1 of the 4 camera channels per PDV channel:
+	int camChannelWidth = quadWidth / numCamChannels;
 
-			// move the row into tmpBuf
-			for (int j = 0; j < CDS_width_fixed; j++) {
-				tmpBuf[iRowTarget * CDS_width_fixed + j] = quad_start[iSrc * CDS_width_fixed + j];
-			}
+	for (int row = 0; row < quadHeight; row++) {
+		for (int col = 0; col < quadWidth; col++) {
+			int chOrd = channelOrder[col % numCamChannels];
+			int camChOffset = chOrd * camChannelWidth;
+			
+			dstBuf[row * quadWidth + (col / numCamChannels) + camChOffset]
+				= *data_ptr++;
 		}
+	}
+	/* copy back to output array
+	for (int row = 0; row < quadHeight; row++) {
+		for (int col = 0; col < quadWidth; col++) {
+			int r = flipVertically ? (quadHeight - 1 - row) : row;
+			int c = flipHorizontally ? (quadWidth - 1 - col) : col;
 
-		// move back to in-place memory
-		for (int i = 0; i < CDS_height; i++) {
-			for (int j = 0; j < CDS_width_fixed; j++) {
-				*quad_start++ = tmpBuf[i * CDS_width_fixed + j];
-			}
+			srcBuf[row * quadWidth + col] = dstBuf[r * quadWidth + c];
 		}
 	}*/
-
 }
+
 
 // Quadrant Mapping
 // Since CDS subtraction halved the image size, we now have auxiliary space
@@ -558,38 +523,54 @@ void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_heigh
 //		- space out the rows of quadrants 0 and 2
 //		- interleave in the rows of quadrants 1 and 3
 
-// PDV channels for little Dave are readout in this order: 
-//  0 - upper left, 
-//  1 - lower left, 
-//  2 - upper right, 
-//  3 - lower right.
 
-void Camera::remapQuadrantsOneImage(unsigned short* image, int quadHeight, int quadWidth) {
+void Camera::remapQuadrantsOneImage(unsigned short* srcBuf, unsigned short* dstBuf, int quadHeight, int quadWidth) {
 
-	int quadrantSize = quadHeight * quadWidth;
+	int quadSize = quadHeight * quadWidth;
+	int img_width = quadWidth * 2;
+	int img_height = quadHeight * 2;
+	bool flipVertically, flipHorizontally;
 
-	// Even channels (Quadrants 0 and 2) - space out
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
-		unsigned short* srcRow = image + quadrantSize * ipdv + quadrantSize / 2 - quadWidth;
-		unsigned short* dstRow = image + quadrantSize * ipdv + quadrantSize - quadWidth;
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 
-		for (int row = int(quadHeight / 2) - 1; row >= 0; row--) {
-			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
-			dstRow -= 2 * quadWidth;
-			srcRow -= quadWidth;
+		flipVertically = (ipdv % 2 == 1);
+		flipHorizontally = false;
+
+		int img_row, img_col;
+
+		// PDV channels for little Dave are readout in this order: 
+
+		//  0 - upper left, 
+		if (ipdv == 0) {
+			img_row = 0;
+			img_col = 0;
 		}
-	}
+		//  1 - upper right,  
+		if (ipdv == 1) {
+			img_row = quadHeight;
+			img_col = 0;
+		}
+		//  2 - lower left, 
+		if (ipdv == 2) {
+			img_row = 0;
+			img_col = quadWidth;
+		}
+		//  3 - lower right.
+		if (ipdv == 3) {
+			img_col = quadWidth;
+			img_row = quadHeight;
+		}
 
-	// Odd channels (Quadrants 1 and 3) - intereave-in rows into the previous channel's rows
-	for (int ipdv = 1; ipdv < NUM_PDV_CHANNELS; ipdv += 2) {
 
-		unsigned short* srcRow = image + quadrantSize * ipdv;
-		unsigned short* dstRow = image + quadrantSize * (ipdv - 1) + quadWidth;
-		// Quadrant 1
-		for (int row = 0; row < int(quadHeight / 2); row++) {
-			memcpy(dstRow, srcRow, quadWidth * sizeof(unsigned short));
-			dstRow += 2 * quadWidth;
-			srcRow += quadWidth;
+		for (int row = 0; row < quadHeight; row++) {
+			for (int col = 0; col < quadWidth; col++) {
+
+				int r = flipVertically ? (quadHeight - 1 - row) : row;
+				int c = flipHorizontally ? (quadWidth - 1 - col) : col;
+
+				dstBuf[(img_row + row) * img_width + (img_col + col)]
+					= srcBuf[ipdv * quadSize + r * quadWidth + c];
+			}
 		}
 	}
 }

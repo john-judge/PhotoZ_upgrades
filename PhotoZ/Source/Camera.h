@@ -113,10 +113,10 @@ public:
 	bool acquireImages(unsigned short* images, int numPts);
 
 	// camera utility functions. Generally drivers should not need to call
-	void remapQuadrantsOneImage(unsigned short* buf, int quadHeight, int quadWidth);
+	void remapQuadrantsOneImage(unsigned short* srcBuf, unsigned short* dstBuf, int quadHeight, int quadWidth);
 	void reassembleImages(unsigned short* images, int nImages);
 
-	void deinterleave(unsigned short* buf, int quad_height, int quad_width, const int* channelOrder, bool flipVertically, bool flipHorizontally);
+	void deinterleave(unsigned short* srcBuf, unsigned short* dstBuf, int quadHeight, int quadWidth, const int* channelOrder);
 	void subtractCDS(unsigned short* image_data, int nImages, int quad_height, int quad_width);
 
 	// Debugging
