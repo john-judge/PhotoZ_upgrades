@@ -445,6 +445,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 
+	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// acquire halfwayPts (200) dark frames with LED off	
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
@@ -461,9 +462,9 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	}
 
 	// parallel section pauses, threads sync and close	
-	NI_openShutter(1); 
+	NI_openShutter(1);  
 	Sleep(100);
-	omp_set_num_threads(4);
+	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// parallel acquisition resumes now that light is on	
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
@@ -487,9 +488,9 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	// Debug: print raw images out
 	unordered_map<int, std::string> framesToDebug;
 	framesToDebug[0] = "0";
-	//framesToDebug[150] = "150";
+	framesToDebug[150] = "150";
 	framesToDebug[350] = "350";
-	//framesToDebug[450] = "450";
+	framesToDebug[450] = "450";
 	unsigned short* img = (unsigned short*)(memory);
 	for (int i = 0; i < rliPts; i++) {
 		bool debug = framesToDebug.find(i) != framesToDebug.end();

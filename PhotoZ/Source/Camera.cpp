@@ -50,7 +50,8 @@ const int Camera::HEIGHT[] = { 512, 50,  160,   80,  80,   40,   30,  20 };
 const int Camera::FREQ[] = { 200,	2000,	1000,	2000,	2000,	4000,	5000,	7500 };
 const char* Camera::PROG[] = { //size		size factor to display size
 	"DM2K_2048x512.cfg", // = 1048576 px	1x width	2x height
-	"DM2K_2048x50.cfg",  // = 102400 px		1x width	2x height
+	//"DM2K_2048x50.cfg",  // = 102400 px		1x width	2x height
+	"DM2K_2048x500.cfg",  // = 102400 px		1x width	2x height   <- superframing x10 attempt
 	"DM2K_1024x160.cfg", // = 163840 px		1x width	2x height
 	"DM2K_1024x80.cfg",  // = 81920 px		1x width	2x height
 	"DM2K_1024x80.cfg",  // = 81920 px		1/2x width	2x height
@@ -178,6 +179,8 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
 	system(command);
 
+	//program(m_program);
+
 	int hbin = 0;
 	if (ccd_lib_bin[m_program] > 1) hbin = 1;
 	int start_line;
@@ -272,9 +275,8 @@ void Camera::program(int p) {
 	m_program = p;
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		if (pdv_pt[ipdv]) {
-			int prog = m_program;
 			if (pdv_pt[ipdv]) {
-				sprintf_s(buf, "@RCL %d\r", prog);		// sending RCL first did not work!
+				sprintf_s(buf, "@RCL %d\r", m_program);		// sending RCL first did not work!
 				serial_write(buf);
 				if (pdv_setsize(pdv_pt[ipdv], width(), height() * get_superframe_factor()) < 0)
 					cout << "Enabling superframing failed! Camera::open_channel()\n";
@@ -454,13 +456,13 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 
 	//#pragma omp parallel for	 // tack this on, reorder loops, and maybe we will see >4x speedup
 	for (int i = 0; i < nImages; i++) {
-		unsigned short* img = images + quadSize * NUM_PDV_CHANNELS * i;
+		unsigned short* img = images + quadSize * i;
 		
 		//frame_deInterleave(width() * height(), lut, img, buffer);
 		//memcpy(img, buffer, buffer_size);
 		
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			deinterleave(img + (ipdv * quadSize * nImages / NUM_PDV_CHANNELS), // adopted new raw image format, skip channel blocks
+			deinterleave(img + (ipdv * quadSize * nImages), // adopted new raw image format, skip channel blocks
 				tmpBuf + (ipdv * quadSize),
 				height(),
 				width() / 2,
@@ -576,7 +578,6 @@ void Camera::remapQuadrantsOneImage(unsigned short* srcBuf, unsigned short* dstB
 			img_col = quadWidth;
 			img_row = quadHeight;
 		}
-
 
 		for (int row = 0; row < quadHeight; row++) {
 			for (int col = 0; col < quadWidth; col++) {

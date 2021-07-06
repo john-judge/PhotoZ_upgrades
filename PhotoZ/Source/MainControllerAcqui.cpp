@@ -37,7 +37,7 @@ void MainController::takeRli()
 		}
 	}
 	// Now that channel(s) are open, read .cfg files and set camera dimensions
-	cam.program(dc->getCameraProgram()); 
+	cam.setCamProgram(dc->getCameraProgram());
 	cam.init_cam();
 	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
