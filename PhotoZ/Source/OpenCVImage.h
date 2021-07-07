@@ -37,7 +37,7 @@ protected:
 	Mat fimage;
 	int iscolor;
 	MouseCallback mouse_cb;
-	void *cb_param; //Vincent: a parameter for the callback function
+	void *cb_param; //a parameter for the callback function
 	bool fit;
 	void draw(int, int, int, int);
 	void draw() {

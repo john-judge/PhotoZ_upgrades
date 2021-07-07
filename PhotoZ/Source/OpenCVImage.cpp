@@ -18,7 +18,6 @@ Mat fl_LoadImage(char*filename, int iscolor)
 		origin = cd->origin;
 		mat = cvGetMat(cd, &stub);
 		cvConvertImage(mat, cd, (origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB);
-		// İmaj withStep yanlış hesaplanıyor (with > 600 gibi ) o yüzden resize ederek yapıyoruz !
 	}
 
 	if (cd->widthStep != cd->width*cd->nChannels) {
@@ -63,16 +62,6 @@ void Fl_OpenCV::draw(int xx, int yy, int ww, int hh)
 	float fx, fy;// , scale;
 	fx = (float)image->cols / ww;
 	fy = (float)image->rows / hh;
-
-
-	/*Vincent (removed): needed to keep the image aspect ratio
-	if(fx>fy)
-	   scale=fx;
-	 else
-	   scale=fy;
-	 if(fit && scale < 1.0){
-	   scale=1.0;
-	 }*/
 
 	fimage.release();
 

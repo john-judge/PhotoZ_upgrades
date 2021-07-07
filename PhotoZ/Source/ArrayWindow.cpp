@@ -23,8 +23,9 @@
 #include "DAPController.h"
 #include "DataArray.h"
 #include "SignalProcessor.h"
-#include "LiveFeed.h"				//new
+#include "LiveFeed.h"
 #include "Definitions.h"
+#include "OpenCVImage.h"
 
 #include <iostream>
 
@@ -35,7 +36,9 @@ extern char txtBuf[];
 ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 :Fl_Double_Window(X,Y,W,H)
 {
-	image=new Image();
+	image = new Image();
+
+	bg_image = new Fl_OpenCV(0, 0, 1, 1);
 
 	// indexes of the FP diodes will be negative
 	for (int i = 0; i < NUM_FP_DIODES; i++)
@@ -44,9 +47,9 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 	fg=FL_WHITE;
 	bg=FL_BLACK;
 	background = BG_SIGNAL_TO_NOISE; // JMJ updated default to SNR background
-	showTrace=1;
-	showRliValue=0;
-	showDiodeNum=0;
+	showTrace = 0; // JMJ 7/6/21 - Disable trace in AW by default. It's not that useful for lil Dave, and GUI performance is now a concern.
+	showRliValue = 0;
+	showDiodeNum = 0;
 
 	yScale  = pow((0.2*log2(1 + 1)),1); // yScale and yScale2 = 100 in photoz 3.0
 	yScale2 = pow((0.2*log2(1 + 1)),1);
@@ -180,7 +183,7 @@ void ArrayWindow::setBackground(int p)
 }
 
 //=============================================================================
-void ArrayWindow::changeNumDiodes()			// new ; for binning
+void ArrayWindow::changeNumDiodes()			// for binning
 {
 	int num_bdiodes = dataArray->num_binned_diodes();
 	int change = num_bdiodes - (int) diodes.size();
@@ -332,11 +335,11 @@ int ArrayWindow::handle(int event)
 	case FL_MOUSEWHEEL: // JMJ 12/12/2020
 		scrollAmt = Fl::event_dy() > 0 ? -0.2 : 0.2;
 		tmpZoomFactor = zoomFactor;
-		zoomFactor = min(50, max(0.8, zoomFactor + scrollAmt));
+		zoomFactor = std::min((const double)50, max(0.8, zoomFactor + scrollAmt));
 
 		if (zoomFactor != tmpZoomFactor) {
 			// As we zoom, automatically adjust binning ~ # raw / zoom
-			dBinning = max(1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
+			dBinning = (int)std::max((const double)1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
 
 			mc->set_digital_binning(dBinning);
 
@@ -988,7 +991,8 @@ void ArrayWindow::resizeDiodes()
 	int array_height = dataArray->binned_height();
 	int num_bdiodes = dataArray->num_binned_diodes();
 
-	int diode_width = min(w() * num * zoomFactor / (den * array_width), h() * num / (den * array_height));
+	int diode_width = std::min(int(w() * num * zoomFactor / (den * array_width)), 
+							   int(h() * num / (den * array_height)));
 	int diode_height = diode_width * zoomFactor;
 
 	// Center the array

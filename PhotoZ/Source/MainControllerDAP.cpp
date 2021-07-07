@@ -215,12 +215,12 @@ void MainController::setCameraProgram(int p)
 	
 	// Resize the array
 	aw->clearSelected(0);
-	dataArray->changeRawDataSize(Camera::WIDTH[p], Camera::HEIGHT[p]);
+	dataArray->changeRawDataSize(Camera::DISPLAY_WIDTH[p], Camera::DISPLAY_HEIGHT[p]);
 	aw->changeNumDiodes();
 	cw->changeNumDiodes();
 	cw->setPointXYZ();
 	sp->changeNumDiodes();
-	cout << "mcDAP line 216 setCamProg p WIDTH and HEIGHT "<< p<<"  "<< Camera::WIDTH[p]<<"  " << Camera::HEIGHT[p]<<"\n";
+	cout << "mcDAP line 216 setCamProg p WIDTH and HEIGHT "<< p<<"  "<< Camera::DISPLAY_WIDTH[p]<<"  " << Camera::DISPLAY_HEIGHT[p]<<"\n";
 	// Redraw DAP window
 	dw->redraw();
 
