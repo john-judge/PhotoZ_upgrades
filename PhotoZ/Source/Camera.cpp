@@ -179,7 +179,10 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
 	system(command);
 
-	program(m_program);
+	//sprintf(command, "@RCL %d", m_program);
+	//serial_command(command);
+
+	program(m_program); // calls pdv_setsize, like sm.cpp line 1982
 
 	int hbin = 0;
 	if (ccd_lib_bin[m_program] > 1) hbin = 1;
@@ -187,13 +190,13 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	if (start_line_lib[m_program]) start_line = start_line_lib[m_program];
 	else start_line = 65 + (1024 - 2 * HEIGHT[m_program] * ccd_lib_bin[m_program]);		// Chun says cam_num_row gets doubled - did not fully understand
 
-	sprintf(command, "@SPI 0;2");
+	sprintf(command, "@SPI 0; 2");
 	serial_write(command);
 	Sleep(20);
-	sprintf(command, "@SPI 0;0");
+	sprintf(command, "@SPI 0; 0");
 	serial_write(command);
 	Sleep(20);
-	sprintf(command, "@SPI 0;4");
+	sprintf(command, "@SPI 0; 4");
 	serial_write(command);
 	Sleep(20);
 	sprintf(command, "@PSR %d; %d", ccd_lib_bin[m_program], start_line);
@@ -205,6 +208,9 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 
 	sprintf(command, "c:\\EDT\\pdv\\setgap2k");// this is a batch job that calls pdb -u 0 -c 0 -f setgap200.txt four times for the different channels. The console indicates successful execution
 	system(command);
+
+	// To Do: need @REP (setFocusRep) here?
+
 	return;
 }
 
@@ -259,10 +265,13 @@ unsigned char* Camera::wait_image(int ipdv) {
 void Camera::serial_write(const char* buf) {
 	// Writes a commend 
 	char buffer[512];
+	//serial_command(buf); // Switch from pdv_serial_write to SM-similar pdv_serial_command
+	
 	pdv_serial_read(pdv_pt[0], buffer, 512 - 1); // flush camera buffer of lingering data
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
 	pdv_serial_write(pdv_pt[0], buffer, (int)strlen(buffer));
+	
 }
 
 int Camera::num_timeouts(int ipdv) {
@@ -434,7 +443,6 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 		}
 	}
 	return failed;
-
 }
 
 // Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
@@ -549,8 +557,6 @@ void Camera::deinterleave(unsigned short* srcBuf, unsigned short* dstBuf, int qu
 // to use to arrange the quadrants of the full image
 //		- space out the rows of quadrants 0 and 2
 //		- interleave in the rows of quadrants 1 and 3
-
-
 void Camera::remapQuadrantsOneImage(unsigned short* srcBuf, unsigned short* dstBuf, int quadHeight, int quadWidth) {
 
 	int quadSize = quadHeight * quadWidth;
@@ -624,86 +630,14 @@ void Camera::printQuadrant(unsigned short* image, const char* filename) {
 	outFile.close();
 	cout << "\nWrote quadrant raw data to PhotoZ/" << filename << "\n";
 }
-int Camera::makeLookUpTable(unsigned int *Lut, int image_width, int image_height, int file_width, int file_height)
+
+// Issue a serial command to PDV channel 0
+void Camera::serial_command(const char* command)
 {
-	// These are Chun's variables that get pulled from 'lib' global arrays, but for Lil Dave they are constant
-	int stripes = 4;
-	int layers = 1;
-	bool CDS = true;
+	char ret_c[256];
+	int toRead;
 
-	int SEGS, image_length, file_length;
-	//	int frame, segment, row, rowIndex, destIndex, rows, cols, swid, dwid, srcIndex;
-	int segment, row, rowIndex, destIndex, rows, cols, swid, dwid, srcIndex;
-	static int twokchannel[] = { 3, 2, 0, 1, 7, 6, 4, 5, 9, 8, 10, 11, 13, 12, 14, 15 };
-	static int onekchannel[] = { 3, 2, 0, 1, 5, 4, 6, 7 };
-	int *channelOrder = NULL;
-	int num_pdvChan;
-
-	SEGS = stripes * layers;
-	image_length = image_width * image_height;
-	file_length = file_width * file_height;
-	rows = file_height / layers;
-
-
-	if (stripes == 8) {
-		channelOrder = twokchannel;
-		num_pdvChan = 4;
-	}
-	else {
-		channelOrder = onekchannel;
-		num_pdvChan = 2;
-	}
-
-	swid = image_width / stripes;
-	dwid = file_width / stripes;
-
-	omp_set_num_threads(4);
-#pragma omp parallel
-	{
-		int segment;
-
-#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
-		// Appears that 'segments' are what I call 'quadrants' ?
-		// dwid = file_width / stripes, and 'stripes' is half the number of segments
-		for (segment = 0; segment < stripes; ++segment) { // going through segments in range [0,stripes]
-			srcIndex = channelOrder[segment] % 4;
-			//if (num_pdvChan == 4)
-			srcIndex += (image_length / 4)*(channelOrder[segment] / 4); // jump to the quadrant start 
-			for (row = 0, rowIndex = 0; row < rows; ++row, rowIndex += file_width) {
-				destIndex = rowIndex + dwid * segment; // jumps to the correct row for destination?
-				for (cols = dwid; cols > 0; --cols, ++destIndex) {
-					Lut[destIndex] = srcIndex;
-					srcIndex += SEGS / num_pdvChan;
-				}
-				if (CDS)
-					srcIndex += dwid * SEGS / num_pdvChan;
-			}
-		}
-#pragma omp parallel for private(row,cols,segment,rowIndex,srcIndex,destIndex)
-		for (segment = stripes; segment < SEGS; ++segment) { // going through segments in range [stripes,SEGS]
-			srcIndex = channelOrder[segment] % 4;
-			// if (num_pdvChan == 4)
-			srcIndex += (image_length / 4)*(channelOrder[segment] / 4); // jump to the quadrant start 
-			// Now we are going down in file width -- back up? due to CDS reset row interlacing?
-			for (row = 0, rowIndex = file_length - file_width; row < rows; ++row, rowIndex -= file_width) {
-				destIndex = rowIndex + dwid * (segment - SEGS / 2);
-				for (cols = dwid; cols > 0; --cols, ++destIndex) {
-					Lut[destIndex] = srcIndex;
-					srcIndex += SEGS / num_pdvChan;
-				}
-				if (CDS)
-					srcIndex += dwid * SEGS / num_pdvChan;
-			}
-		}
-	}
-
-	return 0;
-}
-
-void Camera::frame_deInterleave(int length, unsigned *lookuptable, unsigned short *old_images, unsigned short *new_images)
-{
-
-	for (int i = 0; i < length; ++i)
-		*(new_images++) = old_images[*(lookuptable++)];
-
+	pdv_serial_command(pdv_pt[0], command);
+	toRead = pdv_serial_wait(pdv_pt[0], 255, 256);
+	pdv_serial_read(pdv_pt[0], ret_c, toRead);
 }
