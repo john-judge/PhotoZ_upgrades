@@ -66,6 +66,8 @@ visual: branch for reworking GUI to be more usable and less memory-hungry
 
 ## Other Information
 
+PhotoZ/Source/fluid.exe is used to edit the GUI.
+
 Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) on the Joe computer
 
 EDT/PDV API code with examples can be found at C:/EDT/pdv
