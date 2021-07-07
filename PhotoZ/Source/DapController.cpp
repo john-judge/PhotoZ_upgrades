@@ -450,7 +450,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		cam.start_images(ipdv);
-		unsigned short* privateMem = memory + (ipdv * rliPts * quadrantSize); // pointer to this thread's section of MEMORY	
+		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts); // pointer to this thread's section of MEMORY	
 		for (int i = 0; i < halfwayPts; i+=superframe_factor)
 		{
 			// acquire data for this image from the IPDVth channel	
@@ -462,16 +462,16 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	}
 
 	// parallel section pauses, threads sync and close	
-	NI_openShutter(1);  
+	NI_openShutter(1);
 	Sleep(100);
 	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// parallel acquisition resumes now that light is on	
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		unsigned short* privateMem = memory + (ipdv * rliPts * quadrantSize); // pointer to this thread's section of MEMORY	
+		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts); // pointer to this thread's section of MEMORY	
 		privateMem += (quadrantSize * halfwayPts); // offset of where we left off	
 			 
-		for (int i = halfwayPts; i < rliPts; i+=superframe_factor) {		// acquire 275 frames with LED on	
+		for (int i = halfwayPts; i < rliPts; i+=superframe_factor) {		// acquire rest of frames with LED on	
 			// acquire data for this image from the IPDVth channel	
 			image = cam.wait_image(ipdv);
 			// Save the image to process later	
