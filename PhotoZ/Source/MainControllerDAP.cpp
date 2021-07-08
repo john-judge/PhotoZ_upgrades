@@ -209,8 +209,8 @@ void MainController::set_digital_binning(int dbinning)
 void MainController::setCameraProgram(int p)
 {
 	dc->setCameraProgram(p);
-	Camera cam;
-	cam.setCamProgram(p);
+	//Camera cam;
+	//cam.setCamProgram(p);
 	dc->setDuration();
 	
 	// Resize the array
