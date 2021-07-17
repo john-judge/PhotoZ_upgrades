@@ -28,15 +28,11 @@ void MainController::takeRli()
 	int i, j;		// i is array index; j = time index
 
 	Camera cam;
-	//-------------------------------------------
-	// Attempt channel open before allocating memory
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		if (cam.open_channel(ipdv)) {
-			fl_alert("Main Cont Acq line 45 Failed to open the channel!\n");
-			return;
-		}
-	}
-	// Now that channel(s) are open, read .cfg files and set camera dimensions
+
+	// read .cfg files
+	cam.load_cfg();
+
+	// Now that channel(s) are open, and set camera dimensions
 	cam.setCamProgram(dc->getCameraProgram());
 	cam.init_cam();
 	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.

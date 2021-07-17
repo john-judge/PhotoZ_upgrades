@@ -231,25 +231,27 @@ void DapController::resetDAPs()
 
 void DapController::resetCamera()
 {
+	int	sure = fl_ask("Are you sure you want to reset camera?");
+	Camera cam;
+	if (sure == 1) {
+		for (int ipdv = 0; ipdv < 4; ipdv++) {
+			cam.end_images(ipdv);
+		}
+		char command1[80];
+		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
+		system(command1);
+		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+		system(command1);
+		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+		system(command1);
+		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
+		system(command1);
+		cout << " DapC resetCamera reset camera " << endl;
+	}
 	for (int ipdv = 0; ipdv < 4; ipdv++) {
 		try {
-			Camera cam;
-			char command1[80];
 			if (cam.open_channel(ipdv)) {
 				fl_alert("DapC resetCamera Failed to open the channel!\n");
-			}
-			int	sure = fl_ask("Are you sure you want to reset camera?");
-			if (sure == 1) {
-				cam.end_images(ipdv);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-				sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-				system(command1);
-				cout << " DapC resetCamera reset camera " << endl;
 			}
 		}
 		catch (exception& e) {
@@ -432,12 +434,12 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 
 	int superframe_factor = cam.get_superframe_factor();
 
-	if (width != dataArray->raw_width() || height != dataArray->raw_height())
+	if (width != dataArray->raw_width() || height != dataArray->raw_height() / 2)
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
 		cout << " DapController line 619 - program  " << dc->getCameraProgram() << endl;
 		cout << "line 620 - width & height " << width << "   " << height << endl;
-		cout << "line 621 - raw values     " << dataArray->raw_width() << "   " << dataArray->raw_height() << endl;
+		cout << "line 621 - raw values     " << dataArray->raw_width() << "   " << dataArray->raw_height() / 2 << endl;
 		return 0;
 	}
 
@@ -445,42 +447,55 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
 	DAQmxWriteDigitalLines(taskHandleRLI, 348, true, 0, DAQmx_Val_GroupByChannel, samplesForRLI, successfulSamples, NULL);
 	
-	//cam.serial_command("@SEQ 0\@SEQ 1\r@TXC 1\r");
+	//cam.serial_command("@SEQ 0\r\n@SEQ 1\r\n@TXC 1\r\n");
 
 	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// acquire halfwayPts (200) dark frames with LED off	
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		cam.start_images(ipdv);
+		
+		int loops = halfwayPts / superframe_factor; // superframing 
+
+		// Start all images
+		cam.start_images(ipdv, loops);
+
 		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts); // pointer to this thread's section of MEMORY	
-		for (int i = 0; i < halfwayPts; i+=superframe_factor)
+		for (int i = 0; i < loops; i++)
 		{
 			// acquire data for this image from the IPDVth channel	
 			image = cam.wait_image(ipdv);
-			// Save the image to process later	
+
+			// Save the image(s) to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short) * superframe_factor);
-			privateMem += (quadrantSize * superframe_factor); // stride to the next destination for this channel's memory	
+			privateMem += quadrantSize * superframe_factor; // stride to the next destination for this channel's memory	
+			
 		}
 	}
 
 	// parallel section pauses, threads sync and close	
-	NI_openShutter(1);
-	Sleep(100);
+	NI_openShutter(1); 
+	Sleep(100); 
 	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// parallel acquisition resumes now that light is on	
 	#pragma omp parallel for	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts); // pointer to this thread's section of MEMORY	
-		privateMem += (quadrantSize * halfwayPts); // offset of where we left off	
+
+		int loops = (rliPts - halfwayPts) / superframe_factor; // superframing 
+
+		cam.start_images(ipdv, loops); // superframing
+
+		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts) // pointer to this thread's section of MEMORY	
+						+ (quadrantSize * halfwayPts); // offset of where we left off	
 			 
-		for (int i = halfwayPts; i < rliPts; i+=superframe_factor) {		// acquire rest of frames with LED on	
+		for (int i = 0; i < loops; i++) 		// acquire rest of frames with LED on	
+		{
 			// acquire data for this image from the IPDVth channel	
 			image = cam.wait_image(ipdv);
-			// Save the image to process later	
+
+			// Save the image(s) to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short) * superframe_factor);
-			privateMem += (quadrantSize * superframe_factor); // stride to the next destination for this channel's memory	
-			//cout << "Channel " << ipdv << " copied " << quadrantSize * sizeof(short) << " bytes to " <<
-			//	" memory offset " << (privateMem - memory) / quadrantSize << " quadrant-sizes\n";
+			privateMem += quadrantSize * superframe_factor; // stride to the next destination for this channel's memory	
+
 		}
 		cam.end_images(ipdv);
 	}
@@ -491,10 +506,12 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	unordered_map<int, std::string> framesToDebug;
 	//framesToDebug[0] = "0";
 	//framesToDebug[150] = "150";
-	framesToDebug[350] = "350";
+	//framesToDebug[350] = "350";
 	framesToDebug[355] = "355";
-	//framesToDebug[450] = "450";
+	framesToDebug[450] = "450";
 	unsigned short* img = (unsigned short*)(memory);
+
+	/* No longer useful to print out raw images.
 	for (int i = 0; i < rliPts; i++) {
 		bool debug = framesToDebug.find(i) != framesToDebug.end();
 		if (debug) {
@@ -505,6 +522,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 		}
 		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image 
 	}
+	*/
 
 	//=============================================================================	
 	// Image reassembly	

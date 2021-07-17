@@ -103,7 +103,7 @@ void MainController::start()					//this module runs at startup and the initcam c
 	//dc->resetCamera();			// replaced for LittleDave works but disable while developing program
 	dw->init(dc);
 	aw->openImageFile("01-01.bmp");
-	setCameraProgram(7);
+	setCameraProgram(0); // Default to 200 Hz setting
 	//cout << "mc line 103  initialized camera " << endl;
 	//
 	ui->show();

@@ -69,7 +69,11 @@ const double Camera::sm_lib_rates[] = { 0.20, 0.50, 1.0, 0.64, 1.0, 2.0, 1.25, 2
 const double Camera::sm_cam_lib_rates[] = { 0.2016948, 0.5145356, 1.02354144, 0.6480876, 1.03412632, 2.05128256, 1.27713928, 2.0 };
 const double Camera::sm_integration_increments[] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.147 };
 
+// CCD lib and start line lib are used in camera serial commands
 const int Camera::ccd_lib_bin[] = { 1, 1, 1, 2, 2, 2, 4, 1 };
+const int Camera::start_line_lib[] = { 576, 888, 988, 574, 766, 926, 574, 976 };
+
+
 const int Camera::config_load_lib[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
 const int Camera::cds_lib[] = { 1, 1, 1, 1, 1, 1, 1, 0 };
 const int Camera::ndr_lib[] = { 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -77,7 +81,6 @@ const int Camera::stripes_lib[] = { 4, 4, 4, 4, 4, 4, 4, 4 };
 const int Camera::layers_lib[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
 const int Camera::rotate_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 const int Camera::bad_pix_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-const int Camera::start_line_lib[] = { 576, 888, 988, 574, 766, 926, 574, 976 };
 
 // Based on experimenting on 7/5/21, it appears only the 200 Hz works without superframing
 // From Chun on 1/18/21:
@@ -116,13 +119,13 @@ Camera::Camera() {
 	m_depth = -1;
 	overruns = 0;
 	recovering_timeout = false;
-	m_program = 7;                // default camera program
+	m_program = 0;                // default camera program: 200 Hz
 
 }
 
 Camera::~Camera() {
 	int retry = 0;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_PDV_CHANNELS; i++) {
 		if (pdv_pt[i]) {
 			while (pdv_close(pdv_pt[i]) < 0 && retry != 1) {
 				retry = fl_choice("Failed to close PDV channel. Retry or restart the camera manually.", "Retry", "Exit", "Debugging Info");
@@ -163,11 +166,11 @@ unsigned char* Camera::single_image(int ipdv)			//used by LiveFeed.cpp
 		return nullptr;
 	pdv_flush_fifo(pdv_pt[ipdv]);
 	pdv_start_image(pdv_pt[ipdv]);
-	return pdv_wait_image(pdv_pt[ipdv]);
+	return pdv_wait_image_raw(pdv_pt[ipdv]);
 }
 
-void Camera::init_cam()				// entire module based on code from Chun - sm_init_camera.cpp
-{
+// Load cfg files by running PDV initcam script. Do this before opening channels.
+void Camera::load_cfg() {
 	char command[80];
 	cout << "Camera init_cam  program #  " << PROG[m_program] << "  \n";
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
@@ -178,17 +181,58 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	system(command);
 	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\%s", PROG[m_program]);
 	system(command);
+}
 
-	//sprintf(command, "@RCL %d", m_program);
-	//serial_command(command);
+void Camera::init_cam()				// entire module based on code from Chun - sm_init_camera.cpp
+{
+	char command[80];
+	char buf[256];
 
-	program(m_program); // calls pdv_setsize, like sm.cpp line 1982
+	load_cfg();
 
-	int hbin = 0;
-	if (ccd_lib_bin[m_program] > 1) hbin = 1;
-	int start_line;
-	if (start_line_lib[m_program]) start_line = start_line_lib[m_program];
-	else start_line = 65 + (1024 - 2 * HEIGHT[m_program] * ccd_lib_bin[m_program]);		// Chun says cam_num_row gets doubled - did not fully understand
+
+	//-------------------------------------------
+	// Attempt channel open before allocating memory
+	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
+		if (open_channel(ipdv)) {
+			fl_alert("Camera::init_cam Failed to open the channel!\n");
+			return;
+		}
+	}
+
+	// RCL # is recall settings -- accesses settings from the camera's storage
+	sprintf(command, "@RCL %d", m_program); // 
+	serial_write(command);
+	Sleep(20);
+	sprintf(command, "@SEQ 0"); // stop
+	serial_write(command);
+	Sleep(20);
+
+	/*
+	cam.serial_write("@AAM?\r");
+	cam.serial_read(buf, bufsize);
+	printf("%s\n", buf);
+
+	cam.serial_write("@REP?\r");
+	cam.serial_read(buf, bufsize);
+	printf("%s\n", buf);
+	*/
+
+	// More from Little Joe book (Little Dave maybe uses the same commands? Chun's code sends these commands to 2K's, at least).
+	// TXC - take external control
+	// AAM - attenuation/gain
+	// SEQ - stop(0) or start(1)
+	// TMP? - query the temperature
+
+	int hbin = int(ccd_lib_bin[m_program] > 1);
+	//if (ccd_lib_bin[m_program] > 1) hbin = 1;
+	int start_line = start_line_lib[m_program];
+	// Changed start line to hard-coded lib only.
+	//if (start_line_lib[m_program]) start_line = start_line_lib[m_program];
+	//else start_line = 65 + (1024 - HEIGHT[m_program] * ccd_lib_bin[m_program] / 2);		// Chun says cam_num_row gets doubled - did not fully understand
+
+	program(m_program); // calls pdv_setsize for superframed, like sm.cpp line 1982
+
 
 	sprintf(command, "@SPI 0; 2");
 	serial_write(command);
@@ -209,24 +253,29 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	sprintf(command, "c:\\EDT\\pdv\\setgap2k");// this is a batch job that calls pdb -u 0 -c 0 -f setgap200.txt four times for the different channels. The console indicates successful execution
 	system(command);
 
-	// To Do: need @REP (setFocusRep) here?
 
-	return;
+
+	Sleep(50);
+	sprintf(command, "@TXC 0");
+	serial_write(command);
+	sprintf(command, "@SEQ 1"); // start 
+	serial_write(command);
 }
 
 // Starts image acquisition for one channel
-void Camera::start_images(int ipdv) {
+void Camera::start_images(int ipdv, int count) {
 	if (!pdv_pt[ipdv]) 		return;
 	pdv_flush_fifo(pdv_pt[ipdv]);				 // pdv_timeout_restart(pdv_p, 0);	same as pdv_flush  7-4-2020
-	pdv_multibuf(pdv_pt[ipdv], 4);		// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
+	//pdv_multibuf(pdv_pt[ipdv], count); 	// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
 	// count 	number of images to start. A value of 0 starts freerun. To stop freerun, call pdv_start_images again with a count of 1.
-	//pdv_start_images(pdv_pt[ipdv], 0);
+	pdv_start_images(pdv_pt[ipdv], count); 
+	/*
 	if (get_superframe_factor() > 1) {
 		pdv_start_images(pdv_pt[ipdv], get_superframe_factor()); // changed COUNT arg from 0 to superframe factor.
 	}
 	else {
 		pdv_start_images(pdv_pt[ipdv], 0); // freerun
-	}
+	}*/
 }
 
 // Ends image acquisition for one channel
@@ -254,9 +303,17 @@ int Camera::get_buffer_size(int ipdv) {
 }
 
 unsigned char* Camera::wait_image(int ipdv) {
-	unsigned char* image = pdv_wait_image(pdv_pt[ipdv]);
+	unsigned char* image = pdv_wait_image_raw(pdv_pt[ipdv]);
 	if (edt_reg_read(pdv_pt[ipdv], PDV_STAT) & PDV_OVERRUN)
 		++overruns;
+	return image;
+}
+
+unsigned char** Camera::wait_images(int ipdv, int count) {
+	pdv_wait_images(pdv_pt[ipdv], count);
+	if (edt_reg_read(pdv_pt[ipdv], PDV_STAT) & PDV_OVERRUN)
+		++overruns;
+	unsigned char** image = pdv_buffer_addresses(pdv_pt[ipdv]);
 	return image;
 }
 
@@ -265,12 +322,23 @@ unsigned char* Camera::wait_image(int ipdv) {
 void Camera::serial_write(const char* buf) {
 	// Writes a commend 
 	char buffer[512];
-	//serial_command(buf); // Switch from pdv_serial_write to SM-similar pdv_serial_command
+	/*
 	
 	pdv_serial_read(pdv_pt[0], buffer, 512 - 1); // flush camera buffer of lingering data
 	memset(buffer, 0, sizeof(char) * 512);
 	strcpy_s(buffer, buf);
 	pdv_serial_write(pdv_pt[0], buffer, (int)strlen(buffer));
+	*/
+	//From SM_serial command 
+	//char ret_c[256];
+	//int toRead;
+	pdv_serial_read(pdv_pt[0], buffer, 512 - 1); // flush camera buffer of lingering data
+	memset(buffer, 0, sizeof(char) * 512);
+	strcpy_s(buffer, buf);
+
+	pdv_serial_command(pdv_pt[0], buffer);
+	//toRead = pdv_serial_wait(pdv_pt[0], 255, 256);
+	//pdv_serial_read(pdv_pt[0], ret_c, toRead);
 	
 }
 
@@ -291,14 +359,15 @@ void Camera::program(int p) {
 	m_program = p;
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		if (pdv_pt[ipdv]) {
-			if (pdv_pt[ipdv]) {
-				sprintf_s(buf, "@RCL %d\r", m_program);		// sending RCL first did not work!
-				serial_write(buf);
-				if (get_superframe_factor() > 1) {
-					if (pdv_setsize(pdv_pt[ipdv], width(), height() * get_superframe_factor()) < 0)
-						cout << "Enabling superframing failed! Camera::open_channel()\n";
-				}
-			}
+			//if (pdv_pt[ipdv]) {
+				//sprintf_s(buf, "@RCL %d\r", m_program);		// sending RCL first did not work!
+				//serial_write(buf);
+				//if (get_superframe_factor() > 1) {
+			if (pdv_setsize(pdv_pt[ipdv], width(), height() * get_superframe_factor()) < 0)
+				cout << "Enabling superframing via pdv_setsize failed! Camera::open_channel()\n";
+			else
+				cout << "pdv_setsize called with \n\twidth: " << width() << "\n\theight: " << height() * get_superframe_factor() << "\n";
+			//} 
 		}
 	}
 }
@@ -343,11 +412,12 @@ bool Camera::isValidPlannedState(int num_diodes) {
 // I.e. we check if PDV's internals match PhotoZ's expectations
 // Displays warnings to user if there are problems
 bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
+	int array_diodes_quadrant = (num_diodes - num_fp_diodes) / NUM_PDV_CHANNELS * 2; // x2 for CDS pixels
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		int PDV_size = get_buffer_size(ipdv) / get_superframe_factor();
-		if (num_diodes - num_fp_diodes != PDV_size / 2) {
+		if (array_diodes_quadrant != PDV_size / 2) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
-				<< num_diodes << " pixels" \
+				<< array_diodes_quadrant << " pixels (including CDS reset)" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
 				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n" \
 				<< "\tPDV width: " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n" \
@@ -392,7 +462,7 @@ unsigned short* Camera::allocateImageMemory(int num_diodes, int numPts) {
 // NOTLAST: set to True if this camera session will continue after this acquisition (i.e. for RLI)
 // Returns: whether there was an error
 bool Camera::acquireImages(unsigned short* memory, int numPts, int first, int notLast) {
-	if (first) serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
+	//if (first) serial_write("@SEQ 0\@SEQ 1\r@TXC 1\r");
 
 	if(acquireImages(memory, numPts)) return true;
 
@@ -400,7 +470,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts, int first, int no
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 			end_images(ipdv);
 		}
-		serial_write("@TXC 0\r");
+		//serial_write("@TXC 0\r");
 	}
 	return false;
 }
@@ -420,7 +490,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 	#pragma omp parallel for 	
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		cout << "Number of active threads: " << omp_get_num_threads() << "\n";
-		start_images(ipdv);
+		start_images(ipdv,1);
 		int tos = 0;
 		//for (int ii = 0; ii < 7; ii++) image = wait_image(ipdv);		// throw away first seven frames to clear camera saturation	
 																	// be sure to add 7 to COUNT in lines 327 and 399	
@@ -436,7 +506,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 			}
 			if (num_timeouts(ipdv) > 20) {
 				end_images(ipdv);
-				if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
+				//if (ipdv == 0) serial_write("@TXC 0\r"); // only write to channel 0	
 				failed = true; //Don't return from a parallel section	
 			}
 			//cout << "Channel " << ipdv << " acquired its portion of image " << i << "\n";
