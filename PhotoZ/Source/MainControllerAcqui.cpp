@@ -29,9 +29,6 @@ void MainController::takeRli()
 
 	Camera cam;
 
-	// read .cfg files
-	cam.load_cfg();
-
 	// Now that channel(s) are open, and set camera dimensions
 	cam.setCamProgram(dc->getCameraProgram());
 	cam.init_cam();

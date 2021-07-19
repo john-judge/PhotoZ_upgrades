@@ -90,7 +90,7 @@ const int Camera::bad_pix_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 // to make it super-frame, meaning the frame grabber will get, say 10 frames 
 // (factor=10 for first config, and proportional more>10 for other configs ) as one super frame. 
 //This is to reduce the interrupts.Otherwise the computer can’t keep up.
-const int Camera::super_frame_lib[] = { 1, 10, 10, 10, 10, 10, 10, 10 };
+const int Camera::super_frame_lib[] = { 1, 1, 10, 10, 10, 10, 10, 10 };
 
 const int Camera::NDR_start_lib[] = { 0, 0, 0, 0, 0, 0, 0, 11 };
 const int Camera::NDR_inc_lib[] = { 0, 0, 0, 0, 0, 0, 0, 8 };
@@ -188,8 +188,8 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	char command[80];
 	char buf[256];
 
+	// 200 Hz seems to like when cfg is loaded after open channel 
 	load_cfg();
-
 
 	//-------------------------------------------
 	// Attempt channel open before allocating memory
@@ -199,6 +199,7 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 			return;
 		}
 	}
+
 
 	// RCL # is recall settings -- accesses settings from the camera's storage
 	sprintf(command, "@RCL %d", m_program); // 
@@ -218,6 +219,8 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	printf("%s\n", buf);
 	*/
 
+	program(m_program); // calls pdv_setsize for superframed, like sm.cpp line 1982
+
 	// More from Little Joe book (Little Dave maybe uses the same commands? Chun's code sends these commands to 2K's, at least).
 	// TXC - take external control
 	// AAM - attenuation/gain
@@ -231,8 +234,8 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	//if (start_line_lib[m_program]) start_line = start_line_lib[m_program];
 	//else start_line = 65 + (1024 - HEIGHT[m_program] * ccd_lib_bin[m_program] / 2);		// Chun says cam_num_row gets doubled - did not fully understand
 
-	program(m_program); // calls pdv_setsize for superframed, like sm.cpp line 1982
-
+	// prog #1 seems to not like when pdv_setsize is called here
+	//program(m_program); // calls pdv_setsize for superframed, like sm.cpp line 1982
 
 	sprintf(command, "@SPI 0; 2");
 	serial_write(command);
@@ -253,13 +256,13 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	sprintf(command, "c:\\EDT\\pdv\\setgap2k");// this is a batch job that calls pdb -u 0 -c 0 -f setgap200.txt four times for the different channels. The console indicates successful execution
 	system(command);
 
-
-
 	Sleep(50);
 	sprintf(command, "@TXC 0");
 	serial_write(command);
 	sprintf(command, "@SEQ 1"); // start 
 	serial_write(command);
+
+
 }
 
 // Starts image acquisition for one channel
