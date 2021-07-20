@@ -101,6 +101,7 @@ public:
 	void program(int p);
 
 	int get_superframe_factor();
+	int get_ccd_bin_factor();
 	int width();
 	int height();
 	int get_display_width();

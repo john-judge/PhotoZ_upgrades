@@ -70,8 +70,8 @@ const double Camera::sm_cam_lib_rates[] = { 0.2016948, 0.5145356, 1.02354144, 0.
 const double Camera::sm_integration_increments[] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.147 };
 
 // CCD lib and start line lib are used in camera serial commands
-const int Camera::ccd_lib_bin[] = { 1, 1, 1, 2, 2, 2, 4, 1 };
-const int Camera::start_line_lib[] = { 576, 888, 988, 574, 766, 926, 574, 976 };
+const int Camera::ccd_lib_bin[] = { 1, 1, 2, 2, 4, 4, 8, 8 };
+const int Camera::start_line_lib[] = { 576, 1038, 766, 926, 766, 926, 846, 926 };
 
 
 const int Camera::config_load_lib[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
@@ -90,7 +90,7 @@ const int Camera::bad_pix_lib[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 // to make it super-frame, meaning the frame grabber will get, say 10 frames 
 // (factor=10 for first config, and proportional more>10 for other configs ) as one super frame. 
 //This is to reduce the interrupts.Otherwise the computer can’t keep up.
-const int Camera::super_frame_lib[] = { 1, 1, 10, 10, 10, 10, 10, 10 };
+const int Camera::super_frame_lib[] = { 1, 1, 1, 1, 1, 1, 10, 10 };
 
 const int Camera::NDR_start_lib[] = { 0, 0, 0, 0, 0, 0, 0, 11 };
 const int Camera::NDR_inc_lib[] = { 0, 0, 0, 0, 0, 0, 0, 8 };
@@ -188,9 +188,6 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	char command[80];
 	char buf[256];
 
-	// 200 Hz seems to like when cfg is loaded after open channel 
-	load_cfg();
-
 	//-------------------------------------------
 	// Attempt channel open before allocating memory
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
@@ -200,6 +197,8 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 		}
 	}
 
+	// 200 Hz seems to like when cfg is loaded after open channel 
+	load_cfg();
 
 	// RCL # is recall settings -- accesses settings from the camera's storage
 	sprintf(command, "@RCL %d", m_program); // 
@@ -219,7 +218,7 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	printf("%s\n", buf);
 	*/
 
-	program(m_program); // calls pdv_setsize for superframed, like sm.cpp line 1982
+	program(m_program);
 
 	// More from Little Joe book (Little Dave maybe uses the same commands? Chun's code sends these commands to 2K's, at least).
 	// TXC - take external control
@@ -269,7 +268,7 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 void Camera::start_images(int ipdv, int count) {
 	if (!pdv_pt[ipdv]) 		return;
 	pdv_flush_fifo(pdv_pt[ipdv]);				 // pdv_timeout_restart(pdv_p, 0);	same as pdv_flush  7-4-2020
-	//pdv_multibuf(pdv_pt[ipdv], count); 	// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
+	pdv_multibuf(pdv_pt[ipdv], 4); 	// Suggested by Chun 5-14-2020		//change pdv_p to pdv_pt[0]  9-23-2020
 	// count 	number of images to start. A value of 0 starts freerun. To stop freerun, call pdv_start_images again with a count of 1.
 	pdv_start_images(pdv_pt[ipdv], count); 
 	/*
@@ -367,7 +366,7 @@ void Camera::program(int p) {
 				//serial_write(buf);
 				//if (get_superframe_factor() > 1) {
 			if (pdv_setsize(pdv_pt[ipdv], width(), height() * get_superframe_factor()) < 0)
-				cout << "Enabling superframing via pdv_setsize failed! Camera::open_channel()\n";
+				cout << "Enabling superframing via pdv_setsize failed! Camera::program()\n";
 			else
 				cout << "pdv_setsize called with \n\twidth: " << width() << "\n\theight: " << height() * get_superframe_factor() << "\n";
 			//} 
@@ -378,6 +377,11 @@ void Camera::program(int p) {
 int Camera::get_superframe_factor() {
 	return super_frame_lib[m_program];
 }
+
+int Camera::get_ccd_bin_factor() {
+	return ccd_lib_bin[m_program];
+}
+
 
 // width of one quadrant BEFORE CDS subtraction
 int Camera::width() {
@@ -418,13 +422,20 @@ bool Camera::isValidPlannedState(int num_diodes, int num_fp_diodes) {
 	int array_diodes_quadrant = (num_diodes - num_fp_diodes) / NUM_PDV_CHANNELS * 2; // x2 for CDS pixels
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
 		int PDV_size = get_buffer_size(ipdv) / get_superframe_factor();
+		if (get_ccd_bin_factor() == 4) { // tmp
+			PDV_size /= 2;
+		}
+		if (get_ccd_bin_factor() == 8) { // tmp
+			PDV_size /= 4;
+		}
 		if (array_diodes_quadrant != PDV_size / 2) {
 			cout << "\nAborting acquisition. The size PhotoZ expects for quadrant " << ipdv << " is: \t" \
 				<< array_diodes_quadrant << " pixels (including CDS reset)" \
 				<< "\nBut the size allocated by PDV for this PDV channel quadrant is:\t\t" \
 				<< PDV_size << " bytes = " << PDV_size / 2 << " pixels.\n" \
 				<< "\tPDV width: " << pdv_get_cam_width(pdv_pt[ipdv]) << "\n" \
-				<< "\tPDV height: " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n";
+				<< "\tPDV height: " << pdv_get_cam_height(pdv_pt[ipdv]) << "\n" \
+				<< "\tsuperframe factor: " << get_superframe_factor() << "\n";
 			fl_alert(" Acquisition failed. Please retry once before examining debugging output.\n");
 			return false;
 		}
@@ -583,7 +594,7 @@ void Camera::reassembleImages(unsigned short* images, int nImages) {
 void Camera::subtractCDS(unsigned short* image_data, int nImages, int quad_height, int quad_width)
 {
 	int CDS_add = 2048;
-	int CDS_width_fixed = 1024; // 6/25/21 - empirically, seems like this never changes
+	int CDS_width_fixed = quad_width / 2; // 6/25/21 - empirically, seems like this is always half of cfg width
 	int CDS_height_total = nImages * (quad_width / CDS_width_fixed) / 2 * quad_height * NUM_PDV_CHANNELS; // div by 2 since loop skips 2 CDS-size rows per iter
 
 	unsigned short* new_data = image_data;

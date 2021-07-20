@@ -158,13 +158,14 @@ double DapController::getIntPts()
 int DapController::acqui(unsigned short *memory, Camera &cam)
 {
 	short *buf = new short[4 * numPts]; // There are 4 FP analog inputs for Lil Dave
+	/*
 	if (cam.width() != dataArray->raw_width() || cam.height() != dataArray->raw_height())
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
 		cout << " DapController::acqui() cam.width & cam.height " << cam.width() 
 			 << "   " << cam.height() << endl;		
 		return 0;
-	}
+	}*/
 	int num_diodes = dataArray->num_raw_diodes();
 
 	// Start Acquisition
@@ -433,7 +434,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	int array_diodes = dataArray->num_raw_array_diodes();
 
 	int superframe_factor = cam.get_superframe_factor();
-
+	/*
 	if (width != dataArray->raw_width() || height != dataArray->raw_height() / 2)
 	{
 		fl_alert("Camera not set up properly. Reselect camera size & frequency settings");
@@ -441,7 +442,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 		cout << "line 620 - width & height " << width << "   " << height << endl;
 		cout << "line 621 - raw values     " << dataArray->raw_width() << "   " << dataArray->raw_height() / 2 << endl;
 		return 0;
-	}
+	}*/
 
 	//Sends the digital samples to port 0 line 0 (connected to LED)
 	//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxwritedigitallines/
@@ -482,7 +483,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 
 		int loops = (rliPts - halfwayPts) / superframe_factor; // superframing 
 
-		cam.start_images(ipdv, loops); // superframing
+		cam.start_images(ipdv, loops);
 
 		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts) // pointer to this thread's section of MEMORY	
 						+ (quadrantSize * halfwayPts); // offset of where we left off	
@@ -511,7 +512,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 	framesToDebug[450] = "450";
 	unsigned short* img = (unsigned short*)(memory);
 
-	/* No longer useful to print out raw images.
+	// Might not be useful to print out raw images.
 	for (int i = 0; i < rliPts; i++) {
 		bool debug = framesToDebug.find(i) != framesToDebug.end();
 		if (debug) {
@@ -522,7 +523,7 @@ int DapController::takeRli(unsigned short *memory, Camera &cam, int rliPts)
 		}
 		img += quadrantSize * NUM_PDV_CHANNELS; // stride to the full image 
 	}
-	*/
+	
 
 	//=============================================================================	
 	// Image reassembly	
