@@ -1,5 +1,6 @@
 ## Notice
-This project is being abandoned, superseded by the [PhotoLib / pyPhoto21 project](https://github.com/john-judge/PhotoLib)
+This project is being abandoned, superseded by the [PhotoLib / pyPhoto21 project](https://github.com/john-judge/PhotoLib).
+However, the information accumulated [here](https://github.com/john-judge/PhotoZ_upgrades/issues?q=is%3Aissue) is useful to the ongoing project.
 
 ## Installation (Building from Source in Debug Mode)
 Use VS Code 2017 or 2019 and see the [common install/compile issues](https://github.com/john-judge/PhotoZ_upgrades/issues/14)
