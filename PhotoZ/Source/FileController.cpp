@@ -112,6 +112,7 @@ int FileController::loadWholeFile()
 	// Load RecControl
 	if(NPFLAG!=1&&!loadRecControl(file))
 	{
+		loadData(file);
 		file.close();
 		return 0;
 	}
@@ -148,14 +149,16 @@ int FileController::loadRecControl(fstream &file)
 	if(chBuf>=1 && chBuf<=3) {
 		fl_alert("File Format is not correct! - Hexagonal data (use older version)\n");
 		return 0;
-	} else if(chBuf != 5) {
-		fl_alert("File Format is not correct!\n");
-		return 0;
+	} else if(chBuf != 5 || chBuf != '5') {
+		fl_alert("Allowing a possibly questionable file format!\n");
+		cout << "Version number read from file: " << chBuf << "\n";
+		// return 0;
 	}
 
 	// Slice Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setSliceNo(shBuf);
+	cout << "Slice Number: " << shBuf << "\n";
 	// Location Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setLocationNo(shBuf);
@@ -166,10 +169,13 @@ int FileController::loadRecControl(fstream &file)
 	file.read((char*)&nBuf, nSize);
 	int cam_program = nBuf;
 	dc->setCameraProgram(cam_program);
+	cout << "Camera Program: " << nBuf << "\n";
 
 	// Number of Trials
 	file.read((char*)&chBuf, chSize);
-	recControl->setNumTrials(chBuf);
+	recControl->setNumTrials(1);
+	cout << "Number of Trials: " << chBuf << "\n";
+
 	// Interval between Trials
 	file.read((char*)&chBuf, chSize);
 	recControl->setIntTrials(chBuf);
@@ -181,6 +187,7 @@ int FileController::loadRecControl(fstream &file)
 	// Number of Points per Trace
 	file.read((char*)&nBuf,nSize);
 	dc->setNumPts(nBuf);
+	cout << "Number of Points per Trace: " << nBuf << "\n";
 
 	// Time - RecControl
 	file.read((char*)&tBuf,tSize);
@@ -234,8 +241,11 @@ int FileController::loadRecControl(fstream &file)
 	// Array Dimensions
 	file.read((char*)&nBuf, nSize);
 	int raw_width = nBuf;
+	cout << "raw_width: " << nBuf << "\n";
+
 	file.read((char*)&nBuf, nSize);
 	int raw_height = nBuf;
+	cout << "raw_height: " << nBuf << "\n";
 
 	// Change Memory Size
 	if (raw_width != dataArray->raw_width() || raw_height != dataArray->raw_height())
@@ -317,7 +327,7 @@ int FileController::loadNPRecControl(fstream &file)						// reads header and dat
 int FileController::loadData(fstream &file)
 {
 	file.seekp(1024);
-	int i,j;
+	int i,j,k;
 	int shSize=sizeof(short);
 	int numDiodes = dataArray->num_raw_diodes();
 
@@ -341,15 +351,20 @@ int FileController::loadData(fstream &file)
 
 	// Load Raw Data
 	int numPts=dc->getNumPts();
-	int dataSize=shSize*numPts;
+	int dataSize = shSize; // * numPts;
 	int numTrials=recControl->getNumTrials();
 
-	short *dataBuf = new short[numPts];
+	short *dataBuf = new short[1];
 	for (i = 0; i < numTrials; i++)
 	{
 		for (j = 0; j < dataArray->num_raw_diodes(); j++) {
-			file.read((char*) dataBuf, dataSize);
-			dataArray->assignTrialData(dataBuf, numPts, i, j);
+
+			for (k = 0; k < numPts; k++) {
+				file.read((char*)dataBuf, dataSize);
+				cout << "read from file: " << dataBuf << "\n";
+				dataArray->assignDataPoint(dataBuf, k, i, j);
+			}
+
 		}
 	}
 	delete [] dataBuf;

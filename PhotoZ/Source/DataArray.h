@@ -98,6 +98,7 @@ public:
 	// Data Manipulation
 	const short* getTrialMem(int trial, int diode);		//new
 	void assignTrialData(short *trial_data, int len, int trial, int diode);			//new
+	void assignDataPoint(short * trial_data, int pt, int trial, int diode);
 	void loadTrialData(int trialNo);
 	void arrangeData(int trialNo, unsigned short * input);
 	void average();

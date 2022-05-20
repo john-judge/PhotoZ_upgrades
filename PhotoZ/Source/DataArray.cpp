@@ -914,6 +914,10 @@ void DataArray::assignTrialData(short *trial_data, int len, int trial, int diode
 	memcpy(raw_diode_data[diode][trial], trial_data, sizeof(short)*len);
 }
 
+void DataArray::assignDataPoint(short *trial_data, int pt, int trial, int diode) {
+	memcpy(raw_diode_data[diode][trial]+pt, trial_data, sizeof(short));
+}
+
 //=============================================================================
 void DataArray::loadTrialData(int trialNo)
 {
