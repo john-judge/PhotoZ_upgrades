@@ -89,6 +89,11 @@ int FileController::openFileByName(const char *name)
 	{
 		recControl->setTrialNo(char(0));
 		dataArray->average();
+		// validate 
+		const short* arr = dataArray->getTrialMem(0, 30);
+		for (int i = 0; i < 50; i++) {
+			cout << arr[i] << "\n";
+		}
 		return 1;
 	}
 	else
@@ -112,8 +117,6 @@ int FileController::loadWholeFile()
 	// Load RecControl
 	if(NPFLAG!=1&&!loadRecControl(file))
 	{
-		loadData(file);
-		file.close();
 		return 0;
 	}
 	if (NPFLAG==1&&!loadNPRecControl(file))
@@ -234,7 +237,8 @@ int FileController::loadRecControl(fstream &file)
 	if(fBuf<0.001f) {
 		fBuf=0.614f;
 	}
-	dc->setIntPts(fBuf);
+	dc->setIntPts(1);
+	cout << "Interval between Samples: " << dc->getIntPts() << "\n";
 
 	dapControl->setDuration();	// Set duration
 
@@ -261,10 +265,10 @@ int FileController::loadRecControl(fstream &file)
 		sp->changeNumDiodes();
 
 	// depth set at a constant 2 bytes (hopefully) otherwise there is trouble
-	file.read((char*)&nBuf, nSize);
+	//file.read((char*)&nBuf, nSize);
 	// divide and round up
-	if ((nBuf + (8-1)) / 8 != 2)
-		return 0;
+	//if ((nBuf + (8-1)) / 8 != 2)
+	//	return 0;
 //	else
 //		int test = dataArray->depth();
 	return 1;
@@ -361,9 +365,10 @@ int FileController::loadData(fstream &file)
 
 			for (k = 0; k < numPts; k++) {
 				file.read((char*)dataBuf, dataSize);
-				cout << "read from file: " << dataBuf << "\n";
-				dataArray->assignDataPoint(dataBuf, k, i, j);
+				
+				dataArray->assignDataPoint(*dataBuf, k, i, j);
 			}
+			//cout << "read from file: " << *dataBuf << "\n";
 
 		}
 	}
