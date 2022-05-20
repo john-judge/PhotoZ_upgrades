@@ -110,6 +110,11 @@ int FileController::loadWholeFile()
 	}
 
 	// Load RecControl
+	string fileN(fileName);
+	if (fileN.compare(fileN.length() - 4, 4, ".tsm") && !loadTSMData()) {
+		file.close();
+		return 0;
+	}
 	if(NPFLAG!=1&&!loadRecControl(file))
 	{
 		file.close();
@@ -127,6 +132,17 @@ int FileController::loadWholeFile()
 	file.close();
 	//
 	return 1;
+}
+
+int FileController::loadTSMData(fstream &file) {
+	// Load metadata
+
+	// Load array data
+
+	// Apply cropping and binning
+
+	// Store array data
+
 }
 
 //=============================================================================

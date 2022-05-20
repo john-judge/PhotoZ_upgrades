@@ -19,6 +19,7 @@ private:
 	void changeDir(char*);
 
 	int loadWholeFile();
+	int loadTSMData(fstream&);
 	int loadRecControl(std::fstream&);
 	int loadNPRecControl(std::fstream&);
 	int loadData(std::fstream&);
