@@ -90,10 +90,7 @@ int FileController::openFileByName(const char *name)
 		recControl->setTrialNo(char(0));
 		dataArray->average();
 		// validate 
-		const short* arr = dataArray->getTrialMem(0, 30);
-		for (int i = 0; i < 50; i++) {
-			cout << arr[i] << "\n";
-		}
+		
 		return 1;
 	}
 	else
@@ -176,7 +173,7 @@ int FileController::loadRecControl(fstream &file)
 
 	// Number of Trials
 	file.read((char*)&chBuf, chSize);
-	recControl->setNumTrials(1);
+	recControl->setNumTrials(chBuf);
 	cout << "Number of Trials: " << chBuf << "\n";
 
 	// Interval between Trials
@@ -237,7 +234,7 @@ int FileController::loadRecControl(fstream &file)
 	if(fBuf<0.001f) {
 		fBuf=0.614f;
 	}
-	dc->setIntPts(1);
+	dc->setIntPts(fBuf);
 	cout << "Interval between Samples: " << dc->getIntPts() << "\n";
 
 	dapControl->setDuration();	// Set duration
