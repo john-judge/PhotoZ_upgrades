@@ -158,13 +158,14 @@ int FileController::loadRecControl(fstream &file)
 	// Slice Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setSliceNo(shBuf);
-	cout << "Slice Number: " << shBuf << "\n";
+	cout << "Slice Number: " << recControl->getSliceNo() << "\n";
 	// Location Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setLocationNo(shBuf);
 	// Record Number
 	file.read((char*)&shBuf, shSize);
 	recControl->setRecordNo(shBuf);
+	cout << "Record Number: " << recControl->getRecordNo() << "\n";
 	// Camera Program
 	file.read((char*)&nBuf, nSize);
 	int cam_program = nBuf;
@@ -179,10 +180,12 @@ int FileController::loadRecControl(fstream &file)
 	// Interval between Trials
 	file.read((char*)&chBuf, chSize);
 	recControl->setIntTrials(chBuf);
+	cout << "Interval between Trials: " << chBuf << "\n";
 
 	// Acquisition Gain
 	file.read((char*)&shBuf, shSize);
 	recControl->setAcquiGain(shBuf);
+	cout << "Acquisition Gain: " << shBuf << "\n";
 
 	// Number of Points per Trace
 	file.read((char*)&nBuf,nSize);
@@ -235,7 +238,7 @@ int FileController::loadRecControl(fstream &file)
 		fBuf=0.614f;
 	}
 	dc->setIntPts(fBuf);
-	cout << "Interval between Samples: " << dc->getIntPts() << "\n";
+	cout << "Interval between Samples: " << fBuf << "\n";
 
 	dapControl->setDuration();	// Set duration
 
@@ -331,6 +334,8 @@ int FileController::loadData(fstream &file)
 	int i,j,k;
 	int shSize=sizeof(short);
 	int numDiodes = dataArray->num_raw_diodes();
+
+	cout << "num fp pts: " << dataArray->num_diodes_fp();
 
 	// RLI
 	int rliSize=shSize*numDiodes;
