@@ -150,7 +150,7 @@ int FileController::loadRecControl(fstream &file)
 		fl_alert("File Format is not correct! - Hexagonal data (use older version)\n");
 		return 0;
 	} else if(chBuf != 5 || chBuf != '5') {
-		fl_alert("Allowing a possibly questionable file format!\n");
+		//fl_alert("Allowing a possibly questionable file format!\n");
 		cout << "Version number read from file: " << chBuf << "\n";
 		// return 0;
 	}
