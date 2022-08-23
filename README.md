@@ -2,6 +2,8 @@
 This project is being abandoned, superseded by the [PhotoLib / pyPhoto21 project](https://github.com/john-judge/PhotoLib).
 However, the information accumulated [here](https://github.com/john-judge/PhotoZ_upgrades/issues?q=is%3Aissue) is useful to the ongoing project.
 
+Update: The load-hacked-zda branch is now in active use, needed for compatibility with the [TSM-to-ZDA project](https://github.com/john-judge/TSM-to-ZDA)
+
 ## Installation (Building from Source in Debug Mode)
 Use VS Code 2017 or 2019 and see the [common install/compile issues](https://github.com/john-judge/PhotoZ_upgrades/issues/14)
 
