@@ -1,5 +1,5 @@
 /*
- * "$Id$"
+ * "$Id: Fl_Export.H 10236 2014-08-21 12:29:48Z cand $"
  *
  * WIN32 DLL export .
  *
@@ -23,7 +23,7 @@
  * The following is only used when building DLLs under WIN32...
  */
 
-#  if 0
+#  if defined(FL_DLL)
 #    ifdef FL_LIBRARY
 #      define FL_EXPORT	__declspec(dllexport)
 #    else
@@ -38,5 +38,5 @@
 #endif /* !Fl_Export_H */
 
 /*
- * End of "$Id$".
+ * End of "$Id: Fl_Export.H 10236 2014-08-21 12:29:48Z cand $".
  */

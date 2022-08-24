@@ -7,30 +7,19 @@
 #include "dapio32.h"
 #include "edtinc.h"
 #include <fstream>
-#include "NIDAQmx.h"
 
 class DapChannel;
 class Camera;
 
 //=============================================================================
-class DapController
+class DapController  
 {
 private:
-	TaskHandle taskHandleGet = 0;
-	TaskHandle taskHandlePut = 0;
 	HDAP dap820Put;
 	HDAP dap820Get;
 
-	TaskHandle taskHandleRLI;
-	TaskHandle taskHandleAcquiDO;
-	TaskHandle taskHandleAcquiAI;
-
-	int numPts;
-
-	int32_t error = 0;
-	char errBuff[2048];
-
 	float acquiOnset;
+	int numPts;
 	double intPts;
 	float duration;
 	int program;
@@ -59,46 +48,42 @@ public:
 	// Constructors
 	DapController();
 	~DapController();
-	DapChannel* reset;
-	DapChannel* shutter;
-	DapChannel* sti1;
-	DapChannel* sti2;
 
-	void NiErrorDump();
+	DapChannel *reset;
+	DapChannel *shutter;
+	DapChannel *sti1;
+	DapChannel *sti2;
 
 	// Set DAP and release DAP
-	int setDAPs(float64 SamplingRate = 2000);//setting default for testing purposes.
-	int NI_openShutter(uInt8);
+	int setDAPs();
 	void releaseDAPs();
-
+	
 
 	// Flags
 	void setStopFlag(char);
 	char getStopFlag();
-
+	
 	void setScheduleFlag(char);
 	void setScheduleRliFlag(char);
 	char getScheduleFlag();
 	char getScheduleRliFlag();
 
-	// Buffers for digital output
-	uint8_t *outputs;
-	//uint8_t *pseudoOutputs;
-
 	// RLI
-	int takeRli(unsigned short*, Camera&, int);
+	int takeRli(short*, Camera&);
 
 	// Create DAP File for Acquisition
 	void createAcquiDapFile();
-	void fillPDOut(uint8_t *outputs, char realFlag);
+	void fillPDOut(std::fstream &, char realFlag);
 
 	// Acquisition Control
-	int sendFile2Dap(const char*);
-	int acqui(unsigned short*, Camera&);
+	int sendFile2Dap(const char *);
+	int acqui(short *, Camera &);
 	void pseudoAcqui();
 	int stop();
 	void resetDAPs();
 	void resetCamera();
+
+	int deadCount = 7;
 
 	// Acquisition Duration
 	void setAcquiOnset(float);
@@ -118,14 +103,14 @@ public:
 	float getDuration();
 
 	// Stimulator
-	void setNumPulses(int ch, int num);
+	void setNumPulses(int ch,int num);
 	int getNumPulses(int ch);
-	void setIntPulses(int ch, int num);
+	void setIntPulses(int ch,int num);
 	int getIntPulses(int ch);
 
-	void setNumBursts(int ch, int num);
+	void setNumBursts(int ch,int num);
 	int getNumBursts(int ch);
-	void setIntBursts(int ch, int num);
+	void setIntBursts(int ch,int num);
 	int getIntBursts(int ch);
 };
 

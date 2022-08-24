@@ -10,9 +10,9 @@
 
 // Diode definitions
 #define NUM_FP_DIODES 8
-#define DEFAULT_ARRAY_WIDTH 256
-#define DEFAULT_ARRAY_HEIGHT 40
-#define NUM_BINNED_DIODES 10240
+#define DEFAULT_ARRAY_WIDTH 80
+#define DEFAULT_ARRAY_HEIGHT 80
+#define NUM_BINNED_DIODES 6400
 
 // Background for Array Window
 #define BG_None 0
@@ -30,8 +30,6 @@
 
 #define BG_Live_Feed 8
 
-#define DEFAULT_BINNING_FACTOR 500 // A constant relating zoom and binning to auto-adjust binning JMJ 12/13/2020
-
 class Diode;
 class LiveFeed;
 
@@ -41,7 +39,6 @@ class ArrayWindow:public Fl_Double_Window
 private:
 	//
 	class Image *image;
-	class Fl_OpenCV *bg_image;
 
 	std::vector<Diode*> diodes;
 	Diode *fp_diodes[NUM_FP_DIODES];
@@ -64,14 +61,6 @@ private:
 	double xScale;
 	double xShift;
 	double yScale2;
-
-	// JMJ 12/12/2020 - Zoom and Pan usability enhancement for large lil Dave arrays.
-	double zoomFactor;
-	double xPan;
-	double yPan;
-	bool isDragActive;
-	double xDragLast;
-	double yDragLast;
 
 	// background
 	int background;
@@ -114,13 +103,6 @@ public:
 	//-------------------------------------
 	// Array resizing
 	void changeNumDiodes();
-
-	//-------------------------------------
-	// Public functions for drag to pan
-	void set_drag_active();
-	void set_drag_inactive();
-	bool get_drag_active();
-	void release_drag();
 
 	//-------------------------------------
 	// Inherited from Fl_Double_Window

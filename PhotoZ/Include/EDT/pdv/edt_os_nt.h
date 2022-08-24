@@ -1,10 +1,12 @@
-/*
- * Header file for NT specific includes
+/* 
+ * Header file for NT specific includes 
  * for libedt
  *
  * jsc 2/4/99
  *
  */
+
+
 
 #ifndef _EDT_OS_NT_H
 #define _EDT_OS_NT_H
@@ -15,11 +17,11 @@
 #ifndef _KERNEL
 /* not for driver */
 
-#include <winsock2.h>
+#include <winsock.h>
 #include <winioctl.h>
 
 #include <process.h>
-#include <time.h>
+#include <time.h> 
 
 // ifndef _KERNEL
 #endif
@@ -33,19 +35,16 @@
 #endif
 
 #ifdef _MSC_VER
-typedef unsigned __int64 uint64_t;
-typedef __int64 int64_t;
-typedef unsigned int uint32_t;
-typedef int int32_t;
-typedef unsigned short uint16_t;
-typedef short int16_t;
-
+typedef unsigned __int64 uint64_t ;
+typedef __int64 int64_t ;
+typedef unsigned int  uint32_t ;
+typedef int int32_t ;
 #endif
 
-typedef unsigned char *caddr_t;
-typedef unsigned char uchar_t;
-typedef unsigned short ushort_t;
-typedef unsigned int uint_t;
+typedef unsigned char *caddr_t ;
+typedef unsigned char uchar_t ;
+typedef unsigned short ushort_t ;
+typedef unsigned int uint_t ;
 
 typedef unsigned long u_long;
 
@@ -69,9 +68,7 @@ typedef unsigned long u_long;
 #define strncasecmp strnicmp
 #define strcasecmp stricmp
 
-#define strtoull _strtoui64
-
-#define PAGESIZE 4096
+#define PAGESIZE	4096
 
 #define SECTOR_SIZE 512
 /* WIN32 */
@@ -85,6 +82,7 @@ typedef unsigned long u_long;
 // _MSC_VER >= 1300
 #endif
 
+
 // for using a dll
 #ifndef _KERNEL
 
@@ -94,12 +92,14 @@ typedef unsigned long u_long;
 
 #ifdef __cplusplus
 
-#if defined(__AFXWIN_H__) || defined(_AFXDLL) || defined(_AFXEXT)
+#if defined( __AFXWIN_H__) || defined(_AFXDLL) || defined(_AFXEXT) 
+
 
 #include <afxwin.h>
 
 #define edt_get_dc(wnd) GetDC(wnd)
 #define edt_release_dc(wnd, pdc) ReleaseDC(wnd, pdc)
+
 
 #define EdtBox CRect
 
@@ -121,7 +121,7 @@ typedef unsigned long u_long;
 
 #else
 
-#define ASSERT(f)
+#define ASSERT(f) 
 
 // ifdef DEBUG
 #endif
@@ -129,12 +129,16 @@ typedef unsigned long u_long;
 // ifndef ASSERT
 #endif
 
+
+
 #ifdef TRACE
 #undef TRACE
 // ifdef TRACE
 #endif
 
 #ifdef _DEBUG
+//#include "ErrorHandler.h"
+
 
 #define TRACE SysLog.Message
 
@@ -145,7 +149,11 @@ typedef unsigned long u_long;
 // ifdef _DEBUG
 #endif
 
+
+
+
 typedef __int64 EdtFileOffset;
+
 
 typedef unsigned char byte;
 
@@ -156,23 +164,23 @@ typedef HANDLE thread_t;
 
 #ifndef LaunchThread
 
-#define LaunchThread(pThread, func, pointer)                                                 \
-  {                                                                                          \
-    unsigned int thrdaddr;                                                                   \
-    pThread = (thread_t)_beginthreadex(NULL, 0, func, pointer, CREATE_SUSPENDED, &thrdaddr); \
-    ResumeThread(pThread);                                                                   \
-  }
+#define LaunchThread(pThread,func,pointer) { \
+	unsigned int thrdaddr; \
+    pThread = (thread_t) _beginthreadex(NULL, 0, func, pointer, CREATE_SUSPENDED, &thrdaddr);\
+	ResumeThread(pThread); }
 
 #endif
 
-#define WaitForThread(pThread, timeout) WaitForSingleObject(pThread, timeout)
+#define WaitForThread(pThread,timeout) \
+	WaitForSingleObject(pThread,timeout)
 
-typedef unsigned int(__stdcall *edt_thread_function)(void *);
+
+typedef unsigned int  (__stdcall *edt_thread_function)(void *);
 
 typedef thread_t thread_type;
 
 #define THREAD_RETURN UINT
-#define THREAD_FUNC_DECLARE UINT __stdcall
+#define THREAD_FUNC_DECLARE  UINT __stdcall 
 
 #ifdef _MSC_VER
 
@@ -187,27 +195,35 @@ typedef CRITICAL_SECTION critical_section_t;
 
 typedef HANDLE mutex_t;
 
-#define create_mutex_named(m, nm) m = CreateMutex(NULL, FALSE, nm)
-#define create_mutex(m) m = CreateMutex(NULL, FALSE, NULL)
+#define create_mutex_named(m,nm) m = CreateMutex(NULL,FALSE, nm)
+#define create_mutex(m)    m = CreateMutex(NULL,FALSE,NULL)
 
-#define wait_mutex_timeout(m, timeout) WaitForSingleObject(m, timeout)
-#define wait_mutex(m) WaitForSingleObject(m, INFINITE)
-#define release_mutex(m) ReleaseMutex(m)
-#define delete_mutex(m) CloseHandle(m)
+#define wait_mutex_timeout(m,timeout) WaitForSingleObject(m,timeout)
+#define wait_mutex(m) WaitForSingleObject(m,INFINITE)
+#define release_mutex(m)    ReleaseMutex(m)
+#define delete_mutex(m)	    CloseHandle(m)
+
 
 typedef HANDLE event_t;
 
-#define create_event_named(m, manual, init_state, nm) m = CreateEvent(NULL, manual, init_state, nm)
+#define create_event_named(m, manual, init_state, nm)  \
+    m = CreateEvent(NULL,manual,init_state,nm)
 
-#define create_event(m, manual, init_state) m = CreateEvent(NULL, manual, init_state, NULL)
+#define create_event(m, manual, init_state) \
+    m = CreateEvent(NULL,manual,init_state,NULL)
 
-#define wait_event_timeout(m, timeout) WaitForSingleObject(m, timeout)
-#define wait_event(m) WaitForSingleObject(m, INFINITE)
+#define wait_event_timeout(m,timeout) WaitForSingleObject(m,timeout)
+#define wait_event(m) WaitForSingleObject(m,INFINITE)
 
 #define signal_event(e) SetEvent(e)
 #define clear_event(e) ResetEvent(e)
 
 #endif
 
-// ifndef _EDT_OS_NT_H_
+// ifndef _EDT_OS_NT_H_ 
 #endif
+
+
+
+
+

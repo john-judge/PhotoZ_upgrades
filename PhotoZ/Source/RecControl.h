@@ -29,6 +29,7 @@ private:
 	short trialNoMax;
 
 	int numTrials;
+//	int numSkippedTrials;
 	int intTrials;
 
 	short acquiGain;
@@ -79,7 +80,9 @@ public:
 
 	// Trials
 	void setNumTrials(int);
+//	void setNumSkippedTrials(int);
 	int getNumTrials();
+//	int getNumSkippedTrials();
 
 	void setIntTrials(int);
 	int getIntTrials();

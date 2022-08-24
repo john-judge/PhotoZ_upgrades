@@ -1,38 +1,26 @@
+
 /* #pragma ident "@(#)libpdv.c	1.398 03/15/07 EDT" */
 
 /**
 * @file 
-* PDV Library, most subroutines.
+* PCI DV Library, most subroutines.
 *
 * @defgroup dv EDT Digital Imaging Library
 *
-* The PDV digital imaging library (pdvlib) provides a C language interface to the PDV
+* The PCI DV digital imaging library provides a C language interface to the PCI DV
 * device driver, including routines for image capture, save, and device control.
 *
-* The library is designed for use with all EDT Digital Imaging boards, including the VisionLink series,
-* PCIe and PCI DV, DVa and DV series Camera Link and legacy AIA interfaces, and PMC and Compact PCI
-* variants. The library also has components to support the Camera Link simulator boards including 
-* the PCI DV CLS, PCIe8 DV CLS and PCIe8 DVa CLS.
-*
-* The PDV library sits on top of the
-* lower-level \ref dma (edtlib). Library functions from both libraries operate on the same device handle,
-* and routines from both libraries can be used in the same application. However pdvlib (<code>pdv_</code>)
-* subroutines are designed to handle the extra bookeeping, error-recovery, triggering and
-* timing functionality that is present on EDT Digital Imaging boards. Therefore direct calls to edtlib 
-* (<code>edt_</code>) subroutines should only be made when they provide functionality that is not present
-* in an equivalent or similar pdvlib call. Most notable are the DMA image capture subroutines --
-* pdvlib DMA should always be used (e.g. #pdv_multibuf, #pdv_start_images, #pdv_wait_images),
-* rather than calling the lower-level edtlib DMA subroutines directly (e.g. #edt_configure_ring_buffers,
-* #edt_start_buffers, #edt_wait_for_buffers.) However this restriction does not apply to the \ref msg.
-*
-<a href="http://www.edt.com/api/EDTapi.pdf">Complete EDT API reference in PDF format</a>
-*
-* @note Applications that access EDT boards must be linked with appropriate library (32 or 64-bit) for the
-* platform in use. Applications linked with 32-bit EDT libraries will not run correctly on 64-bit
-* systems, or vice-versa.
+* The PCI DV library sits on top of the lower-level \ref dma. Library functions from
+* both libraries operate on the same device handle, and both types of routines can be
+* used in the same application. However PCI DV (<code>pdv_</code>) library subroutines are designed to
+* handle the extra bookeeping, error-recovery, triggering and timing functionality
+* that is present on EDT Digital Imaging boards. Direct calls to the EDT DMA (<code>edt_</code>)
+* Library routines should only be made when there is functionality needed that is
+* not provided by the Digital Imaging library.  (Note: this restriction does not apply to the
+* \ref msg.)
 *
 * All routines access a specific device whose handle is created and returned by
-* the #pdv_open or #pdv_open_channel routine. PDV applications typically include the
+* the #pdv_open or #pdv_open_channel routine. PCI DV applications typically include the
 * following elements:
 *  -# The preprocessor statement:
 *  @code
@@ -40,7 +28,7 @@
 *  @endcode
 *  -# A call to #pdv_open or #pdv_open_channel, such as:
 *  @code
-* PdvDev *pdv_p = pdv_open_channel(EDT_INTERFACE, 0, 0);
+* PdvDev *pdv_p = pdv_open(EDT_INTERFACE, 0);
 *  @endcode
 *   (EDT_INTERFACE is defined as \c "pdv" in edtdef.h.)
 *  -# Device control or status calls, such as #pdv_get_height, as in:
@@ -56,11 +44,6 @@
 * @code
 * unsigned char *image = pdv_image(pdv_p) ;
 * @endcode
-*  -# A check for timeouts (to flag a problem in the case of an unplugged camera, misconfiguration, or other reason for data loss), as in:
-* @code
-* int t = pdv_timeouts() ;
-* @endcode
-* followed by appropriate action if new timeouts are detected, such as error output & timeout recovery code per simple_take.c
 *  -# A call to #pdv_close to close the device before ending the program, as in:
 *  @code
 * pdv_close(pdv_p) ;
@@ -91,18 +74,20 @@
 * LIBRARY=$(PDVLIB)
 * @endcode
 *  
-* See the \e makefile and example programs provided in the install directory for examples of compiling code using the digital
-* imaging library routines. Windows packages include a Visual Studio (8) solution and project files in <code><em>install_dir</em>\\projects.vs2008</code>.
+* See the Makefile (Linux) or generic.mk (Windows), and example programs provided in the
+* install directory for examples of compiling code using the digital imaging library routines.
+* On Windows you can also create a Visual Studio project to compile and link EDT libraries.
 *
-* Suggested starting points for acquisition are the simple_take.c, simplest_take.c and other
-* <b>simple_*.c</b> example programs. For serial communication, see serial_cmd.c, a command line
-* serial utility. Other <b>simple_*.c</b> example programs are provided to show specialized
+* Suggested starting points for acquisition are the <b><em>simple_take.c</em></b>, <em>simplest_take.c</em></b> and other
+* <b><em>simple_*.c</em></b> example programs. For serial communication, see <b><em>serial_cmd.c</em></b>, a command line
+* serial utility. Other <b><em>simple_*.c</em></b> example programs are provided to show specialized
 * functionality.
 *
 * The  #PdvDev device status structure is defined in the file libpdv.h. It
 * includes the #PdvDependent substructure, and other structure elements that describe
 * the state of the board and camera, as initialized by the current camera configuration file
-* (see the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</a>)
+* (see the Camera Configuration Guide, at
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">www.edt.com/manuals/PDV/camconfig.pdf </A>)
 * or modified by any subsequent API setup calls.  These structure elements include values for
 * things such as the current pixel re-order or color interpolation method, size and depth
 * of the image, number and size of currently allocated buffers.  To ensure compatibility with future
@@ -111,7 +96,7 @@
 * that can be queried via the subroutine calls such as currently set image width, height and depth should be
 * done via subroutine calls rather than hard-coding specific values.
 *
-* The PDV library source files are included in the installation. Most but not
+* The PCI DV library source files are included in the installation. Most but not
 * all routines are documented here.  Undocumented routines include internals, custom,
 * special purpose and obsoletes.  Feel free, however, to look through the library
 * source code and use (with caution) any routines that are appropriate.  Email
@@ -129,11 +114,13 @@
 /** 
 * @defgroup updown Startup / Shutdown
 * To open and close the EDT digital imaging device.
-* #pdv_open and #pdv_open_channel differ only in the \e channel argument.
-* Since many applications are written for single channel boards (for example, the VisionLink F1) 
-* pdv_open will often suffice for opening a handle to the device. However it is just as easy to
-* use #pdv_open_channel with zero-assigned variable in the \e channel argument, providing for
-* future possible expansion to multiple channel boards.
+* #pdv_open and #pdv_open_channel differ only in the \e channel argument. Since many
+* applications are written for single channel boards (e.g. PCI DV, PCI DVa, PCI DVK)
+* or assume only the first (0th) channel on dual channel boards (e.g. PCI DV C-Link,
+* PCI DV FOX), #pdv_open will often suffice for opening a handle to the
+* device. However it is just as easy to use #pdv_open_channel with zero-assigned
+* variable in the \e channel argument, providing for future possible expansion
+* to multiple channel boards.
 *
 * @ingroup dv
 */
@@ -146,7 +133,7 @@
 *
 * Most values get initialized from the config file, via the initcam program or the
 * the camera configuration dialog (see pdv_initcam, initcam.c and the
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>).
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>).
 * In many cases the "get" routines are all that are used from an application, but
 * sometimes it is useful for an application to make changes as well. These subroutines
 * can be used to do both.
@@ -169,11 +156,11 @@
 * @ingroup dv
 * Image acquisition subroutines.
 * The simplest way to acquire an image from an EDT digital imaging board is to use
-* #pdv_image (see simplest_take.c for an example).
+* #pdv_image (see \e simplest_take.c for an example).
 *
 * Using #pdv_start_image / #pdv_wait_image splits image acquisition into \e queue and
 * \e retrieve phases, allowing programmers to parallelize image acquisition and
-* processing (see simple_take.c).
+* processing (see \e \b simple_take.c).
 *
 * Using #pdv_start_images with #pdv_wait_images (or #pdv_wait_image) adds prestart /
 * queuing for further optimization.  Other subroutines are provided for more
@@ -193,13 +180,13 @@
 * re-ordering methods are as follows:
 *
 * <table>
-* <tr><td><b>Camera Output</b></td><td><b>Config Attributes (also see the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration guide</A>)</b></td><td><b>Buffer data</b></td></tr>
+* <tr><td><b>Camera Output</b></td><td><b>Config Attributes (also see the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration guide</A>)</b></td><td><b>Buffer data</b></td></tr>
 * <tr><td>Monochrome 8 bits</td><td>depth: 8<br>extdepth: 8<br>cl_data_path_norm: 07 (single ch.) or 17 (dual ch.)</td><td>1 byte/pixel<br></td></tr>
 * <tr><td>Monochrome 10-16 bits</td><td>depth: 10, 12, 14 or 16<br>extdepth: same as depth<br>CL_DATA_PATH_NORM: 09, 0b, 0d or 0f (single ch.), 19, 1b, 1d or 1f (dual ch.)</td><td>2 bytes/pixel, msb-justified</td></tr>
 * <tr><td>Bayer color 8 bits</td><td>depth: 24<br>extdepth: 8<br>CL_DATA_PATH_NORM: 07 (single ch.), 17 (dual ch.)<br>method_interlace: BGGR</td><td>3 bytes/pixel, B G R<br></td></tr>
 * <tr><td>Bayer color 10-16 bits</td><td>depth: 24<br>extdepth: 10, 12, 14 or 16<br>CL_DATA_PATH_NORM: 09, 0b, 0d or 0f (single ch.), 19, 1b, 1d or 1f (dual ch.)<br>method_interlace: BGGR_WORD</td><td>3 bytes/pixel, B G R<br></td></tr>
 * <tr><td>RGB color 24 bits</td><td>depth: 24<br>extdepth: 24<br>CL_CFG_NORM: 01</td><td>3 bytes/pixel, B G R<br></td></tr>
-* <tr><td>RGB color 30 bits</td><td>depth: 32<br>extdepth: 32<br>rgb30: 1 or 3<br>CL_CFG_NORM: 01<br>(note: PCI DV C-Link and PCIe4/8 DVa C-Link boards must be flashed with medium mode FPGA [see the users guide])</td><td>4 bytes/pixel, 8B 8G 8R 2B 2G 2R 2x<br></td></tr>
+* <tr><td>RGB color 30 bits</td><td>depth: 32<br>extdepth: 32<br>rgb30: 1 or 3<br>CL_CFG_NORM: 01<br>(note: pci dv c-link board must be flashed with medium mode FPGA such as \e pdvcamlk_pir.bit)</td><td>4 bytes/pixel, 8B 8G 8R 2B 2G 2R 2x<br></td></tr>
 * </table>
 */
 
@@ -258,7 +245,7 @@
 * #pdv_send_basler_frame).  One important exception is if the camera and board
 * are to be set up for <em>pulse-width</em>, aka <em>level trigger</em> acquisition
 * control (where the length of the board's shutter timer is used to control the length
-* of the EXPOSE pulse and consequently the camera's integration time). When using that mode (ebabled via the \b method_camera_shutter_timing configuration directive),
+* of the EXPOSE pulse and consequently the camera's integration time). When using that mode (ebabled via the method_camera_shutter_timing configuration directive),
 * #pdv_set_exposure <em>should</em> be used, since it also controls the board's
 * expose timer.
 */
@@ -267,14 +254,14 @@
 * @defgroup utility Utility 
 * @ingroup dv
 * Various utility subroutines.
-* Most PDV utility routines have a \c dvu_ prefix. \c dvu_ subroutines are not necessarily
+* Most pci dv utility routines have a \c dvu_ prefix. \c dvu_ subroutines are not necessarily
 * specific to the EDT digital imaging hardware. For example, dvu_write_rasfile could concievably
-* be used to write a raster file from any source, not just one captured by an EDT framegrabber.
+* be used to write a raster file from any source, not just one captured by an EDT PCI DV board.
 * As such, \c dvu_ subroutines do not operate on an #PdvDev device handle in their
 * parameter lists.
 *
 * There are a few utility subroutines that don't take a #PdvDev device handle but do have
-* a \c pdv_ prefix, and may or may not have some PDV specificity.
+* a \c pdv_ prefix, and may or may not have some PCI DV specificity.
 * 
 * The remaining \c pdv_ subroutines that do take a #PdvDev device handle are tagged
 * as utility subroutines because they do not fit any other category.
@@ -332,7 +319,6 @@ int     Smd_rate = NOT_SET;
 
 #define PDV_DEPENDENT(pdv_p) ((pdv_p)->dd_p)
 
-int check_register_wrap(EdtDev * edt_p);
 static void debug_print_serial_command(char *cmd);
 static void send_serial_binary_cmd(PdvDev * pdv_p, char *hexstr, int value);
 static void pdv_trigger_specinst(PdvDev * pdv_p);
@@ -411,7 +397,7 @@ static char *hex_to_str(char *resp, int n);
 #endif
 
 /**
-* Opens an EDT Framegrabber channel for application access.
+* Opens the PCI DV for application access.  
 * Opens the device, which is the first step in accessing the hardware. 
 * Allocates the memory for the device struct, as defined in libpdv.h
 * (included through edtinc.h), and host memory required to store a
@@ -434,7 +420,7 @@ static char *hex_to_str(char *resp, int n);
 * @Example
 * @code
 * // Example of opening and acquiring images from two cameras connected
-* // to separate channels 0 and 1 of a single VisionLink F4, PCIe8 DVa C-Link,
+* // to separate channels 0 and 1 of a single PCI DV C-Link, PCI DV FOX
 * // or other multi-channel EDT Digital Imaging board
 *
 * PdvDev *pdv_p0 = pdv_open_channel(EDT_INTERFACE, 0, 0);
@@ -468,30 +454,9 @@ static char *hex_to_str(char *resp, int n);
 * 
 * @ingroup updown
 */
+
 PdvDev *
 pdv_open_channel(const char *dev_name, int unit, int channel)
-{
-    return pdv_open_device(dev_name, unit, channel, 1);
-}
-
-/** Open the pdv device, with option to suppress non-existent device console output.
- *
- * #pdv_open_channel calls this subroutine with the verbose argument set to 1, so
- * this subroutine can be directly instead with verbose set to 0 if you want to suppress the
- * console warning message that gets output if attempting to open a non-existent device.
- * Since that's not a bad thing to know (and usually doesn't show up in Windows non-console
- * apps anyway), we recommend using #pdv_open_channel unless you specifically want to suppress
- * those messages.
- *
- * Other than the verbose argument, this is the same as #pdv_open_channel see that subroutine
- * for a full description.
-
- * @param verbose verbose output (default 1 for pdv_open_channel) or not (0)
- * @param param see #pdv_open_channel for other parameters
- * @return see #pdv_open_channel
- */
-PdvDev *
-pdv_open_device(const char *dev_name, int unit, int channel, int verbose)
 {
     PdvDev *pdv_p;
     char    tmpname[64];
@@ -522,12 +487,12 @@ pdv_open_device(const char *dev_name, int unit, int channel, int verbose)
         strcpy(tmpname, EDT_INTERFACE);
     else
         strcpy(tmpname, dev_name);
-    if ((pdv_p = edt_open_device(tmpname, unit, channel, verbose)) == NULL)
+    if ((pdv_p = edt_open_channel(tmpname, unit, channel)) == NULL)
         return NULL;
 
 
     /*
-    * alloc and get the PDV dependent methods struct, which should have
+    * alloc and get the PCI DV dependent methods struct, which should have
     * been initialized in the driver by initcam.
     */
     if (sizeof(Dependent) > EDT_DEPSIZE)
@@ -566,7 +531,7 @@ pdv_open_device(const char *dev_name, int unit, int channel, int verbose)
 
 
 /**
-* Opens channel 0 of an EDT Framegrabber for application access.
+* Opens the PCI DV for application access.  
 * Opens the device, which is the first step in accessing the hardware. 
 * Allocates the memory for the device struct, as defined in libpdv.h
 * (included through edtinc.h), and host memory required to store a
@@ -602,7 +567,6 @@ pdv_open(char *dev_name, int unit)
 * Sets up device for DMA. 
 * Generally only for internal use.
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return void
 * @ingroup acquisition 
 */
 void
@@ -754,7 +718,7 @@ pdv_get_pitch(PdvDev * pdv_p)
 *
 * @return Image width in pixels.
 *
-* @see pdv_get_dmasize, pdv_image_size, \b width directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_dmasize, pdv_image_size, \b width directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_get_cam_width(PdvDev * pdv_p)
@@ -778,7 +742,7 @@ pdv_get_cam_width(PdvDev * pdv_p)
 * </ul>
 * 
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
-* @return DMA size in bytes -- that is, the actual number of bytes acquired plus any added DMA if header data WITHIN the data is specified -- see #pdv_get_header_position, #pdv_extra_headersize
+* @return DMA size in bytes -- that is, the actual number of bytes acquired plus any added DMA if header data WITHIN the data is specified -- see @pdv_get_header_position, @pdv_extra_headersize
 *
 * @see pdv_image_size
 */
@@ -945,7 +909,7 @@ pdv_get_allocated_size(PdvDev * pdv_p)
 * waiting for data, or -1 to revert to automatic timeouts
 *
 * @return 0 on success, -1 on failure. 
-* @see pdv_auto_set_timeout, \b user_timeout directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_auto_set_timeout, \b user_timeout directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup acquisition 
 */
 int
@@ -1023,7 +987,7 @@ pdv_picture_timeout(PdvDev * pdv_p, int value)
 
 
 /**
-* Returns the number of times the device timed out (frame didn't transfer 
+* Returns the number of times the PCI DV timed out (frame didn't transfer 
 * completely or at all) since the device was opened.
 *
 * Timeouts occur when some or all of the image failed to transfer. Reasons for this
@@ -1056,16 +1020,16 @@ pdv_picture_timeout(PdvDev * pdv_p, int value)
 * Since these modes cause the board to ignore all FVAL (frame start) signals beyond
 * the first one in a continuous sequence, losses of relatively small amounts of
 * data won't trigger a timeout, resulting in a persistently out-of-synch condition.
-* The framesync footer logic shown in the \b simple_irig2.c example
+* The framesync header logic shown in the \b simple_irig2.c example
 * application was designed as a workaround for this, and more recently (e.g. driver/library
 * versions 5.3.9.4 and later) the framesync logic was incorporated into pdv_timeouts,
 * providing a convenient and transparent way to ensure detection of and recovery from 
 * an out-of-synch condition without the need to change any code. See  #pdv_enable_framesync
-* and the the \b method_framesync directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* and the the \b method_framesync directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * for more on this.
 *
 *
-* @see pdv_timeout_restart, pdv_enable_framesync, \b user_timeout and \b method_framesync directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* @see pdv_timeout_restart, pdv_enable_framesync, \b user_timeout and \b method_framesync directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 *
 * @Example
@@ -1073,13 +1037,10 @@ pdv_picture_timeout(PdvDev * pdv_p, int value)
 * int t, last_timeouts = 0;
 *
 * t = pdv_timeouts(pdv_p);
-* if (t > last_timeouts)
-* {
-*   printf("got timeout\n");
-*
-*   // (add recovery code here -- see simple_take.c for example)
-*
-*   last_timeouts = t;
+* if (t > last_timeouts) {
+*    printf("got timeout\n");
+*    // add recovery code here -- see simple_take.c for example
+*    last_timeouts = t;
 * }
 * @endcode
 *
@@ -1101,13 +1062,13 @@ pdv_timeouts(PdvDev * pdv_p)
 /**
 * Cleans up after a timeout, particularly when you've prestarted multiple
 * buffers or if you've forced a timeout with #edt_do_timeout. Superseded by
-* #pdv_timeout_restart with newer boards such as the VisionLink and PCIe series.
+* #pdv_timeout_restart with newer boards such as the PCI DV C-Link and PCI DV FOX.
 * 
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 *
 * @return # of buffers left undone; normally will be used as argument to
 * pdv_start_images() if calling routine wants to restart pipeline as if
-* nothing happened (see take.c for example of use)
+* nothing happened (see \e take.c for example of use)
 * @see pdv_timeout_restart
 */
 int
@@ -1143,7 +1104,7 @@ pdv_timeout_cleanup(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Height in pixels of images returned from an aquire.
-* @see pdv_get_cam_height, \b height directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* @see pdv_get_cam_height, \b height directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 */
 int
 pdv_get_height(PdvDev * pdv_p)
@@ -1173,7 +1134,7 @@ pdv_get_height(PdvDev * pdv_p)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
 * @return Image height in pixels.
 *
-* @see pdv_get_height, pdv_get_imagesize, \b width directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* @see pdv_get_height, pdv_get_imagesize, \b width directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 */
 int
 pdv_get_cam_height(PdvDev * pdv_p)
@@ -1336,7 +1297,7 @@ pdv_set_cam_height(PdvDev * pdv_p, int value)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Number of bits per pixel in the image.
-* @see pdv_set_depth, pdv_get_extdepth, \b depth directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* @see pdv_set_depth, pdv_get_extdepth, \b depth directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 */
 int
 pdv_get_depth(PdvDev * pdv_p)
@@ -1356,7 +1317,7 @@ pdv_get_depth(PdvDev * pdv_p)
 * camera outputs, as set by \e initcam from the configuration file
 * \b edtdepth directive.
 * Note that if \b depth is set differently than \b extdepth, the actual
-* number of bits per pixel passed through by the EDT framegrabber board will be
+* number of bits per pixel passed through by the PCI DV board will be
 * different.  For example, if \b extdepth is 10 but \b depth is 8, the
 * board will only pass one byte per pixel, even though the camera is
 * outputting two bytes per pixel.
@@ -1364,7 +1325,7 @@ pdv_get_depth(PdvDev * pdv_p)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open.
 * @return The extended depth (an integer).
 * 
-* @see pdv_get_depth, \b extdepth directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* @see pdv_get_depth, \b extdepth directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 */
 int
 pdv_get_extdepth(PdvDev * pdv_p)
@@ -1376,9 +1337,8 @@ pdv_get_extdepth(PdvDev * pdv_p)
 }
 
 /**
-* Deprecated -- instead use the combined #pdv_set_depth_extdepth_dpath.
-*
 * Sets the bit depth and extended depth.
+*
 * Depth is the number of valid bits per pixel that the
 * board will transfer across the bus.  Extended depth (extdepth) is usally the same but
 * not always, for example if we want to pass only the upper 8 bits of data from
@@ -1396,7 +1356,7 @@ pdv_get_extdepth(PdvDev * pdv_p)
 * @param extdepth the new extended depth value 
 * @return 0 on success, -1 on failure
 * 
-* @see pdv_get_depth, pdv_get_extdepth, \b depth, \b extdepth directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_depth, pdv_get_extdepth, \b depth, \b extdepth directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_set_depth_extdepth(PdvDev * pdv_p, int depth, int extdepth)
@@ -1437,8 +1397,7 @@ pdv_set_depth_extdepth(PdvDev * pdv_p, int depth, int extdepth)
 * @param dpath the new camera link data path value 
 * @return 0 on success, -1 on failure
 * 
-
-* @see pdv_cl_set_base_channel, spdv_get_depth, pdv_get_extdepth, \b depth, \b extdepth, \b CL_DATA_PATH_NORM directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_depth, pdv_get_extdepth, \b depth, \b extdepth, \b CL_DATA_PATH_NORM directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_set_depth_extdepth_dpath(PdvDev * pdv_p, int depth, int extdepth, u_int dpath)
@@ -1503,7 +1462,7 @@ pdv_set_depth_extdepth_dpath(PdvDev * pdv_p, int depth, int extdepth, u_int dpat
 
 
 /**
-* Deprecated -- instead use the combined #pdv_set_depth_extdepth_dpath.
+* DEPRECATED -- instead use the combined @pdv_set_depth_extdepth.
 *
 * The bit depth is the number of valid bits per pixel that the
 * board will transfer across the bus.  Normally depth is initialized
@@ -1512,7 +1471,7 @@ pdv_set_depth_extdepth_dpath(PdvDev * pdv_p, int depth, int extdepth, u_int dpat
 * via a post-initialization command to the camera for example. 
 *
 * Note that if \b depth is set differently than \b extdepth, the actual
-* number of bits per pixel passed through by the EDT framegrabber board will be
+* number of bits per pixel passed through by the PCI DV board will be
 * different from that received from the camera.  For example, if \b
 * extdepth is 10 (matching a camera output of 10 bits) but \b depth is
 * 8, the board will only pass one byte per pixel, even though the camera
@@ -1524,7 +1483,7 @@ pdv_set_depth_extdepth_dpath(PdvDev * pdv_p, int depth, int extdepth, u_int dpat
 * @param value the new depth value 
 * @return The extended depth (an integer).
 * 
-* @see pdv_set_depth_extdepth, pdv_set_depth_extdepth_dpath, pdv_get_depth, pdv_get_extdepth, \b extdepth directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_depth_extdepth, pdv_set_depth_extdepth_dpath, pdv_get_depth, pdv_get_extdepth, \b extdepth directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_set_depth(PdvDev * pdv_p, int value)
@@ -1564,7 +1523,7 @@ pdv_set_depth(PdvDev * pdv_p, int value)
 }
 
 /**
-* Deprecated -- instead use the combined #pdv_set_depth_extdepth_dpath.
+* DEPRECATED -- instead use the combined @pdv_set_depth_extdepth.
 *
 * Sets the bit depth coming from the camera.
 * Normally only called by #pdv_initcam; user applications should avoid calling
@@ -1577,7 +1536,7 @@ pdv_set_depth(PdvDev * pdv_p, int value)
 * via a post-initialization command sent to the camera for example. 
 *
 * Note that if \b depth is set differently than \b extdepth, the actual
-* number of bits per pixel passed through by the EDT framegrabber board will be
+* number of bits per pixel passed through by the PCI DV board will be
 * different.  For example, if \b extdepth is 10 but \b depth is 8, the
 * board will only pass one byte per pixel, even though the camera is
 * outputting two bytes per pixel.
@@ -1586,7 +1545,7 @@ pdv_set_depth(PdvDev * pdv_p, int value)
 * @param value the extended depth, in bits per pixel
 * @return The extended depth (an integer).
 * 
-* @see pdv_get_extdepth, pdv_set_depth, \b extdepth directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_extdepth, pdv_set_depth, \b extdepth directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_set_extdepth(PdvDev * pdv_p, int value)
@@ -1612,7 +1571,7 @@ pdv_set_extdepth(PdvDev * pdv_p, int value)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param model camera model (31 characters max).
 * @return 0 on success, -1 on failure.
-* @see pdv_get_cameratype, \b cameratype directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_cameratype, \b cameratype directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_set_cameratype(PdvDev * pdv_p, char *model)
@@ -1641,7 +1600,7 @@ pdv_set_cameratype(PdvDev * pdv_p, char *model)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return String representing the camera type.
-* @see pdv_get_camera_class, pdv_get_camera_model, pdv_get_camera_info, \b camera_class, \b camera_model, \b camera_info directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_camera_class, pdv_get_camera_model, pdv_get_camera_info, \b camera_class, \b camera_model, \b camera_info directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 char   *
 pdv_get_cameratype(PdvDev * pdv_p)
@@ -1665,7 +1624,7 @@ pdv_get_cameratype(PdvDev * pdv_p)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return String representing the camera class.
 *
-* @see pdv_get_cameratype, \b camera_class directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_cameratype, \b camera_class directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings
 */
 char   *
@@ -1683,7 +1642,7 @@ pdv_get_camera_class(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return String representing the camera model.
-* @see pdv_set_camera_model, \b camera_model directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_camera_model, \b camera_model directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings
 */
 char   *
@@ -1700,7 +1659,7 @@ pdv_get_camera_model(PdvDev * pdv_p)
 *  
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return String representing the camera info.
-* @see pdv_set_camera_info, \b camera_info directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_camera_info, \b camera_info directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings
 *
 */
@@ -1784,42 +1743,34 @@ check_valid_formatstr(char *str)
 }
 
 /**
-* Sets the exposure time, using the method defined by the directives in the camera configuration file, if set.
+* Sets the exposure time on the digital imaging device, using the method defined
+* by the directives in the camera configuration file, if set.
 *
 * pdv_set_exposure will set the exposure (or not) on the camera depending on how
-* the related directives are set in the camera configuration file. Specifically, the
-* \b method_camera_shutter_timing directive (or #pdv_set_shutter_method) defines whether timing is to be
-* controlled via camera serial commands, or by the board via Camera Control (CC) lines.
-*
+* the related directives are set in the camera configuration file. Some cameras have
+* specific methods that are coded into the subroutine -- these are set via the
+* \b method_camera_shutter_timing directive. If the directive is not
+* present in the config file, the default method will be SERIAL_ASCII, and
+* the subroutine will set the exposure by sending the command specified by the
+* \b serial_exposure directive, if it exists.
 * If \b method_camera_shutter_timing is \b AIA_MCL or \b AIA_MCL_100US and
 * something other than 0 is in the left nibble of \b MODE_CNTL_NORM, the board will
-* use its internal shutter timer and send out an expose pulse on the specified CC line with
-* a TRUE period of the number in milliseconds (AIA_MCL) or tenths of milliseconds (AIA_MCL_100US)
-* specified by the \b value parameter. The valid range in either case is 0-25500.
+* use its internal shutter timer and send out a trigger pulse on the specified line with
+* a TRUE period of the value in milliseconds (AIA_MCL) or tenths of milliseconds (AIA_MCL_100US).
+* The min/max value for this mode in either case is 0-25500.  In the case of SERIAL_ASCII
+* or any other mode, the range is camera dependent. Other methods are available that are
+* specific to specific cameras -- see the Camera Configuration guide for details.
 *
-* If \b method_camera_shutter_timing is \b AIA_SERIAL (the default), and then this subroutine
-* sends the appropriate serial commands based on the \b method_serial_format directive, which
-* defines which serial format is to be used. The default format is SERIAL_ASCII, in which case 
-* the subroutine will set the exposure by sending the command specified by the \b serial_exposure directive, if present.
-* If \b method_serial_format is \b SERIAL_ASCII but there is no \b serial_exposure directive, this subroutine
-* is a no-op.
-*
-* In the case of \b method_serial_format: \b SERIAL_ASCII or any other serial mode, the range is camera
-* dependent. Other methods are available that are specific to specific cameras -- see the Camera
-* Configuration guide for details.
-*
-* @note Using this subroutine for other than \b AIA_MCL or \b AIA_100US camera shutter timing modes (that is, any method
-* that uses serial) is no longer recommended. Back in the AIA (pre-Camera Link) days, there was a manageable set of
-* serial methods, so it made sense to have one subroutine that could control exposure time for all the available methods.
-* But the sheer number of different schemes has outgrown this library's ability to keep up, so for any camera command
-* sets other than those that use straight ASCII serial with an integer argument, it's more reliable to instead
-* send any camera-specific serial commands using #pdv_serial_command, #pdv_serial_binary_command, or #pdv_serial_write.
+* If no method is set via any of these methods, the subroutine will be a no-op. 
+* 
+* An alternative to using this convenience routine is send the specific serial
+* commands via #pdv_serial_command or #pdv_serial_write.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param value Exposure time. For AIA_MCL or AIA_MCL_100US, the valid range is 0-25500. For other methods, valid range and increments are camera-dependent. 
 * @return 0 if successful, -1 if unsuccessful.
-* @see pdv_set_shutter_method, pdv_get_shutter_method, pdv_set_exposure_mcl
-* @see <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration</A> directives \b MODE_CNTL_NORM, \b serial_exposure & \b method_camera_shutter_timing 
+* @see pdv_set_exposure_mcl, pdv_shutter_method, \b MODE_CNTL_NORM, \b serial_exposure & \b method_camera_shutter_timing 
+* directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings
 */
 int
@@ -1899,17 +1850,14 @@ pdv_set_exposure(PdvDev * pdv_p, int value)
             case SERIAL_ASCII:
             default:
                 {
-                    int n = check_valid_formatstr(dd_p->serial_exposure); 
+                    int n = check_valid_formatstr(dd_p->serial_offset); 
 
                     cmdstr[0] = '\0';
 
                     if (n == 0) /* no % formatting, use old method */
-                    {
-                        if (dd_p->serial_exposure[0])
-                            sprintf(cmdstr, "%s %d", dd_p->serial_exposure, value);
-                    }
+                        sprintf(cmdstr, "%s %d", dd_p->serial_offset, value);
                     else if ((n > 0) && (n < 5))
-                        sprintf(cmdstr, dd_p->serial_exposure, value, value, value, value);
+                        sprintf(cmdstr, dd_p->serial_offset, value, value, value, value);
 
                     if (cmdstr[0])
                     {
@@ -2016,7 +1964,7 @@ pdv_set_exposure(PdvDev * pdv_p, int value)
 * @param value Exposure time, range 0-65535
 *
 * @return 0 if successful, -1 if unsuccessful.
-* @see pdv_set_exposure, \b MODE_CNTL_NORM & \b method_camera_shutter_timing directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_exposure, \b MODE_CNTL_NORM & \b method_camera_shutter_timing directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -2866,7 +2814,7 @@ send_serial_binary_cmd(PdvDev * pdv_p, char *hexstr, int value)
 * or set your own fixed timeout override with the \b user_timeout directive
 * or #pdv_set_timeout.
 * 
-* @see pdv_initcam,  pdv_set_timeout, pdv_set_exposure, \b pclock_speed & \b user_timeout directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_initcam,  pdv_set_timeout, pdv_set_exposure, \b pclock_speed & \b user_timeout directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 *
 * @return 0 on success, -1 on failure. 
 */
@@ -2972,14 +2920,11 @@ pdv_set_gain(PdvDev * pdv_p, int value)
         int n = check_valid_formatstr(dd_p->serial_gain); 
 
         if (n == 0) /* no % formatting, use old method */
-        {
-            if (dd_p->serial_gain[0])
-                sprintf(cmdstr, "%s %d", dd_p->serial_gain, value);
-        }
+            sprintf(cmdstr, "%s %d", dd_p->serial_gain, value);
         else if ((n > 0) && (n < 5))
             sprintf(cmdstr, dd_p->serial_gain, value, value, value, value);
 
-        if (cmdstr[0])
+        if (cmdstr)
         {
             ret = pdv_serial_command_flagged(pdv_p, cmdstr, SCFLAG_NORESP);
 
@@ -3201,10 +3146,7 @@ pdv_set_blacklevel(PdvDev * pdv_p, int value)
         int n = check_valid_formatstr(dd_p->serial_offset); 
 
         if (n == 0) /* no % formatting, use old method */
-        {
-            if (dd_p->serial_offset[0])
             sprintf(cmdstr, "%s %d", dd_p->serial_offset, value);
-        }
         else if ((n > 0) && (n < 5))
             sprintf(cmdstr, dd_p->serial_offset, value, value, value, value);
 
@@ -3332,7 +3274,7 @@ pdv_set_aperture(PdvDev * pdv_p, int value)
 * #pdv_serial_binary_command to send the command to put the camera into binned
 * mode, then call #pdv_setsize to reset the board to the new frame size.
 *
-* If the PDV library does not know how to set binning on the camera in use,
+* If the PCI DV library does not know how to set binning on the camera in use,
 * a -1 will be returned and the width/height/imagesize will remain unchanged.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
@@ -3341,7 +3283,7 @@ pdv_set_aperture(PdvDev * pdv_p, int value)
 *
 * @return 0 on success, -1 on failure. 
 *
-* @see \b serial_binning directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b serial_binning directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -3432,7 +3374,7 @@ pdv_set_binning_generic(PdvDev * pdv_p, int value)
 * 
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Exposure time, in milliseconds.
-* @see pdv_set_exposure, \b method_camera_shutter_timing directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_exposure, \b method_camera_shutter_timing directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -3537,13 +3479,12 @@ pdv_get_aperture(PdvDev * pdv_p)
 }
 
 /**
-* Tell the EDT framergrabber hardware to invert each pixel before transferring it
+* Tell the PCI DV hardware to invert each pixel before transferring it
 * to the host computer's memory.  This is a hardware operation that is
-* implemented in the board's firmware and has no impact on performance.
+* implemented in the PCI DV firmware and has no impact on performance.
 * 
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param val   1=invert, 0=normal
-* @return void
 * 
 * @ingroup settings 
 */
@@ -3551,6 +3492,9 @@ void
 pdv_invert(PdvDev * pdv_p, int val)
 {
     u_int   data_path;
+
+    edt_msg(DBG2, "pdv_invert()\n");
+
 
     /* data_path = edt_reg_read(pdv_p, PDV_DATA_PATH); */
     data_path = pdv_p->dd_p->datapath_reg;
@@ -3565,75 +3509,6 @@ pdv_invert(PdvDev * pdv_p, int val)
     edt_reg_write(pdv_p, PDV_DATA_PATH, data_path);
     pdv_p->dd_p->datapath_reg = data_path;
 }
-
-/**
-* Get the state of the hardware invert register enable bit.
-* See /ref pdv_invert for details on this feature.
-* 
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return state of the enable bit for this feature:  1=enabled, 0=disabled
-* 
-* @ingroup settings 
-*/
-int
-pdv_get_invert(PdvDev * pdv_p)
-{
-    u_int   data_path;
-
-    return (int)((edt_reg_read(pdv_p, PDV_DATA_PATH) & PDV_INVERT) != 0);
-}
-
-
-/**
-* Enable hardware overwrite of first two bytes of the frame with a counter.
-* Counter increments by one for every frame received by the framegrabber.
-* Disabling this also resets the counter to zero, unless framesync mode is
-* also enabled (see pdv_enable_framesync).
-*
-* Only available on  PCIe8 DVa C-Link, Visionlink, and going forward.
-* 
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @param val   1=enable, 0=disable
-* @return void
-* 
-* @ingroup settings 
-*/
-void
-pdv_set_firstpixel_counter(PdvDev * pdv_p, int ena)
-{
-    if (pdv_p->devid >= PE8DVCL_ID)
-    {
-      u_int reg = edt_reg_read(pdv_p, PDV_CL_CFG2);
-      if (ena)
-          edt_reg_write(pdv_p, PDV_CL_CFG2, reg | PDV_CL_CFG2_PE8_FRMTAG2);
-      else edt_reg_write(pdv_p, PDV_CL_CFG2, reg & ~PDV_CL_CFG2_PE8_FRMTAG2);
-    }
-}
-
-/**
-* Query state of the hardware first pixel counter register enable bit.
-* See /ref pdv_set_firstpixel_counter for details on this feature.
-*
-* Only available on  PCIe8 DVa C-Link, Visionlink, and going forward.
-* 
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return state of the enable bit for this feature:  1=enabled, 0=disabled
-* 
-* @ingroup settings 
-*/
-int
-pdv_get_firstpixel_counter(PdvDev * pdv_p)
-{
-    if (pdv_p->devid >= PE8DVCL_ID)
-    {
-      int reg = edt_reg_read(pdv_p, PDV_CL_CFG2);
-
-      return (int)((edt_reg_read(pdv_p, PDV_CL_CFG2) & PDV_CL_CFG2_PE8_FRMTAG2) != 0);
-    }
-
-    return 0;
-}
-        
 
 /**
 * Obsolete, included for backwards compatability only -- see
@@ -3663,11 +3538,11 @@ pdv_get_interlaced(PdvDev * pdv_p)
 * buffer (pdv_multibuf(pdv_p, 1)), and should never pre-start more than one
 * buffer before waiting for it.  
 *
-* The take.c program has an example of use of this routine.
+* The \e take.c program has an example of use of this routine.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Value of the \b force_single flag.
-* @see \b force_single <a href="http://edt.com/downloads/camera-configuration-guide.pdf">camera
+* @see \b force_single <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">camera
 * configuration</A> directive, pdv_multibuf
 * @ingroup acquisition 
 */
@@ -3681,7 +3556,7 @@ pdv_force_single(PdvDev * pdv_p)
 * Obsolete.
 * Is variable_size set ("variable_size: 1" in the config file)?
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @see \b variable_size <a href="http://edt.com/downloads/camera-configuration-guide.pdf">camera configuration</A> directive
+* @see \b variable_size <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">camera configuration</A> directive
 * @ingroup edt_undoc
 */
 int
@@ -3739,22 +3614,17 @@ pdv_serial_read_nullterm(PdvDev * pdv_p, char *buf, int size, int nullterm)
     if (Pdv_debug)
     {
         int     i, num = bytesReturned;
-        int is_ascii = 1;
 
-        if (num > 32)		/* limit number of bytes printed to 16 */
-            num = 32;
-
-        for (i=0;i<num; i++)
-        {
-            if (!isascii(buf[i]))
-                is_ascii = 0;
-        }
+        if (num > 16)		/* limit number of bytes printed to 16 */
+            num = 16;
         edt_msg(DBG2, "pdv_serial_read(<");
         for (i = 0; i < num; i++)
         {
-            if (is_ascii)
-                edt_msg(DBG2, "%c", (char) buf[i]);
-            else edt_msg(DBG2, "%02x%s", (u_char) buf[i], i < num-1?", ":"");
+            edt_msg(DBG2, "%02x", (u_char) buf[i]);
+            if (i + 1 < num)
+                edt_msg(DBG2, ", ");
+            else
+                break;
         }
         edt_msg(DBG2, ">, %d)\n", size);
     }
@@ -3770,17 +3640,19 @@ pdv_serial_read_nullterm(PdvDev * pdv_p, char *buf, int size, int nullterm)
 * 
 * @Example
 * @code
-* int count = 64;  // wait for 64 bytes, or timeout, whichever comes first.
-* int got = pdv_serial_wait(pdv_p, 0, count); 
-* char buf[count+1];
-*
-* // read the data we waited for
-* pdv_serial_read(pdv_p, buf, got);
-* if (got < count)
-*   printf("timeout occurred while waiting for serial data\n");
-* if (got != 0)
-*   printf("data read over serial: %s\n", buf);
-* @endcode
+*  int count = 64;
+*  // wait for 64 bytes, or timeout, whichever comes first.
+*  int got = pdv_serial_wait(pdv_p, 0, count); 
+*  // read the data we waited for.
+*  char buf[count+1];
+*  pdv_serial_read(pdv_p, buf, got);
+*  if (got < count) {
+*      printf("timeout occurred while waiting for serial data\n");
+*  }
+*  if (got != 0) {
+*      printf("data read over serial: %s\n", buf);
+*  }
+*  @endcode
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param buf   pointer to data buffer--must be preallocated to at least \b
@@ -3904,7 +3776,6 @@ static int pdv_serial_block_size = 1024;
 * Sets the block size for serial writes if the default of 512 is not adequate.
 *
 * @param newsize the new serial block size
-* @return void
 */
 void pdv_set_serial_block_size(int newsize)
 {
@@ -3974,7 +3845,7 @@ pdv_serial_check_enabled(PdvDev *pdv_p)
 * This function is mainly for sending binary data over the serial lines to the
 * camera. It can be used for ASCII commands, but #pdv_serial_command is generally easier.
 * 
-* For a detailed example of serial communications, see the serial_cmd.c example
+* For a detailed example of serial communications, see the \e serial_cmd.c example
 * program.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
@@ -4148,7 +4019,7 @@ pdv_serial_read_blocking(PdvDev *pdv_p, char *buf, int size)
 * added to any command via the \b serial_prefix camera configuration directive.
 * By default there is no serial prefix.
 *
-* For a detailed example of serial communications, see the serial_cmd.c example
+* For a detailed example of serial communications, see the \e serial_cmd.c example
 * program.
 *
 * Consult your camera manufacturer's users guide for information on serial
@@ -4306,7 +4177,6 @@ pdv_serial_prefix(PdvDev * pdv_p)
 * @param prefix - see #pdv_serial_command
 * @param term - see #pdv_serial_command
 * @see pdv_serial_command
-* @return void
 */
 void
 pdv_set_serial_delimiters(PdvDev *pdv_p, char *prefix, char *term)
@@ -4380,7 +4250,7 @@ debug_print_serial_command(char *cmd)
 * Consult your camera manufacturer user's guide for information on serial
 * command format requirements. 
 *
-* For a detailed example of serial communications, see the serial_cmd.c
+* For a detailed example of serial communications, see the \e serial_cmd.c
 * example program.
 *
 *
@@ -4569,14 +4439,14 @@ pdv_read_duncan_frame(PdvDev * pdv_p, u_char *frame)
 * pdv_serial_command_flagged, etc.) instead of calling pdv_serial_write
 * directly
 * 
-* @param pdv_p pointer to pdv device structure returned by #pdv_open
+* @param pdv_p	pointer to pdv device structure returned by #pdv_open
 * 
-* @param cmd command -- must be a valid serial command for the camera in use, as
+* @param cmd	command -- must be a valid serial command for the camera in use, as
 * defined in camera manufacturer's user's manual
 * 
 * @param len number of bytes of cmd to write
 * 
-* @param flag flag bits -- so far only SCFLAG_NORESP is defined -- tells the driver
+* @param flag	flag bits -- so far only SCFLAG_NORESP is defined -- tells the driver
 * not to wait for a response before returning
 * 
 * @return 0 on success, -1 on failure
@@ -4616,7 +4486,7 @@ pdv_serial_binary_command_flagged(PdvDev * pdv_p, const char *cmd, int len, u_in
 */
 
 /**
-* Reads image data from the EDT framegrabber board.  This is the 
+* Reads image data from the PCI DV.  This is the 
 * lowest-level method for aquiring an image. pdv_read is not supported on all platforms;
 * and is included mainly for historical reasons; we recommend instead setting up ring
 * buffers using #pdv_multibuf and ring buffer subroutines such as #pdv_start_image to do the
@@ -4633,7 +4503,6 @@ pdv_serial_binary_command_flagged(PdvDev * pdv_p, const char *cmd, int len, u_in
 *                                 
 * unsigned char *buf = malloc(size);
 * int bytes_returned;
-*
 * bytes_returned = pdv_read(pdv_p, buf, size;
 * @endcode
 *
@@ -4651,7 +4520,7 @@ pdv_read(PdvDev * pdv_p, unsigned char *buf, unsigned long size)
     int last_timeouts;
 
     if (pdv_p == NULL || pdv_p->dd_p == NULL)
-        return 0; 
+        return NULL;
 
     edt_msg(DBG2, "pdv_read(%d)\n", size);
 
@@ -4802,7 +4671,6 @@ pdv_image_raw(PdvDev * pdv_p)
 * is equivalent to pdv_start_images(pdv_p, 1).
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return void
 */
 void
 pdv_start_image(PdvDev * pdv_p)
@@ -4824,7 +4692,6 @@ pdv_start_image(PdvDev * pdv_p)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param count    number of images to start.  A value of 0 starts
 * freerun. To stop freerun, call #pdv_start_images again with a \a count of 1.
-* @return void
 */
 void
 pdv_start_images(PdvDev * pdv_p, int count)
@@ -4896,16 +4763,14 @@ pdv_start_images(PdvDev * pdv_p, int count)
 * //see also simple_take.c and simplest_take.c example program.
 * pdv_multibuf(pdv_p, 4);
 * pdv_start_image(pdv_p);
-* while(1)
-* {
-*   unsigned char *image;
+* while(1) {
+* 	unsigned char *image;
 *
-*   image = pdv_wait_image(pdv_p); //returns the latest image
-*   pdv_start_image(pdv_p);        //start acquisition of next image
+*	image = pdv_wait_image(pdv_p); //returns the latest image
+*	pdv_start_image(pdv_p);        //start acquisition of next image
 *
-*   // (process and/or display image previously acquired here)
-*
-*   printf("got image\n");
+*	//process and/or display image previously acquired here
+*	printf("got image\n");
 * }
 * @endcode
 *
@@ -4929,7 +4794,7 @@ pdv_wait_image(PdvDev * pdv_p)
 * file, this subroutine is equivalent to #pdv_wait_image.
 *
 * For information about camera configuration directives, see the
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
 *
@@ -4937,15 +4802,14 @@ pdv_wait_image(PdvDev * pdv_p)
 * @code
 * pdv_multibuf(pdv_p, 4);
 * pdv_start_image(pdv_p);
-* while(1)
-* {
-*   unsigned char *image;
+* while(1) {
+* 	unsigned char *image;
 *
-*   image = pdv_wait_image_raw(pdv_p); //returns the latest image
-*   pdv_start_image(pdv_p);            //start acquisition of next image
+*	image = pdv_wait_image_raw(pdv_p); //returns the latest image
+*	pdv_start_image(pdv_p);        //start acquisition of next image
 *
-*   // (process and/or display image previously acquired here)
-*   printf("got raw image\n");
+*	//process and/or display image previously acquired here
+*	printf("got raw image\n");
 * }
 * @endcode
 *
@@ -4962,52 +4826,44 @@ pdv_wait_image_raw(PdvDev * pdv_p)
 
 
 /**
- * Identical to #pdv_wait_image but also provides the time at which the
- * DMA was complete on this image. The argument \a timep should point
- * to an array of two unsigned integers which will be filled in with the
- * seconds and microseconds (respectively) of the time the image finished being
- * acquired. #pdv_decode_timestamp can be used to decode the value into a double float.
- *
- * Timestamp comes from the system clock (gettimeofday) at the time the image
- * transfer from the camera to the host memory (DMA) is finished. Latency between
- * the end of DMA and when the timestamp is made will be on the order of a few
- * microseconds. There are other delays in the chain -- the camera may have a
- * lag between the end of frame valid and the end of sending out the data, and system
- * interrupt response time may also be a factor. For more precise
- * timestamping using an external time input, see the
- * <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
- *
- * @param pdv_p pointer to pdv device structure returned by #pdv_open
- * @param timep a pointer to an array of at least two unsigned integers.
- * @see pdv_decode_timestamp
- * 
- * @Example
- * @code
- * u_int timestamp[2];
- *
- * pdv_multibuf(pdv_p, 4); // set up multiple buffers for optimal pipelining
- * pdv_start_image(pdv_p); // start the first image
- *
- * while(1)
- * {
- *  unsigned char *image;
- *
- *  // get the latest image
- *  image = pdv_wait_image_timed(pdv_p, timestamp); 
- *
- *  // start the next one (pipelined)
- *  pdv_start_image(pdv_p); 
- *
- *  // (process and/or display image previously acquired here)
- *
- *  // print the timestamp (double float)
- *  printf("got image at time %lf\n", pdv_decode_timestamp(timestamp));
- * }
- * @endcode
- *
- * @return Address of the image.
- * @see pdv_wait_image, pdv_start_image, pdv_wait_image_raw, pdv_wait_image_timed_raw, pdv_decode_timestamp
- */
+* Identical to #pdv_wait_image but also returns the time at which the
+* DMA was complete on this image.  The argument \a timep should point
+* to an array of unsigned integers which will be filled in with the
+* seconds and microseconds of the time the image was finished being
+* acquired.
+*
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
+*
+* @param pdv_p pointer to pdv device structure returned by #pdv_open
+* @param timep a pointer to an array of at least two unsigned integers.
+* 
+* @Example
+* @code
+* u_int timestamp[2];
+*
+* pdv_multibuf(pdv_p, 4);
+* pdv_start_image(pdv_p);
+* while(1) {
+* 	unsigned char *image;
+*
+*	// get the latest image
+*	image = pdv_wait_image_timed(pdv_p, timestamp); 
+*	pdv_start_image(pdv_p);  //start acquisition of next image
+*
+*	//process and/or display image previously acquired here
+*	printf("got image, at time %s\n", edt_timestamp(timestamp));
+* }
+* @endcode
+*
+* @return Address of the image.
+* @see pdv_wait_image, pdv_start_image, pdv_wait_image_raw, pdv_wait_image_timed_raw
+*/
 unsigned char *
 pdv_wait_image_timed(PdvDev * pdv_p, u_int * timep)
 {
@@ -5019,12 +4875,15 @@ pdv_wait_image_timed(PdvDev * pdv_p, u_int * timep)
 * specifies whether or not to perform the deinterleave. If the doRaw
 * option is 0, the deinterleave conversion will be performed; if the
 * doRaw option is 1, the deinterleave conversion will not be performed.
-*
-* The argument \a timep should * point to an array of at least two unsigned integers
-* which will be filled in with the seconds and microseconds of the time the last
-* image was finished being acquired. See #pdv_wait_image_timed for a more detailed
-* explanation of the timecode description and handling.
 * 
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
+*
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param timep a pointer to an array of at least two unsigned integers.
 * @param doRaw specifies raw (if 1) or interleaved (if 0) image data.
@@ -5035,18 +4894,15 @@ pdv_wait_image_timed(PdvDev * pdv_p, u_int * timep)
 *
 * pdv_multibuf(pdv_p, 4);
 * pdv_start_image(pdv_p);
-* while(1)
-* {
-*   unsigned char *image;
+* while(1) {
+* 	unsigned char *image;
 *
-*   // get the most recent image
-*   image = pdv_wait_image_timed_raw(pdv_p, timestamp, 1); 
+*  	// get the latest image
+*	image = pdv_wait_image_timed_raw(pdv_p, timestamp, 1); 
+*	pdv_start_image(pdv_p);  //start acquisition of next image
 *
-*   //start acquisition of next image
-*   pdv_start_image(pdv_p);
-*
-*   //process and/or display image previously acquired here
-*   printf("got raw image, at time %lf\n", pdv_decode_timestamp(timestamp));
+*	//process and/or display image previously acquired here
+*  	printf("got raw image, at time %s\n", edt_timestamp(timestamp));
 * }
 * @endcode
 *
@@ -5076,16 +4932,21 @@ pdv_wait_image_timed_raw(PdvDev * pdv_p, u_int * timep, int doRaw)
 * option is 0, the deinterleave conversion will be performed; if the
 * doRaw option is 1, the deinterleave conversion will not be performed.
 *
-* The argument \a timep should * point to an array of at least two unsigned integers
-* which will be filled in with the seconds and microseconds of the time the last
-* image was finished being acquired. See #pdv_wait_image_timed for a more detailed
-* explanation of the timecode description and handling.
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
+*
 * @param count number of images to wait for before returning. If
 *              \a count is greater than the number of buffers set by
 *              #pdv_multibuf, only the last \a count images will be
 *              available when this function returns.
+*
 * @param timep a pointer to an array of at least two unsigned integers.
 * @param doRaw specifies raw (if 1) or interleaved (if 0) image data.
 *
@@ -5100,15 +4961,16 @@ pdv_wait_image_timed_raw(PdvDev * pdv_p, u_int * timep, int doRaw)
 * pdv_start_images(pdv_p, num_images);
 * pdv_wait_images_timed_raw(pdv_p, num_images, timestamp, doRaw);
 * bufs = pdv_buffer_addresses(pdv_p);
-* printf("got all images, last one at time: %lf\n", pdv_decode_timestamp(pdv_p, timestamp));
-*
+* printf("got all images. last one at time: %s\n",
+*                          edt_timestamp(timestamp);
 * for (i=0; i<4; i++)
-*   process_image(bufs[i]);   // your processing routine 
+*	process_image(bufs[i]);   // your processing routine 
+* }
 * @endcode
 * 
 * @return The address of the last image. 
 
-* @see pdv_start_image, pdv_wait_images, pdv_wait_images_raw, pdv_wait_images_timed, pdv_decode_timestamp
+* @see pdv_start_image, pdv_wait_images, pdv_wait_images_raw, pdv_wait_images_timed
 */
 unsigned char *
 pdv_wait_images_timed_raw(PdvDev * pdv_p, int count, u_int * timep, int doRaw)
@@ -5132,13 +4994,16 @@ pdv_wait_images_timed_raw(PdvDev * pdv_p, int count, u_int * timep, int doRaw)
 * filled in with the seconds and microseconds of the time the last
 * image was finished being acquired.
 *
-* The argument \a timep should * point to an array of at least two unsigned integers
-* which will be filled in with the seconds and microseconds of the time the last
-* image was finished being acquired. See #pdv_wait_image_timed for a more detailed
-* explanation of the timecode description and handling.
-*
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
+*
 * @param count number of images to wait for before returning. If
 *              \a count is greater than the number of buffers set by
 *              #pdv_multibuf, only the last \a count images will be
@@ -5148,7 +5013,7 @@ pdv_wait_images_timed_raw(PdvDev * pdv_p, int count, u_int * timep, int doRaw)
 
 * @return The address of the last image. 
 
-* @see pdv_start_image, pdv_wait_images, pdv_wait_images_timed_raw, pdv_decode_timestamp
+* @see pdv_start_image, pdv_wait_images, pdv_wait_images_timed_raw
 */
 unsigned char *
 pdv_wait_images_timed(PdvDev * pdv_p, int count, u_int * timep)
@@ -5169,21 +5034,32 @@ pdv_last_image_timed_raw(PdvDev * pdv_p, u_int * timep, int doRaw)
 
 /**
 * Identical to #pdv_wait_last_image_raw but also returns the time at which
-* the DMA was complete on the last image.
-* The argument \a timep should * point to an array of at least two unsigned integers
-* which will be filled in with the seconds and microseconds of the time the last
-* image was finished being acquired. See #pdv_wait_image_timed for a more detailed
-* explanation of the timecode description and handling.
+* the DMA was complete on the last image.  The argument \a timep should
+* point to an array of at least two unsigned integers which will be
+* filled in with the seconds and microseconds of the time the last
+* image was finished being acquired.
+*
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
 *
 * If reordering is not enabled, the data buffer will be the same whether
 * doRaw is 0 or 1. For more on data reordering, see the \b method_interlace
 * directive in the 
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
+*
 * @param timep a pointer to an array of at least two unsigned integers.
+
 * @param doRaw specifies raw (if 1) or interleaved (if 0).
+
 * @return The address of the last image. 
+
 * @see pdv_start_images, pdv_wait_images, pdv_wait_last_image_raw
 */
 unsigned char *
@@ -5221,10 +5097,13 @@ pdv_wait_last_image_timed_raw(PdvDev * pdv_p, u_int * timep, int doRaw)
 * filled in with the seconds and microseconds of the time the last
 * image was finished being acquired.
 *
-* The argument \a timep should * point to an array of at least two unsigned integers
-* which will be filled in with the seconds and microseconds of the time the last
-* image was finished being acquired. See #pdv_wait_image_timed for a more detailed
-* explanation of the timecode description and handling.
+* Timestamp comes from the system clock (gettimeofday) at the time the image
+* transfer from the camera to the host memory (DMA) is finished.  Latency between
+* the end of DMA to when the timestamp is made will be on the order of a few
+* microseconds.  There are other delays in the chain -- the camera may have a
+* lag between the end of frame valid and the end of sending out the data, and system
+* interrupt response time may also be a factor. For more precise
+* timestamping using an external time input, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp function for IrigB input</a>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
 * @param timep a pointer to an array of at least two unsigned integers.
@@ -5243,9 +5122,6 @@ pdv_wait_last_image_timed(PdvDev * pdv_p, u_int * timep)
 /**
 * Identical to pdv_wait_last_image_timed; included for
 * backwards compatability only.
-*
-* @param pdv_p pointer to pdv device structure returned by #pdv_open
-* @param timep a pointer to an array of at least two unsigned integers.
 */
 unsigned char *
 pdv_last_image_timed(PdvDev * pdv_p, u_int * timep)
@@ -5255,33 +5131,6 @@ pdv_last_image_timed(PdvDev * pdv_p, u_int * timep)
 }
 
 /**
- * Decode the timestamp from #pdv_get_image_timed and related subroutines.
- *
- * Converts the u_int array returned by the _timed subroutines to a double float, representing
- * the value in nanoseconds.
- *
- * @param timestamp as an array of two unsigned integers, as provided by #pdv_wait_image_timed or similar call
- * @return the timestamp as a double float
- * @see pdv_wait_image_timed, pdv_wait_images_timed, and other pdv_wait_*_timed subroutines
- */
-double
-pdv_decode_timestamp(PdvDev *edt_p, u_int timestamp[])
-{
-    double curtime = 0.0;
-
-   /* NOTE: this only handles the default case of timetype being set to EDT_TM_SEC_NSEC.
-    * If that was changed (via edt_set_timetype), all bets are off since that was
-    * experimental / unsupported code.
-    */
-
-    /* secs, nsec */
-    curtime = (double) timestamp[0] * 1000000000L + timestamp[1];
-    curtime /= 1000000000.0;
-    return curtime;
-}
-
-
-/**
 * Identical to the pdv_wait_last_image, except that it provides a way to
 * determine whether to include or bypass any image deinterleave that is
 * enabled.
@@ -5289,7 +5138,7 @@ pdv_decode_timestamp(PdvDev *edt_p, u_int timestamp[])
 * If data reordering is not enabled, the data buffer will be the same whether
 * doRaw is 0 or 1. For more on data reordering, see the \b method_interlace
 * directive in the 
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 *
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
@@ -5353,7 +5202,6 @@ pdv_wait_last_image_raw(PdvDev * pdv_p, int *nSkipped, int doRaw)
 * @code
 * int skipped_frames;
 * u_char *imagebuf;
-*
 * imagebuf=pdv_wait_last_image(pdv_p &skipped_frames);
 * @endcode
 * 
@@ -5374,7 +5222,7 @@ pdv_wait_last_image(PdvDev * pdv_p, int *nSkipped)
 * If data reordering is not enabled, the data buffer will be the same whether
 * doRaw is 0 or 1. For more on data reordering, see the \b method_interlace
 * directive in the 
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param nSkipped pointer to an integer which will be filled in with
@@ -5549,14 +5397,13 @@ pdv_get_interleave_data(PdvDev *pdv_p, u_char * buf, int bufnum)
 * @code 
 * // see also simple_take.c example program 
 * unsigned char **bufs;
-*
 * pdv_multibuf(pdv_p, 4);
 * pdv_start_images(pdv_p, 4);
 * pdv_wait_images_raw(pdv_p, 4);
 * bufs = pdv_buffer_addresses(pdv_p);
-*
 * for (i=0; i<4; i++)
-*   process_image(bufs[i]);   // your processing routine 
+*	process_image(bufs[i]);   // your processing routine 
+* }
 * @endcode
 *
 * @return Address of the last image.
@@ -5651,14 +5498,13 @@ pdv_wait_images_raw(PdvDev * pdv_p, int count)
 * @code 
 * // see also simple_take.c example program 
 * unsigned char **bufs;
-*
 * pdv_multibuf(pdv_p, 4);
 * pdv_start_images(pdv_p, 4);
 * pdv_wait_images(pdv_p, 4);
 * bufs = pdv_buffer_addresses(pdv_p);
-*
 * for (i=0; i<4; i++)
-*   process_image(bufs[i]);   // your processing routine 
+*	process_image(bufs[i]);   // your processing routine 
+* }
 * @endcode
 * 
 * @return The address of the last image. 
@@ -5688,10 +5534,11 @@ pdv_wait_images(PdvDev *pdv_p, int count)
 
     if (dd_p->swinterlace)
     {
-        pdv_alloc_tmpbuf(pdv_p);
+        pdv_alloc_tmpbuf(pdv_p);	
     }
 
     buf = pdv_wait_images_raw(pdv_p, count);
+
 
 
     if (dd_p->swinterlace)
@@ -5735,12 +5582,10 @@ pdv_wait_images(PdvDev *pdv_p, int count)
         if (dd_p->markbin || dd_p->markras) dd_p->rascnt++ ;
     }
 
-#if 0 /* NO! pdv_wait_images_raw does this */
     if ((pdv_framesync_mode(pdv_p) == PDV_FRAMESYNC_EMULATE_TIMEOUT)
      && (pdv_check_framesync(pdv_p, buf, &fc) > 0)
      && (last_timeouts == edt_timeouts(pdv_p)))
         edt_do_timeout(pdv_p);
-#endif
 
     return (retval);
 }
@@ -5773,7 +5618,7 @@ pdv_set_slop(PdvDev * pdv_p, int slop)
 * registers for tagging data with magic number, count, and timestamp data.
 * 
 * Currently only one type, HDR_TYPE_IRIG2 is defined. For more about the
-* IRIG functionality on the PCIe8 DV C-Link, see the Timestamping appendinx in the User's Guide.
+* IRIG functionality on the PCIe8 DV C-Link, see the <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">Application Note</a>.
 *
 * This subroutine and the associated camera config directive
 * \b method_header_type encapsulate setting the header logic for a specific
@@ -5800,7 +5645,7 @@ pdv_set_slop(PdvDev * pdv_p, int slop)
 
 * @return 0 in success, -1 on failure
 
-* @see pdv_set_header_size, \b method_header_type directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>,  and the Timestamp appendix in the Users guide.</a>.
+* @see pdv_set_header_size, \b method_header_type directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>, <a href="http://www.edt.com/manuals/PDV/pcie8dvcl_irig_appnote.pdf">PCIe8 DV C-Link Application Note: Using the Timestamp Function</a>.
 */
 pdv_set_header_type(PdvDev *pdv_p, int header_type, int irig_slave, int irig_offset, int irig_raw)
 {
@@ -5850,7 +5695,7 @@ pdv_set_header_type(PdvDev *pdv_p, int header_type, int irig_slave, int irig_off
 }
 
 /**
-* Returns the currently defined header or footer size.  
+* Returns the currently defined header size.  
 *
 * This is usually set in the configuration file with the directive 
 * \b header_size.  It can also be set by calling #pdv_set_header_size.
@@ -5859,7 +5704,7 @@ pdv_set_header_type(PdvDev *pdv_p, int header_type, int irig_slave, int irig_off
 
 * @return Current header size.
 
-* @see pdv_set_header_size, \b header_size directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_header_size, \b header_size directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 int
 pdv_get_header_size(PdvDev * pdv_p)
@@ -5868,18 +5713,20 @@ pdv_get_header_size(PdvDev * pdv_p)
 }
 
 /**
-* Returns the header or fotter position value. 
+* Returns the header position value. 
 *
-* The header position value can by on of the following HdrPosition enumerated values:
-*
-* - HeaderNone
-* - HeaderBefore  
-* - HeaderBegin
-* - HeaderMiddle
-* - HeaderEnd
-* - HeaderAfter
-* - HeaderSeparate
-*
+* The header position value can by on of three values defined in 
+* pdv_dependent.h:
+
+FIX - now enum HdrPosition
+HeaderNone,
+HeaderBefore,  
+HeaderBegin,
+HeaderMiddle,
+HeaderEnd,
+HeaderAfter,
+HeaderSeparate
+
 * These values can be set in the configuration file with the 
 * \b method_header_position directive.  The values in the configuration file
 * should be the same as the definitions above without the leading \b pdv_.
@@ -5888,7 +5735,7 @@ pdv_get_header_size(PdvDev * pdv_p)
 *
 * @return Current header position.
 *
-* @see pdv_get_header_offset, \b header_offset directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_header_offset, \b header_offset directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 HdrPosition
 pdv_get_header_position(PdvDev * pdv_p)
@@ -5899,11 +5746,11 @@ pdv_get_header_position(PdvDev * pdv_p)
 /**
 * Returns the byte offset of the header in the buffer.  
 *
-* The byte offset is determined by the header position value.  If header_position
-* is PDV_HEADER_BEFORE, the offset is 0; if header_position is PDV_HEADER_AFTER
-* (i.e. not really a header but a footer), the offset is the image size.  If
-* header_position is PDV_HEADER_WITHIN, the header offset can be set using the
-* \b header_offset directive in the camera_configuration file, or by calling 
+* The byte offset is determined by the header position value.  If 
+* header_position is PDV_HEADER_BEFORE, the offset is 0; if header_position
+* is PDV_HEADER_AFTER, the offset is the image size.  If header_position is
+* PDV_HEADER_WITHIN, the header offset can be set using the \b header_offset
+* directive in the camera_configuration file, or by calling 
 * #pdv_set_header_offset.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
@@ -5937,7 +5784,7 @@ pdv_get_header_offset(PdvDev * pdv_p)
 
 /**
 * Returns the current setting for flag which determines whether the header
-* (or footer) size is to be added to the DMA size.  This is true if the camera/device
+* size is to be added to the DMA size.  This is true if the camera/device
 * returns header information at the beginning or end of its transfer.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
@@ -5949,15 +5796,6 @@ pdv_get_header_dma(PdvDev * pdv_p)
     return (pdv_p->dd_p->header_dma);
 }
 
-/**
-* Tells if there is a header and it is within the data, and not extra data
-* that gets added to the image DMA.
-* Returns 1 if header_position is any of the enumerated values HeaderBegin,
-* HeaderMiddle, or HeaderEnd. Otherwise it returns 0.
-* 
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return 1 true or 0 false.
-*/
 int
 pdv_get_header_within(PdvDev *pdv_p)
 
@@ -5989,14 +5827,13 @@ pdv_extra_headersize(PdvDev * pdv_p)
 }
 
 /**
-* Sets the header (or footer) size, in bytes, for the device.  This can also be done by
-* using the \b header_size directive in the camera configuration file.
+* Sets the header size (in bytes) for the pdv.  This can also be done by using
+* the \b header_size directive in the camera configuration file.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param header_size new value for header size.
 *
-* @see pdv_get_header_size, \b header_size directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
-* @return void
+* @see pdv_get_header_size, \b header_size directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 void
 pdv_set_header_size(PdvDev * pdv_p, int header_size)
@@ -6008,24 +5845,23 @@ pdv_set_header_size(PdvDev * pdv_p, int header_size)
 }
 
 /**
-* Sets the header (or footer) position.
+* Sets the header position.
 *
-* Originally one of PDV_HEADER_BEFORE, PDV_HEADER_WITHIN, PDV_HEADER_AFTER, later changed to
-* the HdrPosition enumerated values:
-*
-* - HeaderNone,
-* - HeaderBefore,
-* - HeaderBegin,
-* - HeaderMiddle,
-* - HeaderEnd,
-* - HeaderAfter,
-* - HeaderSeparate
+* One of  PDV_HEADER_BEFORE, PDV_HEADER_WITHIN, PDV_HEADER_AFTER, which are defined
+
+One of          HeaderNone,
+HeaderBefore,
+HeaderBegin,
+HeaderMiddle,
+HeaderEnd,
+HeaderAfter,
+HeaderSeparate
+
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param header_position the astarting point for the header position
 *
 * @see pdv_get_header_offset, pdv_set_header_offset
-* @return void
 */
 void
 pdv_set_header_position(PdvDev * pdv_p, HdrPosition header_position)
@@ -6044,7 +5880,6 @@ pdv_set_header_position(PdvDev * pdv_p, HdrPosition header_position)
 * @param header_dma  new value (0 or 1) for the header_dma attribute.
 *
 * @see pdv_get_header_dma
-* @return void
 */
 void
 pdv_set_header_dma(PdvDev * pdv_p, int header_dma)
@@ -6060,7 +5895,6 @@ pdv_set_header_dma(PdvDev * pdv_p, int header_dma)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param header_offset  new value for the header offset.
-* @return void
 */
 void
 pdv_set_header_offset(PdvDev * pdv_p, int header_offset)
@@ -6072,10 +5906,10 @@ pdv_set_header_offset(PdvDev * pdv_p, int header_offset)
 }
 
 /**
-* Checks for frame sync and frame count.
+* Checks for frame sync  and frame count.
 *
-* Framesync is hardware-enabled frame tagging via extra footer data on every
-* frame. With framesync enabled, there are 16 bytes of extra footer data added
+* Framesync is hardware-enabled frame tagging via extra header data on every
+* frame. With framesync enabled, there are 16 bytes of extra header data added
 * to the frame DMA, with a magic number and frame count. If the magic number is
 * not correct, framesync will return an error, allowing the calling function to
 * handle the error. Typically this means stopping any continuous capture loop,
@@ -6102,10 +5936,11 @@ pdv_set_header_offset(PdvDev * pdv_p, int header_offset)
 int 
 pdv_check_framesync(PdvDev *pdv_p, u_char *image_p, u_int *framecnt)
 {
-    Irig2Record *irp; /* from pdv_irig.h */
+    Irig2Record *irp;	/* from pdv_irig.h */
 
     if ((image_p == NULL) || (pdv_framesync_mode(pdv_p) == 0))
         return -1;
+
 
     irp = (Irig2Record *)(image_p + pdv_get_header_offset(pdv_p));
     edt_msg(DBG2, "pdv_framesync(): magic %s framecnt %d\n", irp->magic == IRIG2_MAGIC? "OK ": "BAD", irp->framecnt);
@@ -6120,9 +5955,9 @@ pdv_check_framesync(PdvDev *pdv_p, u_char *image_p, u_int *framecnt)
 }
 
 /**
-* Enables frame sync footer and frame out-of-synch detection.
+* Enables frame sync header and frame out-of-synch detection.
 *
-* With framesync enabled, extra footer data is added to the frame DMA,
+* With framesync enabled, extra header data is added to the frame DMA,
 * enabling you to check for an out-of-synch condition using #pdv_check_framesync
 * or #pdv_timeouts, and respond accordingly.
 * The mode argument should be one of:
@@ -6144,13 +5979,11 @@ pdv_enable_framesync(PdvDev *pdv_p, int mode)
 {
     int ret = 0;
 
-
     pdv_p->dd_p->framesync_mode = 0;
 
     if (!edt_has_irigb(pdv_p))
-    {
         ret = -1;
-    }
+
     else
     {
         if (mode)
@@ -6166,11 +5999,7 @@ pdv_enable_framesync(PdvDev *pdv_p, int mode)
                 edt_msg(DBG2, "pdv_enable_framesync() OK\n");
             }
         }
-        else
-        {
-            if (pdv_p->dd_p->header_type == HDR_TYPE_NONE)
-                pdv_set_header_type(pdv_p, HDR_TYPE_NONE, 0, 0, 0);
-        }
+        else pdv_set_header_type(pdv_p, HDR_TYPE_NONE, 0, 0, 0);
     }
 
     return ret;
@@ -6198,37 +6027,27 @@ pdv_framesync_mode(PdvDev *pdv_p)
 /** @} */ /* end settings */
 
 /**
-* Return shutter (expose) timing method and mode control (CC) state. 
-*
-* See \ref pdv_set_shutter_method for an explanation of the return value
-* (shutter method) and mcl parameter;
-*
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @param mcl mode control (CC line) state
-* @return the shutter (expose) timing method
-* @see pdv_set_shutter_method
-* @ingroup settings 
-*/
-int
-pdv_get_shutter_method(PdvDev * pdv_p, u_int *mcl)
-{
-    edt_msg(DBG2, "pdv_get_shutter_method()\n");
-
-    *mcl = edt_reg_read(pdv_p, PDV_MODE_CNTL);
-
-    return pdv_p->dd_p->camera_shutter_timing;
-}
-
-/**
 * Return shutter (expose) timing method. 
 *
-* This subroutine returns only the timing method, not the mode control (CC lines) state.
-* Generally you'll want both so it's recommended to use the newer \ref pdv_get_shutter_method()
-* call. See the description for #pdv_set_shutter_method() for explanation of the return values.
-* 
+* The default shutter timing method is AIA_SER, and simply means that the
+* board doesn't handle any expose timing but leaves that to the camera
+* and (possibly) controlled via serial commands to the camera. This is
+* the typical timing method for freerun and triggered cameras/modes.
+* Other methods may be enabled using the \b method_camera_shutter_timing
+* config file directive or equivalent API calls.
+*
+* Possible values are defined in edtdef.h and should be one of:
+* - \b AIA_SERIAL: No timing from the board; controlled via serial if
+*   at all
+* - \b AIA_MCL: Mode control timing: board holds the CC1 (EXPOSE)
+*   line high for the duration of the exposure, duration of the pulse
+*   set via pdv_set_exposure, millisecond range.
+* - \b AIA_MCL_100US: Mode control timing: board holds the CC1
+*   (EXPOSE) line high for the duration of the exposure, duration of the
+*   pulse set via pdv_set_exposure, microsecond range.
+*
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return the shutter (expose) timing method
-* @see pdv_set_shutter_method, pdv_get_shutter_method
 * @ingroup settings 
 */
 int
@@ -6240,73 +6059,9 @@ pdv_shutter_method(PdvDev * pdv_p)
 }
 
 /**
- * Set the device's exposure method and CC line state.
- * 
- * Typically the exposure method is set in the config file via the \b method_camera_shutter_timing
- * and \b MODE_CNTL_NORM directives. This subroutine provides a programatic way to do the same thing,
- * post-configuration.
- *
- * The most common values for \b method (defined in pdv_dependent.h) are:
- *
- * - \b AIA_SERIAL:    Default. Expose timing is controlled via serial or other (camera-dependent)
- *                     method and the board's hardware is not involved in timing the shutter.
- * - \b AIA_MCL:       CC pulse-width timing, millisecond granularity. Each image capture
- *                     request (e.g. #pdv_start_image) will cause the board to set the EXPOSE (CC) line
- *                     or lines (as set via the \b mcl parameter's left nibble) TRUE for the current expose
- *                     time in milliseconds, as set by #pdv_set_exposure.
- * - \b AIA_MCL_100US: CC pulse-width timing, 100 microsecond granularity. Each image capture
- *                     request (e.g. #pdv_start_image) will cause the board to set the EXPOSE (CC) line
- *                     or lines (as set via the \b mcl parameter's left nibble) TRUE for the current expose
- *                     time in 100 microsecond increments, as set by #pdv_set_exposure.
- * 
- * Several other methods are defined, but most are specific to legacy AIA cameras / framegrabbers and
- * are not applicable to Camera Link. For more information on all available methods see
- * the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
- * 
- * The \b mcl parameter sets the state of the four camera control (CC) lines, as an 8-bit hexidecimal
- * number. The right nibble sets the steady state of the CC lines, and the left nibble selects which
- * of these lines, if any, the framegrabber hardware use to send out a trigger or expose pulse on each capture request.
- * Most commonly, this value will be \c 0x00 when the camera generates images continuously or is triggered
- * via an external source, or \c 0x10 if the board should send out a trigger pulse (1 millisecond, if \b method
- * equals \c AIA_SERIAL) or timed pulse (as set via #pdv_set_exposure if \b method equals \c AIA_MCL or
- * \c AIA_MCL_100US) on the CC1 line on each image capture request. See the 
- * the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
- * for information on the less common values.
- *
- * @note The AIA Camera Link specification doesn't define how the four CC lines should be used, if at all. 
- * However in our experience, virtually all Camera Link cameras that have CC-driven trigger or expose modes
- * use CC1, which corresponds to an \b mcl value of \c 0x10. For more details see your camera's
- * documentation, and the description of <b>0x07 Mode Control register</b> in the
- * <a href="http://edt.com/downloads/dv-c-link-firmware-reference.pdf">Firmware Guide for Camera Link</a>.
- * 
- * @param pdv_p pointer to pdv device structure returned by #pdv_open 
- * @param method method (see above)
- * @param mcl mode control (CC line) state (see above)
- * @see pdv_get_shutter_method
- * @return 0 on success, -1 on failure
- * @ingroup settings
- */
-int
-pdv_set_shutter_method(PdvDev *pdv_p, int method, unsigned int mcl)
-{
-    if (!pdv_p)
-        return -1;
-
-    edt_msg(DBG2, "pdv_set_shutter_method (%d, %02x)\n", method);
-
-    pdv_p->dd_p->camera_shutter_timing = method;
-    pdv_p->dd_p->mode_cntl_norm = mcl;
-
-    edt_reg_write(pdv_p, PDV_MODE_CNTL, mcl);
-
-    return 0;
-}
-
-/**
 * Set the interlace flag. Flag is no longer used so it's obsolete.
 * Currently de-interleaving is iset via the config file and the
 * dd_p flag is switnerlace.
-* @return void
 *
 * @ingroup edt_undoc 
 */
@@ -6328,7 +6083,7 @@ pdv_set_interlace(PdvDev * pdv_p, int interlace)
 * or #pdv_read.
 * 
 * For more on deinterleave methods, see the
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>.
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>.
 *
 * @note the \c _raw acquisition routines bypass the deinterleave
 * logic.
@@ -6337,11 +6092,11 @@ pdv_set_interlace(PdvDev * pdv_p, int interlace)
 *
 * @return One of the following interlace methods, defined in pdv_dependent.h
 * \arg \b PDV_BGGR
-* 8-bit Bayer encoded data
+*	8-bit Bayer encoded data
 * \arg \b PDV_BGGR_DUAL
-* 8-bit Bayer encoded data, from dual channel camera
+*	8-bit Bayer encoded data, from dual channel camera
 * \arg \b PDV_BGGR_WORD
-* 10-12 bit Bayer encoded data
+*	10-12 bit Bayer encoded data
 * \arg \b PDV_BYTE_INTLV 
 *      Data is byte interleaved (odd/even pixels are from odd/even lines, 8
 *      bits per pixel). 
@@ -6375,7 +6130,7 @@ pdv_set_interlace(PdvDev * pdv_p, int interlace)
 * \arg \b PDV_WORD_INTLV_ODD
 *      Deinterlaced, 2-bytes per pixel, odd first
 *
-* @see \b method_interlace directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b method_interlace directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup acquisition 
 */
 int
@@ -6388,10 +6143,10 @@ pdv_interlace_method(PdvDev * pdv_p)
 
 
 /**
-* Sets the debug level of the PDV library. This results in debug output
-* being written to the screen by PDV library calls.  The same thing can be 
+* Sets the debug level of the PCI DV library. This results in debug output
+* being written to the screen by PCI DV library calls.  The same thing can be 
 * accomplished by setting the PDVDEBUG environment variable to 1.  See also 
-* the program setdebug.c for information on using the device driver debug 
+* the program \e setdebug.c for information on using the device driver debug 
 * flags.
 *
 * To control the output of messages from the DV library, see the \ref
@@ -6457,7 +6212,7 @@ pdv_overrun(PdvDev * pdv_p)
 * Waits for response from the camera as a result of a #pdv_serial_write or
 * #pdv_serial_command. After calling this function, use #pdv_serial_read to get
 * the data. For a detailed example of serial communications, see the
-* serial_cmd.c example program.
+* \e serial_cmd.c example program.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param msecs   number of milliseconds to wait before timing out.  If this
@@ -6550,7 +6305,7 @@ pdv_serial_wait_next(EdtDev * pdv_p, int msecs, int count)
 * can greatly shorten the time it takes for a pdv_serial_wait call to return.
 *
 * This character can also be initialized in the
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">camera configuration</A> directive
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">camera configuration</A> directive
 * \b serial_waitchar.
 *
 * @return 0 in success, -1 on failure
@@ -6582,7 +6337,7 @@ pdv_set_waitchar(PdvDev * pdv_p, int enable, u_char wchar)
 * @param waitc  character (byte) to wait for
 * 
 * @return 1 if waitchar enabled, 0 if disabled
-* @see pdv_set_waitchar and \b serial_waitchar directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_waitchar and \b serial_waitchar directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup serial 
 */
 int
@@ -6627,7 +6382,7 @@ pdv_get_fulldma_size(PdvDev *pdv_p, int *extrasizep)
         {
             int     newsize = pdv_get_dmasize(pdv_p);
 
-            extrasize += size; /* use second part of buffer for interlace result */
+            extrasize += size;	/* use second part of buffer for interlace result */
             size = newsize;
         }
     }
@@ -6714,8 +6469,6 @@ pdv_multibuf_block(PdvDev *pdv_p, int numbufs, u_char *block, int blocksize)
     int ret;
     int header_before = (pdv_p->dd_p->header_position == HeaderBefore);
 
-    edt_msg(DBG2, "pdv_multibuf_block(%d, %d, %x)\n", numbufs, block, blocksize);
-
     /* FIXED INTERLACE */
 
     size = pdv_get_fulldma_size(pdv_p, &extrasize);
@@ -6731,7 +6484,7 @@ pdv_multibuf_block(PdvDev *pdv_p, int numbufs, u_char *block, int blocksize)
         header_before,
         block) ;
 
-    pdv_allocate_output_buffers(pdv_p);
+    pdv_allocate_output_buffers(pdv_p);	
 
     return ret;
 
@@ -6745,8 +6498,6 @@ pdv_multibuf_separate(PdvDev *pdv_p, int numbufs, u_char **buffers)
     int ret;
 
     Dependent *dd_p = pdv_p->dd_p;
-
-    edt_msg(DBG2, "pdv_multibuf_separate(%d, %x)\n", numbufs, buffers);
 
     if (dd_p->swinterlace || size != pdv_get_dmasize(pdv_p))
     {
@@ -6776,7 +6527,7 @@ pdv_multibuf_separate(PdvDev *pdv_p, int numbufs, u_char **buffers)
 *
 * pdv_multibuf need only be called once after a #pdv_open or #pdv_open_channel,
 * and before any calls to acquisition subroutines such as #pdv_start_images / #pdv_wait_images.
-* If image size changes, call #pdv_multibuf again to re-allocate buffers with the new image size.
+* If image size changes, call pdv_multibuf again to re-allocate buffers with the new image size.
 *
 * The number of buffers is limited only by the amount of host memory available, up to
 * approximately 3.5GBytes (or less, depending on other OS use of the low 3.5 GB of memory).
@@ -6843,10 +6594,8 @@ pdv_multibuf(PdvDev * pdv_p, int numbufs)
 * @code
 * int size = pdv_image_size(pdv_p);
 * unsigned char *bufarray[4];
-*
 * for (i=0; i < 4; i++)
-*   bufarray[i] = pdv_alloc(size);
-*    
+*           bufarray[i] = pdv_alloc(size);
 * pdv_set_buffers(pdv_p, 4, bufarray);
 * @endcode
 *
@@ -7010,7 +6759,6 @@ pdv_buffer_addresses(PdvDev * pdv_p)
 * 
 * @param pdv_p    device struct returned from pdv_open
 * @see pdv_stop_hardware_continuous
-* @return void
 * @ingroup acquisition
 */
 void
@@ -7036,7 +6784,6 @@ pdv_start_hardware_continuous(PdvDev * pdv_p /* , int frames */ )
 *
 * @param pdv_p    device struct returned from pdv_open
 * @see pdv_start_hardware_continuous
-* @return void
 * @ingroup acquisition
 */
 void
@@ -7105,7 +6852,7 @@ pdv_set_serial_parity(PdvDev * pdv_p, char parity)
 * present. Under most circumstances, applications do not need to set the baud
 * rate explicitly.
 *
-* @param baud the desired baud rate.
+* @param baud	the desired baud rate.
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
 
 * @return 0 on success, -1 on error
@@ -7119,10 +6866,17 @@ pdv_set_baud(PdvDev * pdv_p, int baud)
     int     id=pdv_p->devid;
     u_int   new, baudreg;
     u_int   cntl;
-    int     donew = 0;
+    int     donew	 = 0;
     int     ret = 0;
 
-    if (edt_is_dvcl(pdv_p) || edt_is_dvfox(pdv_p) || (id == PDVA_ID) || edt_is_simulator(pdv_p))
+    if (dd_p->xilinx_rev < 2 || dd_p->xilinx_rev > 32)
+    {
+        edt_msg(DBG2, "pdv_set_baud() warning: can't enable, N/A this xilinx (%x)\n",
+            pdv_p->dd_p->xilinx_rev);
+        return -1;
+    }
+
+    if (edt_is_dvcl(pdv_p) || edt_is_dvfox(pdv_p) || (id == PDVA_ID) || edt_is_dvcl2(pdv_p))
         donew = 1;
 
     switch (baud)
@@ -7148,7 +6902,7 @@ pdv_set_baud(PdvDev * pdv_p, int baud)
         break;
 
     case 57600:
-        baudbits = PDV_BAUD0 | PDV_BAUD1; /* ALERT (funky old DV or DVK only) */
+        baudbits = PDV_BAUD0 | PDV_BAUD1;	/* ALERT (funky old DV or DVK only) */
         donew = 1;
         baudreg = 0x014;
         break;
@@ -7203,7 +6957,7 @@ pdv_set_baud(PdvDev * pdv_p, int baud)
 * the config file (default 9600).
 * 
 * @return baud rate in bits/sec, or 0 on error
-* @see \b serial_baud directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b serial_baud directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup serial 
 */
 int
@@ -7226,7 +6980,6 @@ pdv_get_baud(PdvDev * pdv_p)
 * implementations, the routine just turns around and makes a perror system
 * call, with the errstr argument. NT implementations format and print the last
 * error using GetLastErrorString.
-* @return void
 *
 * @ingroup utility
 */
@@ -7249,13 +7002,12 @@ pdv_setdebug(PdvDev * pdv_p, int debug)
 /**
 * Resets the serial interface.
 *
-* This is mostly used during initialization (\e initcam) to make sure any outstanding
+* This is mostly used during initialization \e initcam to make sure any outstanding
 * reads and writes from previous interrupted applications are cleaned up and to put
 * the serial state machine in a known idle state. Applications typically do not
 * need to call this subroutine.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return void
 *
 * @ingroup serial 
 */
@@ -7276,7 +7028,7 @@ pdv_reset_serial(PdvDev * pdv_p)
 *
 * @Example
 * @code
-* unsigned char *buf = pdv_alloc(pdv_image_size(pdv_p));
+* 	unsigned char *buf = pdv_alloc(pdv_image_size(pdv_p));
 * @endcode
 *
 * @param size   the number of bytes of memory to allocate
@@ -7297,7 +7049,6 @@ pdv_alloc(int size)
 * Convenience routine to free the memory allocated with #pdv_alloc.
 *
 * @param ptr  Address of memory buffer to free.
-* @return void
 * @ingroup utility 
 */
 void
@@ -7817,19 +7568,18 @@ pdv_serial_command_hex(PdvDev * pdv_p, const char *str, int length)
 * @code
 * //use the region of interest calls to cut off a 10 pixel wide
 * //border around the image.
-* int cam_w = pdv_get_cam_width(pdv_p);
-* int cam_h = pdv_get_cam_height(pdv_p);
-* int hactv = cam_w - 20
-* int vactv = cam_h - 20
-* int hskip = 10;
-* int vskip = 10;
-*
-* pdv_set_roi(pdv_p, hskip, hactv, vskip, vactv);
-* pdv_enable_roi(pdv_p, 1); 
+*	int cam_w = pdv_get_cam_width(pdv_p);
+*	int cam_h = pdv_get_cam_height(pdv_p);
+*	int hactv = cam_w - 20
+*	int vactv = cam_h - 20
+*	int hskip = 10;
+*	int vskip = 10;
+*	pdv_set_roi(pdv_p, hskip, hactv, vskip, vactv);
+*	pdv_enable_roi(pdv_p, 1); 
 * @endcode
 *
 * @return 0 on success, -1 on failure. 
-* @see pdv_enable_roi, \b vskip, \b vactv, \b hskip, \b hactv directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_enable_roi, \b vskip, \b vactv, \b hskip, \b hactv directives in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 
@@ -7843,7 +7593,7 @@ pdv_set_roi(PdvDev * pdv_p, int hskip, int hactv, int vskip, int vactv)
 /**
 * @if edtinternal
 * Sets ROI with extra intrnal flag to call setsize -- this lets us call it from subroutines
-* that call #pdv_setsize and avoid recursion
+* that call pdv_setsize and avoid recursion
 * @internal 
 * User applications should not need to call this -- it will
 * be called as needed by library functions like #pdv_setsize.
@@ -7858,6 +7608,16 @@ pdv_set_roi_internal(PdvDev * pdv_p, int hskip, int hactv, int vskip, int vactv,
 
     edt_msg(DBG2, "pdv_set_roi(hskip %d hactv %d vskip %d vactv %d)\n",
         hskip, hactv, vskip, vactv);
+
+    /*
+    * ALERT: check for ROI xilinx capabilities here -- 4005 doesn't do ROI
+    */
+    if (dd_p->xilinx_rev < 2 || dd_p->xilinx_rev > 32)
+    {
+        edt_msg(DBG2, "pdv_set_roi(): WARNING: can't enable, N/A this xilinx (%x)\n",
+            dd_p->xilinx_rev);
+        return -1;
+    }
 
     cam_w = pdv_get_cam_width(pdv_p);
     cam_h = pdv_get_cam_height(pdv_p);
@@ -7925,48 +7685,17 @@ pdv_set_roi_internal(PdvDev * pdv_p, int hskip, int hactv, int vskip, int vactv,
 
     edt_set_dependent(pdv_p, dd_p);
 
-    return 0; /* ALERT: need to return error from above if
+    return 0;			/* ALERT: need to return error from above if
                         * any */
 }
 
 
-/**
- * Set the number of channels (taps) and horizontal and vertical alignment of the taps.
- * Will set the number of Camera Link taps (channels) in the hardware by setting
- * the left nibble of the PDV_CL_DATA_PATH register, and the htaps and vtaps
- * PdvDev->dd_p structure elements.
- *
- * For single-tap modes, htaps and vtaps should both be 1. For dual or 4-tap modes, most
- * cameras output the data horizontally so htaps would be 2 or 4, and vtaps would remain 1.
- * For RGB cameras (except bayer), htaps is usually 3 and vtaps 1.
- *
- * Typically these are set via initcam or pdv_initcam; look at the various config files' htaps
- * and vtaps directives. If a camera's output tap configuration is changed after after
- * initialization, (usually via a serial command) this command can be used to update
- * the framegrabber's registers to match.
- *
- * @param pdv_p pointer to pdv device structure returned by #pdv_ope
- * @param htaps number of horizontal taps
- * @param htaps number of vertical taps
- * @return void
- * @see pdv_set_depth_extdepth_dpath, \b hskip, \b vskip and \b CL_DATA_PATH_NORM directives in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
- * 
- * @ingroup settings 
- */
 void
 pdv_cl_set_base_channels(PdvDev *pdv_p, int htaps, int vtaps)
 
 {
     Dependent *dd_p = pdv_p->dd_p;
-    int taps;
-
-    if ((htaps > 1) && (vtaps > 1))
-        taps = htaps + vtaps;
-    else if (htaps > 1)
-        taps = htaps;
-    else if (vtaps > 1)
-        taps = vtaps;
-    else taps = 1;
+    int taps = (htaps > vtaps)? htaps : vtaps;
 
     dd_p->cl_data_path = (taps - 1) << 4 | (dd_p->depth - 1);
 
@@ -7994,6 +7723,15 @@ pdv_dalsa_ls_set_expose(PdvDev * pdv_p, int hskip, int hactv)
 
     edt_msg(DBG2, "pdv_dalsa_ls_set_expose(hskip %d hactv %d)\n", hskip, hactv);
 
+    /*
+    * ALERT: check for ROI xilinx capabilities here -- 4005 doesn't do ROI
+    */
+    if (dd_p->xilinx_rev < 2 || dd_p->xilinx_rev > 32)
+    {
+        edt_msg(DBG2, "pdv_dalsa_ls_set_expose(): WARNING: can't enable, N/A this xilinx (%x)\n", dd_p->xilinx_rev);
+        return -1;
+    }
+
     edt_reg_write(pdv_p, PDV_HSKIP, hskip);
     edt_reg_write(pdv_p, PDV_HACTV, hactv - 1);
 
@@ -8003,7 +7741,8 @@ pdv_dalsa_ls_set_expose(PdvDev * pdv_p, int hskip, int hactv)
     edt_set_dependent(pdv_p, dd_p);
     pdv_enable_roi(pdv_p, 1);
 
-    return 0;	/* ALERT: need to return error from above if any */
+    return 0;			/* ALERT: need to return error from above if *
+                        * any */
 }
 
 
@@ -8045,7 +7784,7 @@ pdv_auto_set_roi(PdvDev * pdv_p)
 *
 * The initial state of the region of interest can be controlled with directives
 * in the configuration file.  Most config files provided by EDT have ROI enabled
-* by default.  See the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* by default.  See the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * for more information.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open
@@ -8079,6 +7818,12 @@ pdv_enable_roi(PdvDev * pdv_p, int flag)
         dd_p->roi_enabled = flag;
 
         return 0;
+    }
+
+    if (dd_p->xilinx_rev < 2 || dd_p->xilinx_rev > 32)
+    {
+        edt_msg(DBG2, "pdv_enable_roi(): can't enable, N/A this xilinx (%x)\n", dd_p->xilinx_rev);
+        return -1;
     }
 
     edt_msg(DBG2, "pdv_enable_roi(%d): %sabling\n", flag, flag ? "EN" : "DIS");
@@ -8137,7 +7882,7 @@ pdv_get_roi_enabled(PdvDev *pdv_p)
 * @Example
 * @code 
 * if (pdv_access("file.ras", F_OK))
-*   print("Warning: about to overwrite file %s/n", "file.ras");
+*     print("Warning: about to overwrite file %s/n", "file.ras");
 * @endcode
 *
 * @return 0 on success, -1 on failure. 
@@ -8285,7 +8030,7 @@ pdv_enable_strobe(PdvDev * pdv_p, int ena)
 }
 
 /**
-* check if the strobe is even valid for this FPGA, and which
+* check if the strobe is even valid for this Xilinx, and which
 * method is used.
 *
 * @return  
@@ -8434,17 +8179,21 @@ pdv_flush_channel_fifo(PdvDev * pdv_p)
 
 /**
 * Flushes the board's input FIFOs, to allow new data transfers to start
-* from a known state. 
-*
+* from a known state.  Reasons for doing this include:
+*  <li> first time starting acquires from an unknown state</li>
+*  <li> restarting image capture after an aborted DMA</li>
 * This subroutine effectively resets the board, so calling it after every
-* image will degrade performance and is not recommended. Additionally, resetting
-* after a timeout, involves more than just flushing the FIFOs -- therefore we
-* recommend using #pdv_timeout_restart to reset (which calls this, among
-* other things).
+* image will degrade performance and is not recommended.
 *
-* @param pdv_p pointer to edt device structure returned by #edt_open or
-* #edt_open_channel
- * @return void
+* @param pdv_p pointer to pdv device structure returned by #pdv_open 
+*/
+/**
+* \brief
+* FIX !!!  Write brief comment for pdv_flush_fifo here.
+* 
+* \param pdv_p
+* FIX !!! Description of parameter pdv_p.
+* 
 */
 void
 pdv_flush_fifo(PdvDev * pdv_p)
@@ -8460,13 +8209,10 @@ pdv_flush_fifo(PdvDev * pdv_p)
         return;
     }
 
-    if (pdv_p->devid == PDVCL_ID   || 
-        pdv_p->devid == PE1DVVL_ID ||
-        pdv_p->devid == PE4DVVL_ID ||
-        pdv_p->devid == PE4DVCL_ID ||
+    if (pdv_p->devid == PDVCL_ID || 
         pdv_p->devid == PE8DVCL_ID ||
-        pdv_p->devid == PE8VLCLS_ID ||
-        pdv_p->devid == PE8DVCLS_ID)
+        pdv_p->devid == PE8DVCLS_ID ||
+        pdv_p->devid == PE4DVCL_ID)
     {
         /* RFIFO doesnt exist on camera link */
         /* doing the reset intfc here may cause problems */
@@ -8515,9 +8261,6 @@ pdv_setup_continuous_channel(PdvDev * pdv_p)
 * Shouldn't need to be called by user apps since #pdv_start_images, etc.
 * call it already. But it is in some EDT example applications from before
 * this was the case.
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @see pdv_stop_continuous
-* @return void
 *
 */
 void
@@ -8564,9 +8307,6 @@ pdv_setup_continuous(PdvDev * pdv_p)
 * Shouldn't need to be called by user apps since other subroutines 
 * (e.g. #pdv_timeout_cleanup) now call it as needed. But it is still in
 * some EDT example applications from before this was the case.
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @see pdv_setup_continuous
-* @return void
 */
 void
 pdv_stop_continuous(PdvDev * pdv_p)
@@ -8587,7 +8327,7 @@ pdv_stop_continuous(PdvDev * pdv_p)
 /**
 * Cleans up after a timeout, particularly when you've prestarted multiple
 * buffers or if you've forced a timeout with #edt_do_timeout. The example
-* programs take.c and simple_take.c have examples of use; note that these
+* programs \e \b take.c and \e \b simple_take.c have examples of use; note that these
 * examples call #pdv_timeout_restart twice, which may be overkill for some
 * applications/cameras.  If the system is configured properly (and all cables/
 * cameras have robust connections), timeouts should not be a factor. Even so,
@@ -8600,7 +8340,7 @@ pdv_stop_continuous(PdvDev * pdv_p)
 *
 * @return # of buffers left undone; normally will be used as argument to
 * #pdv_start_images if calling routine wants to restart pipeline as if
-* nothing happened (see take.c and simple_take.c for examples of use).
+* nothing happened (see \e take.c and \e simple_take.c for examples of use).
 * @see pdv_timeouts
 */
 
@@ -8654,7 +8394,7 @@ hex_to_str(char *resp, int n)
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 *
 * @return Minimum exposure value.
-* @see \b shutter_speed_min directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b shutter_speed_min directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -8687,7 +8427,7 @@ pdv_get_max_shutter(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Minimum gain value.
-* @see \b gain directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b gain directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -8704,7 +8444,7 @@ pdv_get_min_gain(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Maximum gain value.
-* @see \b gain directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b gain directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -8721,7 +8461,7 @@ pdv_get_max_gain(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return Minimum offset value.
-* @see \b offset directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b offset directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -8738,7 +8478,7 @@ pdv_get_min_offset(PdvDev * pdv_p)
 *
 * @param pdv_p    device struct returned from pdv_open
 * @return maximum offset value
-* @see \b offset directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see \b offset directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * @ingroup settings 
 */
 int
@@ -8806,10 +8546,7 @@ pdv_enable_lock(PdvDev * pdv_p, int flag)
 
 
 /**
-* Send serial break (only Camera Link, and aiag and related FPGA files).
-*
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @return void
+* send serial break (only aiag and related xilinx files)
 * @ingroup serial  
 */
 void
@@ -8958,7 +8695,6 @@ isxdigits(char *str)
 * the serial settings. Since serial commands have changed quite a bit over
 * the years, this subroutine should not be depended on and is only included
 * for backwards compatability.
-*
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @return 1 if pdv_p appears setup for Redlake, 0 otherwise.
 * @ingroup utility 
@@ -9017,7 +8753,7 @@ pdv_is_hamamatsu(PdvDev * pdv_p)
 
 
 /**
-* Deprecated -- Queries certain specific cameras via serial, and sets library variables for gain,
+* DEPRECATED -- Queries certain specific cameras via serial, and sets library variables for gain,
 * black level, exposure time and binning to values based on the results of the query.
 * Included for backwards compatability only. The cameras supported are all older (pre-2000) cameras
 * made by Kodak Megaplus 'i', Hamamatsu, DVC, and Atmel.
@@ -9048,7 +8784,7 @@ pdv_update_values_from_camera(PdvDev * pdv_p)
 }
 
 /**
-* Deprecated -- Queries Kodak 'i' model cameras via serial, and sets library variables for gain,
+* DEPRECATED -- Queries Kodak 'i' model cameras via serial, and sets library variables for gain,
 * black level, exposure time and binning based on the results of the query.
 * Included for backwards compatability only.  This subroutine will be removed in a future release
 * and should not be used.
@@ -9090,7 +8826,7 @@ pdv_update_from_kodak_i(PdvDev * pdv_p)
 }
 
 /**
-* Deprecated -- Queries some Hamamatsu cameras via serial, and sets library variables for gain,
+* DEPRECATED -- Queries some Hamamatsu cameras via serial, and sets library variables for gain,
 * black level, and exposure time based on the results of the query.
 * Included for backwards compatability only.  This subroutine will be removed in a future release
 * and should not be used.
@@ -9136,7 +8872,7 @@ pdv_update_from_hamamatsu(PdvDev * pdv_p)
 
 
 /**
-* Deprecated -- Queries some Atmel cameras via serial, and sets library variables for gain,
+* DEPRECATED -- Queries some Atmel cameras via serial, and sets library variables for gain,
 * exposure time and binning based on the results of the query.
 * Included for backwards compatability only.  This subroutine will be removed in a future release
 * and should not be used.
@@ -9760,7 +9496,7 @@ pdv_get_dvc_state(PdvDev * pdv_p, DVCState * pState)
 * \arg 1 = turn on photo trigger
 * \arg 2 = turn on field ID trigger (through camera or cable). Does not apply
 * to PCI C-Link.
-* @return void
+*
 * @ingroup settings 
 */
 void
@@ -9787,7 +9523,6 @@ pdv_enable_external_trigger(PdvDev * pdv_p, int flag)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @ingroup acquisition 
-* @return void
 */
 
 void 
@@ -9804,7 +9539,6 @@ pdv_start_expose(PdvDev * pdv_p)
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @ingroup settings 
-* @return void
 */
 void 
 pdv_invert_fval_interrupt(PdvDev * pdv_p)
@@ -9832,16 +9566,16 @@ pdv_invert_fval_interrupt(PdvDev * pdv_p)
 * for reliable operation in a given mode (very rare). Frame timing functionality
 * is disabled by default.
 * 
-* @note See the Triggering section in your EDT framegrabber's Users Guide, and also the
-* <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @note See the Triggering section in the PCI DV Users Guide, and also the
+* <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 * for more on camera triggering methods.
 *
 * @param pdv_p pointer to pdv device structure returned by #pdv_open 
 * @param period	frame period in microseconds-2, range 0-16777215
 * @param method  one of:
-*          \arg  0                 -- disable frame counter
-*          \arg  PDV_FMRATE_ENABLE -- continuous frame counter
-*          \arg  PDV_FVAL_ADJUST   -- frame counter extends every frame valid
+*          \arg  0                -- disable frame counter
+*          \arg  PDV_FRAME_ENABLE -- continuous frame counter
+*          \arg  PDV_FVAL_ADJUST  -- frame counter extends every frame valid
 *                                    by 'period' microseconds
 * @return -1 on error, 0 on success
 * @ingroup settings 
@@ -9883,7 +9617,7 @@ pdv_set_frame_period(PdvDev *pdv_p, int period, int method)
 *
 * @param pdv_p    device handle returned by pdv_open
 * @return period  the frame period (microsecond units)
-* @see pdv_set_frame_period, \b frame_period directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_set_frame_period, \b frame_period directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 *
 * @ingroup settings 
 */
@@ -9914,7 +9648,6 @@ pdv_get_frame_period(PdvDev *pdv_p)
 * @param rxcount  number of characters expected back
 * @param timeout  number of milliseconds to wait for expected response
 * @param wchar    pointer to terminating char (NULL if none)
-* @return void
 *
 * @ingroup serial 
 */
@@ -10002,7 +9735,7 @@ pdv_is_simulator(PdvDev *pdv_p)
     edt_flash_get_fname_auto(pdv_p, xilinx_name);
 
     /* CL2 (CLS) */
-    if (edt_is_simulator(pdv_p))
+    if (edt_is_dvcl2(pdv_p))
         return 1;
 
     /* Legacy: old PCIe4 used the same ID whether it was loaded with sim FPGA or
@@ -10048,9 +9781,9 @@ pdv_is_simulator(PdvDev *pdv_p)
 * during initialization and it will not be necessary to call it from
 * an application.
 *
-* @return void
+* @return number of lines transferred on the last acquire
 * @ingroup acquisition 
-* @see pdv_get_lines_xferred, \b fval_done directive in the <a href="http://edt.com/downloads/camera-configuration-guide.pdf">Camera Configuration Guide</A>
+* @see pdv_get_lines_xferred, \b fval_done directive in the <a href="http://www.edt.com/manuals/PDV/camconfig.pdf">Camera Configuration Guide</A>
 */
 void
 pdv_set_fval_done(PdvDev *pdv_p, int enable)
@@ -10165,11 +9898,9 @@ pdv_cl_get_fv_counter(PdvDev *pdv_p)
 * Resets the frame valid counter to zero.
 *
 * @note This subroutine only works on EDT Camera Link boards.
-* @param pdv_p pointer to pdv device structure returned by #pdv_open 
-* @see pdv_get_fv_counter
-* @return void
 *
 * @ingroup acquisition 
+* @see pdv_get_fv_counter
 */
 void
 pdv_cl_reset_fv_counter(PdvDev *pdv_p)
@@ -10256,118 +9987,4 @@ pdv_get_rawio_size(PdvDev *pdv_p)
 
     return size;
 
-}
-
-/*
- * for #pdv_initcam and pdv_cls_set_dep only
- */
-static void
-dep_wait(pdv_p)
-{
-}
-
-void
-pdv_check_fpga_rev(PdvDev *pdv_p)
-{
-    PdvDependent *dd_p = pdv_p->dd_p;
-
-    if (dd_p->xilinx_rev == NOT_SET)
-    {
-        int     rev;
-
-        edt_msg(DEBUG2, "checking for new rev xilinx\n");
-        dep_wait(pdv_p);
-
-        pdv_flush_fifo(pdv_p); /* ADDED  3/14/2012 RWH */
-
-        edt_reg_write(pdv_p, PDV_STAT, 0xff);
-        rev = edt_reg_read(pdv_p, PDV_REV);
-        if (rev >= 1 && rev <= 32)
-        {
-            edt_msg(DEBUG2, "xilinx rev set to %d (0x%x)\n", rev, rev);
-            dd_p->xilinx_rev = rev;
-        }
-        else
-        {
-            dd_p->xilinx_rev = 0;
-            edt_msg(DEBUG2, "no xilinx rev from IOCTL, setting to 0\n");
-        }
-
-#ifdef NOT_DONE
-        /* xilinx rev 2 we got option flag register */
-        if ((dd_p->xilinx_rev >= 2) && (dd_p->xilinx_rev != 0xff))
-            dd_p->xilinx_opt = edt_reg_read(pdv_p, PDV_XILINX_OPT);
-#endif
-        dd_p->register_wrap = check_register_wrap(pdv_p);
-    }
-}
-
-
-/*
-* this code checks for register wrap. Since newer xilinxs have larger
-* register space, there's a possibility that we can read/write registers
-* but they're actually wrapping by 32. So read/write the low register
-* and check if it wraps to high. Uses MASK register and writes back
-* when done
-*
-* RETURNS 1 if wrap, 0 if not
-*/
-int
-check_register_wrap(EdtDev *pdv_p)
-{
-    int wrapped = 0;
-    int r;
-    int mask_lo, mask_lo_wrap;
-
-    /* definately not in and OLD xilinx.... */
-    if (pdv_p->dd_p->xilinx_rev < 2 || pdv_p->dd_p->xilinx_rev > 32)
-        return 1;
-
-    /* made it this far; check for wrap */
-    mask_lo = edt_reg_read(pdv_p, PDV_MASK_LO);
-    mask_lo_wrap = edt_reg_read(pdv_p, PDV_MASK_LO+32) ;
-    edt_reg_write(pdv_p, PDV_MASK_LO+32, 0);
-    edt_reg_write(pdv_p, PDV_MASK_LO, 0xa5);
-    if ((r = edt_reg_read(pdv_p, PDV_MASK_LO+32)) == 0xa5)
-        wrapped = 1;
-
-    /* restore the register */
-    edt_reg_write(pdv_p, PDV_MASK_LO, mask_lo);
-    if (!wrapped)
-        edt_reg_write(pdv_p, PDV_MASK_LO, mask_lo_wrap);
-
-    edt_msg(DEBUG2, "registers %s\n", wrapped? "WRAPPING":"not wrapping");
-    return wrapped;
-}
-
-
-/**
- * Set board FPGA registers from the a list of FPGA register address / value pairs in
- * the device handle's dependent struct.
- * Primarily for internal use by pdv_initcam (initcam) and clsim_lib (clsiminit).
- * @param pdv_p   device handle returned by pdv_open
- * @param dd_p    dd_p Dependent device structure, including xilinx_flag element
- * @return void
- */
-void
-pdv_do_xregwrites(EdtDev *edt_p, Dependent *dd_p)
-{
-    int i;
-
-    /*
-    * set any registers specifically called out with xregwrite
-    * xilinx_flag (fpga) used to be just a flag 0 or 1 to write, now 
-    * holds the actual address of the register (unless 0xff)
-    */
-    for (i = 0; i < 32; i++)
-    {
-        if (dd_p->xilinx_flag[i] == 0xff)
-            break;
-
-        edt_intfc_write(edt_p, dd_p->xilinx_flag[i], dd_p->xilinx_value[i]);
-        edt_msg(DEBUG2, "xregwrite_%d writing reg 0x%02x value 0x%02x\n",
-            dd_p->xilinx_flag[i], dd_p->xilinx_flag[i],
-            dd_p->xilinx_value[i]);
-        dep_wait(edt_p);
-    }
 }

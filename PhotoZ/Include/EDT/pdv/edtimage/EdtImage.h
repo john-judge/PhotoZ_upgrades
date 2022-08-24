@@ -27,7 +27,7 @@
 
 
 
-enum BufferStates {
+typedef enum BufferStates {
     BufIdle,
     BufToRead,
     BufReading,

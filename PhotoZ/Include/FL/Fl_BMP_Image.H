@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_BMP_Image.H 10732 2015-05-23 23:42:26Z matt $"
 //
 // BMP image header file for the Fast Light Tool Kit (FLTK).
 //
@@ -37,5 +37,5 @@ class FL_EXPORT Fl_BMP_Image : public Fl_RGB_Image {
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_BMP_Image.H 10732 2015-05-23 23:42:26Z matt $".
 //

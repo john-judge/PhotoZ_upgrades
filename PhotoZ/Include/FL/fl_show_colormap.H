@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: fl_show_colormap.H 8864 2011-07-19 04:49:30Z greg.ercolano $"
 //
 // Colormap picker header file for the Fast Light Tool Kit (FLTK).
 //
@@ -45,5 +45,5 @@ FL_EXPORT Fl_Color fl_show_colormap(Fl_Color oldcol);
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: fl_show_colormap.H 8864 2011-07-19 04:49:30Z greg.ercolano $".
 //

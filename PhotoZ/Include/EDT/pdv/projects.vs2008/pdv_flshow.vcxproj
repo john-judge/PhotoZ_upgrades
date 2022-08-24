@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>15.0.27924.0</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\pdv_flshow_Release\</OutDir>
+    <IntDir>.\pdv_flshow_Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\pdv_flshow_\</OutDir>
+    <IntDir>.\pdv_flshow_\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>.\pdv_flshow_Release/pdv_flshow.tlb</TypeLibraryName>
+      <HeaderFileName />
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>.;..;../pdvplus;../edtimage;c:/fltk;c:/fltk/vcnet;../tiff/libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;VC_EXTRA_LEAN;WIN32_EXTRA_LEAN;WINVER=0x400;USE_MMX;EDT_MMX_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <PrecompiledHeaderOutputFile>.\pdv_flshow_Release/pdv_flshow.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\pdv_flshow_Release/</AssemblerListingLocation>
+      <ObjectFileName>.\Release/</ObjectFileName>
+      <ProgramDataBaseFileName>.\pdv_flshow_Release/</ProgramDataBaseFileName>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>glu32.lib;opengl32.lib;comctl32.lib;wsock32.lib;fltk.lib;fltkgl.lib;pdvlib.lib;edt_mmx.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>../test/pdv_flshow.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>c:\fltk\lib;..;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>libcd;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ProgramDatabaseFile>.\pdv_flshow_Release/pdv_flshow.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>.\pdv_flshow_/pdv_flshow.tlb</TypeLibraryName>
+      <HeaderFileName />
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>.;..;c:/fltk;../edtimage;c:/fltk/vcnet;../pdvplus;../tiff/libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;VC_EXTRA_LEAN;WIN32_EXTRA_LEAN;USE_MMX;EDT_MMX_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader />
+      <PrecompiledHeaderOutputFile>.\pdv_flshow_/pdv_flshow.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>.\pdv_flshow_/</AssemblerListingLocation>
+      <ObjectFileName>.\pdv_flshow_/</ObjectFileName>
+      <ProgramDataBaseFileName>.\pdv_flshow_/</ProgramDataBaseFileName>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>glu32.lib;opengl32.lib;comctl32.lib;wsock32.lib;fltkd.lib;fltkgld.lib;pdvlib_d.lib;pdvplus_d.lib;edtimage_d.lib;libtiff_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>../test/pdv_flshowd.exe</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>c:\fltk\lib;..;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>libcd;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>.\pdv_flshow_/pdv_flshowd.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\pdv_flshow\CamBrowser.cpp" />
+    <ClCompile Include="..\pdv_flshow\CameraConfig.cpp" />
+    <ClCompile Include="..\pdv_flshow\CameraConfigEditor.cpp" />
+    <ClCompile Include="..\pdv_flshow\CameraConfigUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\CamSelector.cpp" />
+    <ClCompile Include="..\pdv_flshow\CamSelectorUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\cfgfileset.c" />
+    <ClCompile Include="..\pdv_flshow\CfgFileTextEditor.cpp" />
+    <ClCompile Include="..\pdv_flshow\DisplayContrast.cpp" />
+    <ClCompile Include="..\pdv_flshow\DisplayContrastUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\HelpData.cpp" />
+    <ClCompile Include="..\pdv_flshow\HelpWindow.cpp" />
+    <ClCompile Include="..\pdv_flshow\histogrammer.cpp" />
+    <ClCompile Include="..\pdv_flshow\LogWindowUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\PdvGlLiveWindow.cpp" />
+    <ClCompile Include="..\pdv_flshow\PdvGlScroller.cpp" />
+    <ClCompile Include="..\pdv_flshow\PdvGlWindow.cpp" />
+    <ClCompile Include="..\pdv_flshow\pdv_dep_config.c" />
+    <ClCompile Include="..\pdv_flshow\pdv_flshow.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename)1.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename)1.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\pdv_flshow\pdv_flshowUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\PixelTable.cpp" />
+    <ClCompile Include="..\pdv_flshow\PixelText.cpp" />
+    <ClCompile Include="..\pdv_flshow\PixelTextUI.cpp" />
+    <ClCompile Include="..\pdv_flshow\PlotWindow.cpp" />
+    <ClCompile Include="..\pdv_flshow\Profiler.cpp" />
+    <ClCompile Include="..\pdv_flshow\RgbControl.cpp" />
+    <ClCompile Include="..\pdv_flshow\RgbControlUI.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\pdv_flshow\CamBrowser.h" />
+    <ClInclude Include="..\pdv_flshow\CameraConfig.h" />
+    <ClInclude Include="..\pdv_flshow\CameraConfigEditor.h" />
+    <ClInclude Include="..\pdv_flshow\CameraConfigUI.h" />
+    <ClInclude Include="..\pdv_flshow\CamSelector.h" />
+    <ClInclude Include="..\pdv_flshow\CamSelectorUI.h" />
+    <ClInclude Include="..\pdv_flshow\cfgfileset.h" />
+    <ClInclude Include="..\pdv_flshow\CfgFileTextEditor.h" />
+    <ClInclude Include="..\pdv_flshow\DisplayContrast.h" />
+    <ClInclude Include="..\pdv_flshow\DisplayContrastUI.h" />
+    <ClInclude Include="..\pdv_flshow\HelpData.h" />
+    <ClInclude Include="..\pdv_flshow\HelpWindow.h" />
+    <ClInclude Include="..\pdv_flshow\histogrammer.h" />
+    <ClInclude Include="..\pdv_flshow\PdvGlLiveWindow.h" />
+    <ClInclude Include="..\pdv_flshow\PdvGlScroller.h" />
+    <ClInclude Include="..\pdv_flshow\PdvGlWindow.h" />
+    <ClInclude Include="..\pdv_flshow\pdv_dependent.h" />
+    <ClInclude Include="..\pdv_flshow\pdv_dep_config.h" />
+    <ClInclude Include="..\pdv_flshow\pdv_flshowUI.h" />
+    <ClInclude Include="..\pdv_flshow\PixelTable.h" />
+    <ClInclude Include="..\pdv_flshow\PixelText.h" />
+    <ClInclude Include="..\pdv_flshow\PixelTextUI.h" />
+    <ClInclude Include="..\pdv_flshow\PlotWindow.h" />
+    <ClInclude Include="..\pdv_flshow\Profiler.h" />
+    <ClInclude Include="..\pdv_flshow\RgbControl.h" />
+    <ClInclude Include="..\pdv_flshow\RgbControlUI.h" />
+    <ClInclude Include="..\pdv_types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\pdv_flshow\cfgfilehlp.html" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

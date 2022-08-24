@@ -1,28 +1,47 @@
-/**
- * Copyright (c) 1997-2018 Engineering Design Team (EDT), Inc.
- * All rights reserved. This file is subject to the terms
- * and conditions of the EULA defined at edt.com/terms-of-use.
- *
- * Technical Contact: <tech@edt.com>
- */
+/* #pragma ident "@(#)pciload_main.c	1.118 06/13/07 EDT" */
 
-/**
- * @file pciload_main.c
+/*
+ * pciload_main.c
  *
- * Main module for the EDT pciload program, the PCI Interface
- * FPGA code programmer / verifier / lister for EDT boards
+ * main module for the EDT pciload program, the PCI Interface
+ * FPGA code loader for EDT boards
+ *
+ * Copyright (C) 1997-2002 EDT, Inc.
  */
 
 #include "edtinc.h"
+
 #include "pciload.h"
+
 #include <stdlib.h>
 #include <ctype.h>
 
 extern volatile char *throwaway;
 
+int read_info_file(u_int devid, char *esn, int esn_size);
+int save_info_file(u_int devid, char *info, int vb); 
+void increment_sn(char *sn);
 void print_maclist(char *label, char *list);
-static u_short edt_print_prom_summary(EdtDev *edt_p, int sect);
-void edt_pciload_printversion(char *devname, int unit, int do_lib_version);
+char *format_number_string(char *fmt, char *src, char *dest);
+char *merge_esns(char *new_esn, char *esn, char *new_sn, char *new_opts, char *new_pn, char *new_rev, char *new_clock);
+char *make_esn_string(char *str, Edt_embinfo *ei);
+void copy_maclist(char *dest, char *src);
+u_short edt_print_prom_summary(EdtDev *edt_p, int sect);
+
+void
+edt_read_prom_data(EdtDev *edt_p, int promcode, int segment, 
+        EdtPromData *pdata);
+
+
+int
+check_ask_info(EdtDev *edt_p, 
+        int promcode, 
+        int sect,
+        EdtPromData *pdata,
+        int vfonly, 
+        int proginfo, 
+        int nofs);
+
 
 #ifdef NO_FS
 #include "nofs_flash.h"
@@ -36,20 +55,134 @@ typedef struct {
 } EdtLoadNames;
 
 
+/* DEBUG */ int Option_hack = 0;
+
 /* ALERT: return should only be called from main, otherwise this could break things.... */
 #ifdef NO_MAIN
 #define return(x) return(x)
 #endif
 
-/*
- * Given a file path or name or basename, find the actual bitfile paths to load
- * depending on the device type and where the bitfiles are found (std. subdirs,
- * or . or pathname provided) and populate the list of names to load. Return 
- * value is 1 for most newer fpgas, or 2 for dual-voltage fpgas, or 0 if no
- * matching file(s) found.
- */
-int
-get_names_to_load(int promcode, char *fname, char *flashdir, EdtLoadNames *names_to_load, int sect, int nofs)
+    char   *
+fix_fname(char *fname, 
+        char *fname_ret, 
+        int promcode, 
+        int is_5_volt,
+        char *flash_dir,
+        int nofs)
+{
+    int     i;
+    char    buf[EDT_PATHBUF_SIZE];
+    char    buf2[EDT_PATHBUF_SIZE];
+    char    extbuf[EDT_STRBUF_SIZE];
+    char   *promdir;
+    char   *end;
+    char   *ext = 0;
+    int     haspath = 0;
+    FILE   *fp;
+    Edt_prominfo *pi = edt_get_prominfo(promcode);
+
+    if (strcmp(fname, "ERASE") == 0)
+    {
+        strcpy(fname_ret, fname);
+        return fname_ret;
+    }
+
+    strcpy(buf, fname);
+    promdir = pi->fpga;
+
+    for (i = 0; buf[i] != 0; i++)
+    {
+        if (buf[i] == DIRECTORY_CHAR)
+            haspath = 1;
+        else if (buf[i] == '.' && i != 0)
+            ext = &buf[i];
+    }
+    end = &buf[i];
+
+    if (ext)
+    {
+        strcpy(extbuf, ext);
+        *ext = 0;
+        end = ext;
+    }
+    else
+    {
+        strcpy(extbuf, ".bit");
+    }
+
+    if (is_5_volt != -1)
+    {
+        if (strcmp(end - 3, "_3v") != 0 &&
+                strcmp(end - 3, "_5v") != 0)
+        {
+            end[0] = '_';
+            end[1] = (is_5_volt == 1) ? '5' : '3';
+            end[2] = 'v';
+            end[3] = 0;
+        }
+        else
+        {
+            if ((end[-2] == '3' && is_5_volt == 1) ||
+                    (end[-2] == '5' && is_5_volt == 0))
+            {
+                printf("file contains a '_%cv' extension, while trying to program %svolt sector.\n",
+                        end[-2], is_5_volt ? "5" : "3.3");
+                return NULL;
+            }
+        }
+        /* printf("after voltage add, fname = '%s%s'\n", buf, extbuf); */
+    }
+
+    sprintf(buf2, "%s%s", buf, extbuf);
+
+    if (nofs)
+        sprintf(fname_ret, "%s/%s%s", promdir, buf, extbuf);
+    else
+    {
+        if ((fp = fopen(buf2, "r")) == NULL)
+        {
+
+            if (!haspath)
+            {
+                sprintf(buf2, "%s%c%s%c%s%s", flash_dir, DIRECTORY_CHAR, promdir, DIRECTORY_CHAR, buf, extbuf);
+                if ((fp = fopen(buf2, "r")) == NULL)
+                {
+
+                    sprintf(buf2, "%s%c%s%s", flash_dir, DIRECTORY_CHAR, buf, extbuf);
+                    if ((fp = fopen(buf2, "r")) == NULL)
+                    {
+
+                        printf("Couldn't find the file in any of these locations:\n");
+                        printf("%s%s\n", buf, extbuf);
+                        printf("%s%c%s%c%s%s\n", flash_dir, DIRECTORY_CHAR, promdir, DIRECTORY_CHAR, buf, extbuf);
+                        printf("%s%c%s%s\n", flash_dir, DIRECTORY_CHAR, buf, extbuf);
+                        return NULL;
+                    }
+                }
+            }
+            else
+            {
+                perror(buf2);
+                return NULL;
+            }
+        }
+        fclose(fp);
+
+        strcpy(fname_ret, buf2);
+    }
+
+    edt_msg(EDT_MSG_INFO_1, "Using bitfile %s\n", fname_ret);
+    return fname_ret;
+}
+
+/* load bitfiles and program */
+
+int get_names_to_load(int promcode, 
+        char *fname, 
+        char *flashdir,
+        EdtLoadNames *names_to_load, 
+        int sect,
+        int nofs)
 
 {
     int sector;
@@ -58,37 +191,35 @@ get_names_to_load(int promcode, char *fname, char *flashdir, EdtLoadNames *names
 
     sector = (sect == IS_DEFAULT_SECTOR)? ep->defaultseg : sect;
 
+
     if (sect == IS_DEFAULT_SECTOR)
     {
         if (ep->load_seg1 != -1)
         {
-            if (find_fname_to_load(promcode, 0, nofs, fname,  
-                 flashdir, names_to_load[0].fname) == -1)
+            if ((newfname = fix_fname(fname, names_to_load[0].fname, 
+                            promcode, 0, flashdir, nofs)) == NULL)
                 return (0);
             names_to_load[0].sector = ep->load_seg0;
-
-            if (find_fname_to_load(promcode, 1, nofs, fname,  
-                 flashdir, names_to_load[0].fname) == -1)
+            if ((newfname = fix_fname(fname, names_to_load[1].fname, 
+                            promcode, 1, flashdir, nofs)) == NULL)
                 return (0);
             names_to_load[1].sector = ep->load_seg1;
-
             return 2;
 
         }
         else
         {
-            if (find_fname_to_load(promcode, -1, nofs, fname,  
-                 flashdir, names_to_load[0].fname) == -1)
+            if ((newfname = fix_fname(fname, names_to_load[0].fname, 
+                            promcode, -1, flashdir, nofs)) == NULL)
                 return (0);
             names_to_load[0].sector = ep->load_seg0;
-
             return 1;
         }
     }
     else
     {
-        if (find_fname_to_load(promcode, -1, nofs, fname,  
-                 flashdir, names_to_load[0].fname) == -1)
+        if ((newfname = fix_fname(fname, names_to_load[0].fname, 
+                        promcode, -1, flashdir, nofs)) == NULL)
             return (0);
 
         names_to_load[0].sector = sector;
@@ -100,8 +231,8 @@ get_names_to_load(int promcode, char *fname, char *flashdir, EdtLoadNames *names
 
 
 
-EdtPciLoadVerify
-get_program_verify(int promcode)
+EdtPciLoadVerify get_program_verify(int promcode)
+
 {
 
     EdtPciLoadVerify pvf = NULL;
@@ -117,6 +248,28 @@ get_program_verify(int promcode)
         case SPI_XC3S1200E:
             return program_verify_SPI;
 
+#if 0 /* shouldn't need any of this, default has all the smarts from EPinfo */
+      /* (and should also be fixed in the above cases!!!) */
+        case AMD_XC2S200_4M:
+        case AMD_XC2S100_8M:
+        case AMD_XC2S200_8M:
+            return program_verify_XC2S200;
+
+        case AMD_XC2S150:
+            return program_verify_XC2S150;
+
+        case AMD_4028XLA:
+            return program_verify_4028XLA;
+
+        case AMD_XC5VLX30T:
+        case AMD_XC5VLX30T_A:
+        case AMD_XC5VLX50T:
+        case AMD_XC5VLX70T:
+        case AMD_EP2SGX30D:
+        case AMD_EP2SGX30D_A:
+        case AMD_XC6SLX45:
+        case AMD_EP2AGX45D:
+#endif
         default:
             return program_verify_default;
 
@@ -129,8 +282,13 @@ get_program_verify(int promcode)
 /*
  * extract the prom type / name for the array if embedded bitfile
  */
-static int
-load_bitfile(char *fname, EdtBitfile *bitfile, int promcode, int nofs)
+
+
+    int
+load_bitfile(char *fname, 
+        EdtBitfile *bitfile, 
+        int promcode, 
+        int nofs)
 {
     /* this code borrowed from main() */
     Edt_prominfo *ep = edt_get_prominfo(promcode);
@@ -138,11 +296,7 @@ load_bitfile(char *fname, EdtBitfile *bitfile, int promcode, int nofs)
     /*
      * if ERASE don't do anything except copy the filename to the struct
      */
-    if (strcmp(fname, "ERASE") == 0)
-    {
-      bitfile->filename = strdup("ERASE");
-    }
-    else
+    if (strcmp(fname, "ERASE") != 0)
     {
 
         printf("  Bitfile:  %s\n", fname);
@@ -215,7 +369,7 @@ load_bitfile(char *fname, EdtBitfile *bitfile, int promcode, int nofs)
 }
 
 
-static int
+    static int
 usage(char *s)
 {
     printf("\n");
@@ -230,78 +384,55 @@ usage(char *s)
     printf("  and prints the prom ID for each.\n");
     printf("\n");
     printf("options:\n");
-    printf("  -u <unit>        Specify the unit number (default 0), or device type/unit e.g. -u %s1\n", EDT_INTERFACE);
-    printf("  -i               Program new embedded ID info (if loading flash with 'update' or filename')\n");
-    printf("  -I               Program new embedded ID info; get defaults from file if present\n");
-    printf("  -iX or -Ix <arg> Same as -i or -I, but X can be any of:\n");
-    printf("      s <arg>         Serial number (4-10 digits)\n");
-    printf("      p <arg>         Part number (10 digits)\n");
-    printf("      v <arg>         Version number (1-4 digits)\n");
-    printf("      c <arg>         Clock speed (1-4 digits)\n");
-    printf("      o <arg>         Options (4-10 characters)\n");
-    printf("      O <arg>         OSN (4-31 characters)\n");
-    printf("      t <arg>         Option serial number (4-10 digits)\n");
-    printf("      m <arg>         Mac address list, format nn,addr,addr1,...addr15 where nn is number of mac addresses\n");
-    printf("  -d <dir>         Specify the directory to look for files (default ./flash)\n");
-    printf("  -D [addr|i] [sz] Starting at addr (hex, default 0) read and dump sz bytes (dec., default 768), from FPGA,\n");
-    printf("                   rounded to nearest 16. 'i' instead of an address dumps from the info space address\n");
-    printf("  -p               Print a summary of installed boards (this is the default operation)\n");
-    printf("  -q               Set quiet mode\n");
-    printf("  -s <0-5>         Set the PROM sector number on boards using XLA or Alterra parts\n");
-    printf("                   If no sector is specified (recommended), pciload will program\n");
-    printf("                   the default sector(s) for that device with the specified file (or)\n");
-    printf("                   with the specified file (or the default file if none specified)\n");
-    printf("  -v               Verify on-board firmware against file (will not burn new f/w)\n");
-    printf("  -c [fname]       Check on-board firmware ID against file ID and report\n");
-    printf("  -V               Verbose mode\n");
-    printf("  -F <0-8>         Add various rewrites/sleeps; works around problems with some systems'\n");
-    printf("                   chipsets. If programming fails, try -F 2, 4 or 3. See also -S\n");
-    printf("  -S               Set 'slow' mode -- necessary on some computers; try this if the load or\n"); 
-    printf("                   verify seems to hang or indicates corrupt firmware and -F doesn't fix it\n");
+    printf("  -u specifies the unit number (default 0). alternately you can specify\n");
+    printf("     device type and board at the same time, e.g. -u %s1\n", EDT_INTERFACE);
+    printf("  -i program new embedded ID info (if loading flash with 'update' or filename')\n");
+    printf("  -I program new embedded ID info; get defaults from file if present\n");
+    printf("  -iX or -Ix <arg> -- same as -i or -I, but X can be any of:\n");
+    printf("      s <arg> sets serial number (4-10 digits)\n");
+    printf("      p <arg> sets part number (10 digits)\n");
+    printf("      v <arg> sets version number (1-4 digits)\n");
+    printf("      c <arg> sets clock speed (1-4 digits)\n");
+    printf("      o <arg> sets options (4-10 characters)\n");
+    printf("      O <arg> sets OSN (4-10 digits)\n");
+    printf("      t <arg> sets option serial number (4-10 digits)\n");
+    printf("      m <arg> sets mac address list, format nn,addr,addr1,...addr15 where nn is number of mac addresses\n");
+    printf("  -d specifies directory to look for files (default ./flash)\n");
+    printf("  -p prints a summary of installed boards\n");
+    printf("  -q sets quiet mode\n");
+    printf("  -s <0-5> sets the PROM sector number on boards using XLA or Alterra parts\n");
+    printf("     If no sector is specified (recommended), pciload will program default sector(s)\n");
+    printf("     with the specified file (or the default file if none specified)\n");
+    printf("  -v verify on-board firmware against file (will not burn new f/w)\n");
+    printf("  -V sets verbose mode\n");
+    printf("  -F <0-8> adds various rewrites/sleeps; works around problems with some systems'\n");
+    printf("     chipsets. If programming fails, try -F 2, 4 or 3. See also -S\n");
+    printf("  -S sets 'slow' mode -- necessary on some computers; try this if the load or\n"); 
+    printf("     verify seems to hang or indicates corrupt firmware and -F doesn't fix it\n");
 #ifdef NO_FS
-    printf("  -r               Force read FPGA bitfile instead of array: only applicable with NO_FS\n");
-    printf("  -e               Force read from array (default) only applicable with NO_FS\n");
+    printf("  -r force read FPGA bitfile instead of array: only applicable with NO_FS\n");
+    printf("  -e force read from array (default) only applicable with NO_FS\n");
 #endif
-    printf("  -h               This help/usage message ('pciload --help' will also work)\n");
+    printf("  -h this help/usage message ('pciload help' will also work)\n");
     printf("\n");
-    printf("  The last argument may either be a full or partial filename to burn, or one of the\n");
-    printf("  keywords 'update', 'verify', 'checkid', 'checkupdate', or 'ERASE'.\n");
+    printf("  The last argument can be one of the keywords 'update', 'verify', 'help' or\n");
+    printf("  a full or partial filename. When updating, avoid using a filename unless\n");
+    printf("  you know for sure what file you need; instead use the keyword 'update'.\n");
     printf("\n");
-    printf("  If a partial filename is specified (e.g. 'pcd',  or 'pe4dvacamlk', pciload\n");
-    printf("  will search for the appropriate version of the FPGA file, and update to\n");
-    printf("  that version (or compare if '-v' is specified). Complete/absolute pathnames\n");
-    printf("  can also be used for filename, but it is recommended that you  us the par-\n");
-    printf("  tial filename method to allow pciload to find and use the correct file from\n");
-    printf("  possibly multiple files with the same or similar names under the the flash\n");
-    printf("  subdirectory tree\n");
+    printf("  If the keyword 'update' is present, pciload will attempt to find an up-\n");
+    printf("  dated version of the board's current firmware under the flash/ directory\n");
+    printf("  and update the PROM with the contents of that file.\n");
     printf("\n");
-    printf("  The keywords 'update' and 'checkupdate' tell pciload to find and burn the\n");
-    printf("  current version of the board's firmware in the flash/<fpga> directory into\n");
-    printf("  the board's flash PROM. 'checkupdate' will check and burn only if the data\n");
-    printf("  in the file is different from that in the PROM, whereas 'update' will re-burn\n");
-    printf("  the new data regardless.\n");
-    printf("\n");
-    printf("  If the keyword 'verify' is present, pciload will compare the FPGA firmware in\n");
-    printf("  the board's flash PROM to the one in the file (optionally the '-v' flag can be\n");
-    printf("  used with a filename to compare to a specific FPGA file)\n");
-    printf("\n");
-    printf("  If the keyword 'checkid' is present, pciload will compare the FPGA ID the\n");
-    printf("  PROM to the one in the file (optionally the '-c' flag can be used with a\n");
-    printf("  filename to compare to a specific FPGA file).\n");
-    printf("\n");
-    printf("  If the keyword 'ERASE' is present, pciload will erase the currently selected\n");
-    printf("  prom BOOT sector. Since this renders the board unusable after the next power\n");
-    printf("  cycle, the ERASE function should only be used when security requirements\n");
-    printf("  dictate. See README.erase_prom in your installation directory for details on\n");
-    printf("  how to erase all volatile sectors of EEprom memory on a board.\n");
+    printf("  If the keyword 'verify' is present, pciload will compare the firmware in\n");
+    printf("  the PROM to the one in the file (optionally the '-v' flag can be used\n");
+    printf("  with a filename to compare to a specific firmware file)\n");
     printf("\n");
     printf("  The keyword 'help' prints out this message (equivalent to '-h').\n");
     printf("\n");
-    printf("  Exit codes: pciload will exit with 0 on success, 1 on most errors, or 2\n");
-    printf("  if the specified board can't be opened (single-board operations). For the\n");
-    printf("  'checkid', -c, 'verify', -v, and programming options, the exit code is 0\n");
-    printf("  if the IDs match or the verify succeeds, or 3 if the ID's don't match or\n");
-    printf("  verification fails.\n");
+    printf("  If a partial filename is specified (e.g. 'pcd',  or 'pci11w', pciload will\n");
+    printf("  search for the appropriate version of the firmware file, and update to\n");
+    printf("  that version (or compare if '-v' is specified). Complete/absolute pathnames\n");
+    printf("  can also be used for filename (but with caution).\n");
 
     printf("\n");
     if (s == NULL)
@@ -310,10 +441,67 @@ usage(char *s)
 }
 
 /*
- * output the fpga's ID string (name / date) in <> brackets
+ * print the serial numbers
  */
-static void
-print_segment_info(EdtDev *edt_p, int promcode, int segment, EdtPromData *pdata)
+void print_id_info(EdtPromData *pdata)
+{
+    Edt_embinfo ei;
+    char pn_str[16];
+    char mac_str[32];
+    int nmacs;
+    int i, j;
+
+    if ((!pdata->maclist[0]) || (sscanf(pdata->maclist, "%2d,", &nmacs) != 1) || (nmacs < 0) || (nmacs > 16))
+        nmacs = 0;
+
+    memset(&ei,0,sizeof(ei)) ;
+
+
+    if (pdata->esn[0])
+    {
+        if (edt_parse_devinfo(pdata->esn, &ei) == 0)
+        {
+            printf("  s/n %s, p/n %s, i/f fpga %s, rev %d, clock %d Mhz", 
+                    ei.sn, 
+                    edt_fmt_pn(ei.pn, pn_str), 
+                    strlen(ei.ifx) > 2?ei.ifx:"(none)", 
+                    ei.rev, ei.clock);
+            if (*ei.opt)
+                printf(", opt %s", ei.opt);
+
+            if (pdata->osn[0])
+                printf(", oem s/n %s", pdata->osn);
+
+            if ((*pdata->optsn) || (nmacs))
+            {
+                printf("\n  option sn %s, %d mac addrs", pdata->optsn[0]?pdata->optsn:"none", nmacs);
+                for (i=0, j=3; i<nmacs; i++, j+=13)
+                {
+                    if (sscanf(&pdata->maclist[j], "%12s,", mac_str) == 1)
+                        printf("%s%s", i == 0? ": ":", ", format_number_string("XX:XX:XX:XX:XX:XX", mac_str, mac_str));
+                }
+            }
+            printf("\n");
+        }
+    }
+
+}
+
+char Promcode_str[64];
+    char *
+fmt_promcode(int promcode)
+{
+    Edt_prominfo *pi = edt_get_prominfo(promcode);
+
+    if (promcode < 0 || promcode > edt_get_max_promcode())
+        return "Unknown Flash ROM!";
+    sprintf(Promcode_str, "%s %s FPGA, %s FPROM", pi->fpga, pi->busdesc, pi->promdesc);
+    return Promcode_str;
+}
+
+    void
+print_segment_info(EdtDev *edt_p, int promcode, int segment,
+        EdtPromData *pdata)
 {
     edt_read_prom_data(edt_p, promcode, segment, pdata);
 
@@ -323,14 +511,9 @@ print_segment_info(EdtDev *edt_p, int promcode, int segment, EdtPromData *pdata)
 
 }
 
-/*
- * Output all the formatted FPGA PROM informaton for a specified sector
- * 
- *   Sector <sect> (<BOOT|Prot|User>)  <<id string, as read from flash>>
- *
- * (Note: this should really be table-driven...)
- */
-static void
+
+/* this should really be table-driven... */
+    void
 print_prominfo(EdtDev *edt_p, int promcode, u_short stat)
 {
     int i;
@@ -342,28 +525,6 @@ print_prominfo(EdtDev *edt_p, int promcode, u_short stat)
 
     if (promcode > edt_get_max_promcode())
         printf("  Unknown flash ROM [%02x %02x] - no information available\n", xidbits, idbits);
-
-    if (edt_pciload_info_na(edt_p))
-    {
-        int rc = 1;
-
-        // if we don't have the bitfile ID string, use the option string in its place (if it exists)
-        if ((edt_p->bfd.bitfile_name[0] == 0))
-        {
-            if (edt_get_board_description(edt_p, TRUE) == 0)
-            {
-                if ((rc = edt_read_option_string(edt_p, edt_p->bfd.optionstr, NULL)) == 0)
-                {
-                    printf("  Sector 0 <%s>\n", edt_p->bfd.optionstr);
-                }
-            }
-        }
-
-      if (rc != 0)
-          printf("  Sector 0 <flash info for this device is not available via pciload>\n");
-
-      return;
-    }
 
 
     /* should all be table driven but first need to make sure all EPinfo values are correct */
@@ -423,17 +584,14 @@ print_prominfo(EdtDev *edt_p, int promcode, u_short stat)
 }
 
 
-/*
- * Gather the info about a specific board print the summary info (everything except
- * the name -- see comment for edt_enumerate_and_summarize)
- */
-static u_short
+    u_short
 edt_print_prom_summary(EdtDev *edt_p, int sect)
+
 {
     int sector;
     int     promcode;
-    char promcode_str[128];
     u_short  stat;
+    u_int   frdata;
     Edt_prominfo *ep;
     EdtPromData pdata;
 
@@ -441,37 +599,26 @@ edt_print_prom_summary(EdtDev *edt_p, int sect)
     ep = edt_get_prominfo(promcode);
     sector = (sect == IS_DEFAULT_SECTOR)? ep->defaultseg:sect;
     edt_read_prom_data(edt_p, promcode, sector, &pdata);
-    edt_fmt_promcode(promcode, promcode_str);
-    printf("  ID 0x%02x, %s\n", edt_p->devid, promcode_str);
-    edt_print_id_info(&pdata);
-    edt_print_pcie_negotiated_link(edt_p);
+    printf("  ID 0x%02x, %s\n", edt_p->devid, fmt_promcode(promcode));
+    print_id_info(&pdata);
     print_prominfo(edt_p, promcode, stat);
-    edt_print_dev_flashstatus(edt_p, stat, sector);
+    frdata = edt_reg_read(edt_p,EDT_FLASHROM_DATA) ;
+    edt_print_flashstatus(stat, sector, frdata);
     printf("\n");
 
     return stat;
 }
 
-/*
- * enumerate the boards found in the system, and print out a summary
- * of the information for each in a formatted way:
- * 
- * <dev> unit <u> (<devname>):
- *   ID 0x<id>, <fpga> <bus> FPGA, <flash> FPROM
- *   s/n <serial>, p/n <part>, i/f fpga <fpga>, rev <rev>, clock <clock> Mhz, opt <options>
- *   PCIe negotiated link width <width>, <speed> Gbps (if PCIe, skipped otherwise)
- *   Sector <s0> (<precedence>)  <<id string>>
- *   Sector <s1> (<precedence>)  <<id string>>
- *   ... for all active sectors
- */
-static int
+
+
+
+    int
 edt_enumerate_and_summarize(char *dev, int unit, int sect)
 
 {
     int nunits = 0;
     int i;
     EdtDev *edt_p;
-    char lasttype[15];
 
     Edt_bdinfo *boards = edt_detect_boards(dev, unit, &nunits, 0);
 
@@ -481,36 +628,20 @@ edt_enumerate_and_summarize(char *dev, int unit, int sect)
         return (1);
     }
 
-    lasttype[0] = '\0';
-
-    for (i = 0; boards[i].id != -1; i++)
-    {
-        if (strncmp(lasttype, boards[i].type, 15) != 0)
-        {
-            edt_pciload_printversion(boards[i].type, boards[0].id, (i == 0));
-            strncpy(lasttype, boards[i].type, 15);
-        }
-    }
-
     if (boards[1].id != -1)
         printf("\nMultiple EDT PCI boards detected:\n\n");
 
     for (i = 0; boards[i].id != -1; i++)
     {
-        if ((unit < 0) || (unit == boards[i].id))
-        {
-            printf("%s unit %d (%s):\n", 
-                    boards[i].type, 
-                    boards[i].id,
-                    edt_idstring(boards[i].bd_id, boards[i].promcode));
+        printf("%s unit %d (%s):\n", 
+                boards[i].type, 
+                boards[i].id,
+                edt_idstring(boards[i].bd_id, boards[i].promcode));
 
-            if (boards[i].bd_id != P53B_ID) 
-            {
-                if ((edt_p = edt_open(boards[i].type, boards[i].id)) != NULL)
-                {
-                    edt_print_prom_summary(edt_p, sect);
-                }
-            }
+        if (boards[i].bd_id != P53B_ID) 
+        {
+            edt_p = edt_open(boards[i].type, boards[i].id);
+            edt_print_prom_summary(edt_p, sect);
         }
     }
 
@@ -519,11 +650,7 @@ edt_enumerate_and_summarize(char *dev, int unit, int sect)
     return 0;
 }
 
-
-/*
- * returns 0 if match, 3 if not; for exit code from pdiload
- */
-int
+    int
 check_load_values(EdtDev *edt_p, 
         int promcode, 
         EdtBitfile *bitfile, 
@@ -542,84 +669,47 @@ check_load_values(EdtDev *edt_p,
         printf("  prom ID size out of range (%d)\n", (int)strlen(pdata->id));
         return 0;
     }
-    if (warn || task == EDT_VerifyOnly || task == EDT_CheckIdOnly)
-        idmatch = check_id_stuff(bitfile->hdr.promstr, pdata->id, edt_p->devid, task, bitfile->filename, segment);
 
-    if (task == EDT_Erase)
-      return 0;
+    if (warn || task == VerifyOnly)
+        idmatch = check_id_stuff(bitfile->hdr.promstr, pdata->id, edt_p->devid, task, bitfile->filename);
 
-    if (task == EDT_CheckIdOnly)
+    if (!idmatch)
     {
-        if (idmatch)
-        {
-            printf("\n  file ID and prom ID are the same\n\n");
-            warn = 0;
-        }
-        else
-        {
-            printf("\n  file ID and prom ID differ\n\n");
-        }
-    }
-    else if (task == EDT_CheckUpdate)
-    {
-        if (idmatch)
-        {
-            printf("\n  file ID and prom ID are the same; skipping update\n\n");
-            warn = 0;
-        }
-        else
-        {
-            printf("\n  file ID and prom ID differ\n\n");
-        }
-    }
-    else if (!idmatch)
-    {
-        if (task == EDT_VerifyOnly)
+        if (task == VerifyOnly)
         {
             printf("\n  file ID and prom ID differ; skipping remainder of verify\n\n");
-            return 3;
+            return 0;
         }
-        else printf("  file ID and prom ID differ\n");
+        else printf("  (file ID and prom ID differ)\n");
     }
 
-    if (!(task == EDT_VerifyOnly || task == EDT_CheckIdOnly))
+    if (!(task == VerifyOnly))
     {
-        if (warn && !quiet)
-        {
-            check_hw_fw_conflicts(edt_p, bitfile);
+        if (warn && !quiet) {
             warnuser(edt_p, bitfile->filename, segment);
         }
     }
-    if (idmatch)
-        return 0;
-    return 3;
+    return 1;
 }
 
 
 
 int     quiet = 0;
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
 int option ;
 pciload(char *command_line)
 #else
-int
+    int
 main(int argc, char *argv[])
 #endif
 {
     int     i, ret = 0;
     int     sector;
-    int     skipUpdate = 0;
     int     nofs = 0;
-    int     verify_status = 0, vb = 0, vfonly = 0, chkonly = 0;
+    int     ver = 0, vb = 0, vfonly = 0;
     int     summary_only = 0;
     char    fname[MAX_STRING+1];
     int     promcode;
@@ -638,14 +728,12 @@ main(int argc, char *argv[])
     int     unit = -1;
     int     sect;
     int     proginfo = 0;
-    u_int dump_addr = 0;
-    u_int dump_size = 0;
-
     Edt_embinfo embinfo;
+
     EdtPromData existing;
     EdtPromData modified;
 
-    EdtLoadState task = EDT_Enumerate;
+    PciloadState task;
     EdtBitfile    bitfile;
     char new_sn[16];
     char new_pn[16];
@@ -724,63 +812,20 @@ main(int argc, char *argv[])
 
             switch (argv[i][1])
             {
-                case 'D':
-                    dump_size = 0x300;
-
-                    if ((i+1 == argc) || (argv[i+1][0] == '-'))
-                    {
-                        dump_addr = 0;
-                    }
-                    else
-                    {
-                        ++i;
-
-                        if (argv[i][0] == 'i')
-                        {
-                            dump_addr = 0xffffffff; /* flag to dump starting at info space */
-                        }
-                        else if (argv[i][0] == 'a') /* dump all */
-                        {
-                            dump_addr = 0;
-                            dump_size = 0xffffffff; /* flag; will be set to the actual flash size */
-                        }
-                        else /* should be an address */
-                        {
-                            dump_addr = strtoul(argv[i], NULL, 16);
-
-                            /* check for size */
-                            if ((i+1 != argc) && (argv[i+1][0] != '-'))
-                            {
-                                dump_size = atoi(argv[++i]);
-                            }
-                        }
-                    }
-                    task = EDT_DumpFlash;
-                    break;
-
                 case 'd':
                     if (++i == argc)
-                    {
                         usage("unfinished -d option");
-                        ret = 1;
-                    }
-                    else strcpy(flash_dir, argv[i]);
+                    strcpy(flash_dir, argv[i]);
                     break;
                 case 'u':
                     if (++i == argc)
-                    {
                         usage("unfinished -u option");
-                        ret = 1;
-                    }
-                    else unitstr = argv[i];
+                    unitstr = argv[i];
                     break;
                 case 's':
                     if (++i == argc)
-                    {
                         usage("unfinished -s option");
-                        ret = 1;
-                    }
-                    else sect = atoi(argv[i]);
+                    sect = atoi(argv[i]);
                     break;
                 case 'e':
 #ifdef NO_FS
@@ -792,15 +837,8 @@ main(int argc, char *argv[])
 #endif
                     break;
                 case 'v':
-                    vfonly = 1;
-                    task = EDT_VerifyOnly;
+                    vfonly = vfonly ? 0 : 1;
                     break;
-
-                case 'c':
-                    chkonly = 1;
-                    task = EDT_CheckIdOnly;
-                    break;
-
                 case 'r':
 #ifdef NO_FS
                     nofs = 0;
@@ -835,7 +873,7 @@ main(int argc, char *argv[])
                                       break;
                             case 'o': strncpy(new_opts, argv[i], 11); 
                                       break;
-                            case 'O': strncpy(new_osn, argv[i], 31); 
+                            case 'O': strncpy(new_osn, argv[i], 11); 
                                       break;
                             case 'n': strncpy(new_optsn, argv[i], 11); 
                                       break;
@@ -849,7 +887,7 @@ main(int argc, char *argv[])
                         proginfo = 2;
                     else proginfo = 1;
                     break;
-                case 'p':             /* print a summary of installed boards */
+                case 'p':		/* print a summary of installed boards */
                     summary_only=1;
                     break;
                 case 'q':
@@ -885,6 +923,10 @@ main(int argc, char *argv[])
                     edt_flash_set_do_fast(0) ;
                     break;
 
+                case 'H':
+                    Option_hack= 1;
+                    break;
+
                 case 'h':
                     usage(errbuf);
                     break;
@@ -899,7 +941,6 @@ main(int argc, char *argv[])
             }
         }
     }
-
 
     if (ret)
         return (ret);
@@ -917,39 +958,36 @@ main(int argc, char *argv[])
 
     if (strcmp(fname, "update") == 0)
     {
-        task = EDT_AutoUpdate;
-        fname[0] = '\0';
+        task = AutoUpdate;
     } 
-    else if (strcmp(fname, "checkupdate") == 0)
+    else if (strcmp(fname, "erase") == 0)
     {
-        task = EDT_CheckUpdate;
-        fname[0] = '\0';
-    } 
-    else if ((strcmp(fname, "erase") == 0) || (strcmp(fname, "ERASE") == 0))
-    {
-        task = EDT_Erase;
+        task = Erase;
     }
-    else if (strcmp(fname, "verify") == 0)
+    else if (vfonly || (strcmp(fname, "verify") == 0))
     {
-        task = EDT_VerifyOnly;
-        fname[0] = '\0';
+        task = VerifyOnly;
         vfonly = 1;
-    }
-    else if ((strcmp(fname, "checkid") == 0))
-    {
-        task = EDT_CheckIdOnly;
-        fname[0] = '\0';
-        chkonly = 1;
     }
     else if (fname[0])
     {
-        if ((task != EDT_VerifyOnly) && (task != EDT_CheckIdOnly))
-            task = EDT_LoadProm;
+        task = LoadProm;
     }
     else if (strcmp(fname, "help") == 0)
     {
         usage(errbuf);
         return(0);
+    }
+    else
+        task = Enumerate;
+
+
+    /* create critical defaults */
+    if (task == Enumerate)
+    {
+        edt_enumerate_and_summarize(dev, unit, sect);
+
+        return 0;
     }
 
     if (dev[0] == 0)
@@ -960,21 +998,10 @@ main(int argc, char *argv[])
     else
         unit = 0;
 
-    /* create critical defaults */
-    if (task == EDT_Enumerate)
-    {
-        if (*unitstr)
-            edt_enumerate_and_summarize(dev, unit, sect);
-        else 
-            edt_enumerate_and_summarize("", -1, sect);
-
-        return 0;
-    }
-
-
     /* DO SOMETHING FOR ONLY ONE BOARD */
-    /* if no name, and task == update or verify or ?? */
-    if (!fname[0])
+    /* if no name, and task == update or verify */
+
+    if ((task == VerifyOnly || task == AutoUpdate) || (!fname[0]))
     {
         if (unit == -1)
             unit = 0 ;
@@ -990,25 +1017,11 @@ main(int argc, char *argv[])
             return (1) ;
         }
 
-        if (task == EDT_DumpFlash)
+        if (edt_flash_get_fname(edt_p, fname) != 0)
         {
-            promcode = edt_flash_prom_detect(edt_p, &stat);
-            ep = edt_get_prominfo(promcode);
-
-            if (dump_addr == 0xffffffff)
-               dump_addr = edt_get_id_addr(promcode, ep->defaultseg);
-
-           if (dump_size == 0xffffffff)
-               dump_size = edt_get_flashsize(promcode);
-
-            edt_dump_flash(edt_p, dump_addr, dump_size);
-            edt_close(edt_p);
-            return 0;
-        }
-        else if ((task != EDT_Erase) && edt_flash_get_fname(edt_p, fname) != 0)
-        {
-            edt_msg(EDT_MSG_FATAL,"Unable to...? \n");
+            edt_msg(EDT_MSG_FATAL,"Unable to \n");
             return (1) ;
+
         }
 
         edt_close(edt_p);
@@ -1039,51 +1052,26 @@ main(int argc, char *argv[])
 
     edt_print_prom_summary(edt_p, sect);
 
-    /* some devices can't program with jumper in protected position */
-    if ((task != EDT_VerifyOnly) && (task != EDT_CheckIdOnly) && edt_flash_is_protected(edt_p))
+    /* older devices can't program with jumper in protected position */
+    if ((task != VerifyOnly) && ((stat & EDT_ROM_JUMPER) == 0) && (promcode < AMD_XC2S150))
     {
-        if (edt_is_micron_prom(edt_p) && (task == EDT_LoadProm))
-        {
-            /* special case A5 -- can't get the jumper easily and it doesn't work the same as
-             * others in all revs */
-            if (edt_p->devid == PE8G3A5_ID)
-            {
-              printf("WARNING: Protected ROM jumper is in the PROT position. If this is a rev 10\n");
-              printf("or newer A5 board, the default (non-protected) boot sector will be programmed.\n");
-              printf("If that's your intent, press ENTER now. If this is a rev 09 or earlier A5 board,\n");
-              printf("it will attempt to program the PROTECTED sector which is likely NOT what you\n");
-              printf("want. In that case, press 'q' now to quit, then withOUT powering down, move the\n");
-              printf("jumper to the NORM position before trying again. In any case, once programming\n");
-              printf("is complete you must power down the computer then ensure the jumper is back\n");
-              printf("in the NORM position before powering up and using the PCIe G3 A5 board again.\n\n");
-            }
-            else
-            {
-              printf("Error: Protected ROM jumper is in the PROTECTED position.\n");
-              printf("Before programming this device, you must move the jumper to the NORM\n");
-              printf("position, or use an alternate method to program the protected sector.\n\n");
-              exit(1);
-            }
-        }
-        else
-        {
-          printf("Caution: Protected ROM jumper is in the PROTECTED position.\n");
-          printf("Some EDT devices don't allow programming in this mode -- if programming\n");
-          printf("fails, remove the jumper (without powering down the system) and re-run\n");
-          printf("the pciload programming command.\n\n");
-        }
+        printf("Protected ROM jumper is in the protected position pin 1-2\n");
+        printf("Verify only allowed\n");
+        printf("To program, remove jumper and run pciload again\n");
+        task = VerifyOnly;
     }
+
 
     modified = existing;
 
-    if (edt_merge_esns(new_esn, modified.esn, new_sn, new_opts, new_pn, new_rev, new_clock) != NULL)
+    if (merge_esns(new_esn, modified.esn, new_sn, new_opts, new_pn, new_rev, new_clock) != NULL)
         strcpy(modified.esn, new_esn);
     if (new_osn[0])
         strcpy(modified.osn, new_osn);
     if (new_optsn[0])
         strcpy(modified.optsn, new_optsn);
     if (new_maclist[0])
-        edt_copy_maclist(modified.maclist, new_maclist);
+        copy_maclist(modified.maclist, new_maclist);
 
     /*
      * things to take care of in the next switch statement:
@@ -1101,6 +1089,7 @@ main(int argc, char *argv[])
     {
         EdtLoadNames names_to_load[2];
         EdtPciLoadVerify pvf;
+
 
         int n_names = 0;
 
@@ -1122,15 +1111,9 @@ main(int argc, char *argv[])
 
         sector = (sect == IS_DEFAULT_SECTOR)? ep->defaultseg:sect;
 
-        if (task == EDT_LoadProm)
+        if (task == LoadProm)
         {
-            if (n_names == 0)
-            {
-                fprintf(stderr, "Error: invalid basename or filename argument\n");
-                exit(1);
-            }
-
-            if ((saveinfo = edt_check_ask_info(edt_p,
+            if ((saveinfo = check_ask_info(edt_p,
                             promcode,
                             sector,
                             &modified, 
@@ -1145,59 +1128,53 @@ main(int argc, char *argv[])
             if ((ret = load_bitfile(names_to_load[i].fname, &bitfile, promcode, nofs)) != 0)
                 return(ret);     
 
+
             /* make sure it makes sense */
-            if (task == EDT_VerifyOnly || task == EDT_CheckIdOnly)
+            if (task == VerifyOnly)
                 edt_read_prom_data(edt_p, promcode, names_to_load[i].sector, &modified);
 
-            ret = check_load_values(edt_p, 
-                    promcode, 
-                    &bitfile, 
-                    &modified, 
-                    task,
-                    (i == 0),
-                    names_to_load[i].sector);
 
-            if (task == EDT_CheckUpdate && ret == 0)
-                skipUpdate = 1;
-
-            if (task == EDT_VerifyOnly && ret != 0)
-                skipUpdate = 1;
-
-            if (!(task == EDT_VerifyOnly || task == EDT_CheckIdOnly))
-                strncpy(modified.id, bitfile.hdr.promstr, sizeof(modified.id)-1);
-
-            if (!(task == EDT_CheckIdOnly) && !skipUpdate)
+            if (check_load_values(edt_p, 
+                        promcode, 
+                        &bitfile, 
+                        &modified, 
+                        task,
+                        (i== 0),
+                        names_to_load[i].sector))
             {
-                verify_status += pvf(edt_p, &bitfile,  &modified, promcode, 
+                if (task != VerifyOnly)
+                    strncpy(modified.id, bitfile.hdr.promstr, sizeof(modified.id)-1);
+
+                ver += pvf(edt_p, &bitfile,  &modified, promcode, 
                         names_to_load[i].sector,
-                        (task == EDT_VerifyOnly), (i==0), vb);
+                        (task == VerifyOnly), (i==0), vb);
             }
+
         }
+
     }
 
     if (nofs)
         saveinfo = 0;
 
     /* save the serial # info to a file if changed and programmed */
-    if ((!(vfonly || chkonly)) && (verify_status == 0) && (saveinfo))
+    if ((!vfonly) && (ver == 0) && (saveinfo))
     {
-        edt_save_info_file(edt_p->devid, modified.esn, vb);
+        save_info_file(edt_p->devid, modified.esn, vb);
     }
 
     edt_close(edt_p);
 
-    if (*fname && !(vfonly || chkonly) && !skipUpdate)
+    if (*fname && !vfonly)
     {
-        if (verify_status != 0)
+        if (ver)
         {
             printf("One or more sectors failed verification. Errors may be due to slow host\n");
             printf("writes/reads. Try -F <level> or -S (pciload --help to see all options)\n");
-            ret = 3;
         }
         else if (strcmp(fname, "ERASE") == 0)
         {
-            printf("\n");
-            printf("This board will be non-functional after the next power-down, and will remain\n");
+            printf("This board will be non-functional after the next power-down, and will remain \n");
             printf("so until the appropriate EDT PCI FPGA firmware is loaded back into the\n");
             printf("Board's EEPROM.\n\n");
             printf("To reload the firmware, power the system down, move the protected mode jumper\n");
@@ -1205,39 +1182,454 @@ main(int argc, char *argv[])
             printf("up again, move the jumper back to the non-protected position (pins 2-3),\n");
             printf("then load the appropriate firmware using the pciload program.\n");
         }
-        else
+        else printf("The firmware update will take effect after the next time you cycle power.\n");
+    }
+    return(0);
+}
+
+/*
+ * copy a maclist would use strncpy but do this instead to ensure format; i.e.
+ * all unused entries are 000000000000
+ */
+    void
+copy_maclist(char *dest, char *src)
+{
+    int i, nmacs;
+    char *sp = &src[2];
+    char mac[MACADDR_SIZE];
+
+    if (sscanf(src, "%02d,", &nmacs) != 1)
+        nmacs = 0;
+
+    sprintf(dest, "%02d", nmacs);
+
+    for (i=0; i<16; i++, sp+=13)
+    {
+        if ((i < nmacs) && (sscanf(sp, ",%12s", mac) == 1))
         {
-            printf("The firmware update will take effect after the next time you cycle power.\n");
-            ret = 0;
+            strcat(dest, ",");
+            strcat(dest, mac);
+        }
+        else strcat(dest, ",000000000000");
+    }
+    dest[MACLIST_SIZE-2] = dest[MACLIST_SIZE-1] = '\0';
+}
+
+    char *
+merge_esns(char *new_esn, char *esn, char *new_sn, char *new_opts, char *new_pn, char *new_rev, char *new_clock)
+{
+    Edt_embinfo ei;
+
+    edt_zero(new_esn, ESN_SIZE);
+    edt_parse_devinfo(esn, &ei);
+
+    if (!(*new_sn || *new_pn || *new_rev || *new_clock || *new_opts))
+        return NULL;
+
+    if (*new_sn)
+        strncpy(ei.sn, new_sn, 11);
+    if (*new_pn)
+        strncpy(ei.pn, new_pn, 11);
+    if (*new_opts)
+        strncpy(ei.opt, new_opts, 15);
+    if (*new_rev)
+        ei.rev = atoi(new_rev);
+    if (*new_clock)
+        ei.clock = atoi(new_clock);
+    make_esn_string(new_esn, &ei);
+    return new_esn;
+}
+
+/*
+ * go from edt info struct to ':' formatted string.
+ * return the string
+ */
+    char *
+make_esn_string(char *str, Edt_embinfo *ei)
+{
+    sprintf(str, "%s:%s:%d:%s:%d:%s:", ei->sn, ei->pn, ei->clock, ei->opt, ei->rev, ei->ifx);
+    return str;
+}
+
+
+
+    int
+match_ifx_dir(char *base, char *name)
+{
+    DIRHANDLE  dirp = (HANDLE) 0;
+    char    d_name[EDT_PATHBUF_SIZE];
+    int     ret = 0;
+
+    if ((dirp = edt_opendir(base)) == (HANDLE)0)
+        return 0;
+
+    while (edt_readdir(dirp, d_name))
+    {
+        if (strcasecmp(name, d_name) == 0)
+        {
+            ret = 1;
+            break;
         }
     }
-    return(ret);
+    edt_closedir(dirp);
+    return ret;
 }
 
-
-void
-edt_pciload_printversion(char *devname, int unit, int do_lib_version)
+/*
+ * check IF xilinx name against dir names and return 1 if match, 0 if not
+ * ADD new dv devices as they come along
+ */
+    int
+valid_ifxname(int devid, char *name)
 {
-    u_int v;
-    edt_version_string version;
-    edt_version_string build;
-    EdtDev *edt_p = edt_open(devname, unit);
+    if (ID_HAS_COMBINED_FPGA(devid))
+        return 0;
 
-    edt_get_library_version(NULL, version, sizeof(version));
-    v = edt_get_version_number();
+    if (   match_ifx_dir("./camera_config/bitfiles/dv", name)
+            || match_ifx_dir("./camera_config/bitfiles/dva", name)
+            || match_ifx_dir("./camera_config/bitfiles/dvaero", name)
+            || match_ifx_dir("./camera_config/bitfiles/dvfox", name)
+            || match_ifx_dir("./camera_config/bitfiles/dvk", name))
+        return 1;
 
-    if (do_lib_version)
-        printf("\nLibrary version %s\n", version);
-
-    if (edt_p)
-    {
-        edt_get_driver_version (edt_p, version, sizeof (version));
-        edt_get_driver_buildid (edt_p, build, sizeof (version));
-    }
-    else strcpy(version, "unknown");
-
-    printf("%s driver version %s\n", devname, version);
-
+    if (match_ifx_dir("./bitfiles", name))
+        return 1;
+    return 0;
 }
 
+
+    int
+edt_ask_ifxilinx(int devid, char *pn, int rev, char *ifx)
+{
+    int ok = 0;
+    int tries = 0;
+    char resp[EDT_STRBUF_SIZE];
+    char tmppn[32];
+
+    /* if xxx-xxxxx-00, replace last 2 digits with rev */
+    if ((strcmp(&(pn[8]), "00") == 0))
+        sprintf(&(tmppn[8]), "%02d", rev);
+    else strcpy(tmppn, pn);
+
+    if (ID_HAS_COMBINED_FPGA(devid))
+    {
+        strcpy(ifx, "none");
+        return 0;
+    }
+
+    if ((strlen(ifx) < 2) && (strlen(tmppn) > 7))
+        edt_find_xpn(tmppn, ifx);
+
+    while (!ok)
+    {
+        printf("Enter interface Xilinx FPGA, (0-10 characters) %s%s%s > ",
+                *ifx?"[":"", ifx, *ifx?"]":"");
+        throwaway = fgets(resp,127,stdin);
+        strip_newline(resp);
+
+        if (*ifx && !*resp)
+            return 0;
+
+        if (strlen(resp) > 10 || strchr(resp, ':')) /* no colons allowed */
+        {
+            if (++tries > 2)
+            {
+                printf("3 tries, giving up\n");
+                return 1;
+            }
+            printf("\nInvalid I/F Xilinx string -- must be 0-10 alphanumeric characters\n\n");
+        }
+        else
+        {
+            strcpy(ifx, resp);
+            ok = 1;
+        }
+    }
+    /* printf("\n"); */
+    return 0;
+}
+
+/*
+ * format a string per the fmt argument, place the result in
+ * the dest string and return a pointer to that. format string
+ * should be upper or lower-case Xs -- anything else is treated
+ * as a format character that will be inserted into the dest string.
+ * For example xx-xxxxx-xx to add dashes in the dest string. May
+ * use dest as src (overwriting the unformatted with the formatted
+ * string); in that case src/dest string must be at least as long
+ * as the fmt string.
+ */
+    char *
+format_number_string(char *fmt, char *src, char *dest)
+{
+    u_int i, j=0;
+    char *tmpstr = (char *)edt_alloc((int)strlen(fmt)+1);
+
+    for (i=0; i<strlen(fmt) && j<strlen(src); i++)
+    {
+        if (tolower(fmt[i]) == 'x')
+            tmpstr[i] = src[j++];
+        else tmpstr[i] = fmt[i];
+    }
+    tmpstr[i] = '\0';
+    strcpy(dest, tmpstr);
+    edt_free(tmpstr);
+    return dest;
+}
+
+
+/*
+ * prompt for info to put into the serial number, etc. part of
+ * the xilinx PROM
+ * return 0 on success, 1 on failure or quit
+ */
+    int
+ask_info(int devid, Edt_embinfo *si)
+{
+    char resp[EDT_STRBUF_SIZE];
+    int ok = 0, n, ret, nmacs = 0;
+
+    while (!ok)
+    {   
+        printf("\n");
+        edt_ask_sn("board", si->sn, 0);
+
+        edt_ask_pn(si->pn);
+        edt_ask_rev(&(si->rev));
+        if ((ret = edt_ask_ifxilinx(devid, si->pn, si->rev, si->ifx)) != 0)
+            return ret;
+        edt_ask_clock(&(si->clock), "(usually 10, 20, 30, or 40)");
+        edt_ask_options(si->opt);
+
+        edt_ask_sn("option", si->optsn, 1);
+        if (si->maclist[0])
+            if ((n = sscanf(si->maclist, "%02d,", &nmacs)) != 1)
+                nmacs = 0;
+
+        if ((n = edt_ask_nmacs(&nmacs, si->maclist)) != 0)
+            edt_ask_maclist(nmacs, si->maclist);
+
+        printf("\n\n");
+        edt_print_info(devid, si);
+        printf("\n");
+
+        *resp = '\0';
+        while (tolower(*resp) != 'y' && (tolower(*resp) != 'n'))
+        {
+            printf("\nOkay? (y/n/q) [y]> ");
+            throwaway = fgets(resp,127,stdin);
+
+            if ((*resp == '\n') || (*resp == '\r') || (*resp == '\0'))
+                *resp = 'y'; /* default to 'yes' */
+
+            if (*resp == 'y')
+                ok = 1;
+            else if (*resp == 'q')
+            {
+                printf("exiting\n");
+                return 1;
+            }
+            else if (*resp != 'n')
+                printf("\nEnter 'y' if the above information is correct, 'n' to change, q to quit\n");
+        }
+    }
+    return 0;
+}
+
+    void
+edt_print_info(int devid, Edt_embinfo *si)
+{
+    char pn_fmt[32];
+    int clock_alert = 0;
+    int nmacs;
+
+    if (si->clock != 10 && si->clock != 20
+            && si->clock != 30 && si->clock != 40)
+        clock_alert = 1;
+
+    if ((sscanf(si->maclist, "%02d,", &nmacs) != 1) || (nmacs < 0) || (nmacs > MAX_MACADDRS))
+        nmacs = 0;
+
+    printf("Serial no:        %s\n", si->sn);
+    printf("Part number:      %s\n", format_number_string("XXX-XXXXX-XX", si->pn, pn_fmt));
+    printf("I/F FPGA:         %s %s", si->ifx, valid_ifxname(devid, si->ifx)?"\n":" (WARNING: no matching FPGA dir found)\n");
+    printf("Rev:              %02d\n", si->rev);
+    printf("Clock:            %d Mhz\n", si->clock);
+    printf("Options:          %s\n", si->opt[0]?si->opt:"<none>");
+    printf("Option serial no: %s\n", si->optsn);
+    printf("MAC addresses:    ");
+    if (nmacs)
+    {
+        int i, idx = 3;
+
+        for (i=0; i<nmacs; i++)
+        {
+            char mac_only[16], mac_fmt[24];
+
+            strncpy(mac_only, &si->maclist[idx], 12);
+            mac_only[12] = '\0';
+            printf("%s%s ", format_number_string("XX:XX:XX:XX:XX:XX", mac_only, mac_fmt), i < nmacs-1?",":"");
+            idx +=13;
+        }
+    }
+    else printf("none\n");
+}
+
+    void
+pad_sn(char *sn)
+{
+    char *p;
+    char tmpsn[EDT_STRBUF_SIZE];
+    int num;
+
+    strcpy(tmpsn, sn);
+
+    p = &tmpsn[strlen(sn)];
+
+    while (p > tmpsn && (*(p-1) >= '0') && (*(p-1) <= '9'))
+        --p;
+
+    num = atoi(p);
+    *p = '\0';
+    if (Option_hack)
+        sprintf(sn, "PDVF%04d", num);
+    else sprintf(sn, "%s%04d", tmpsn, num);
+}
+
+/*
+ * check whether to ask for the serial number and do so if indicated
+ * return nonzero if saving of new info is indicated, 0 if not, -1 on error
+ */
+    int
+check_ask_info(EdtDev *edt_p, 
+        int promcode, 
+        int sect,
+        EdtPromData *pdata,
+        int vfonly, 
+        int proginfo, 
+        int nofs)
+{
+    /* proginfo > 1 means use info in file for
+     * defaults instead of whats already on the board
+     */
+    Edt_embinfo ei;
+
+    edt_parse_devinfo(pdata->esn, &ei);
+    strcpy(ei.optsn, pdata->optsn);
+    strcpy(ei.maclist, pdata->maclist);
+
+    if ((!nofs) && (((proginfo) > 1) || (!*pdata->esn)))
+    {
+        char str[ESN_SIZE+2];
+
+        if (read_info_file(edt_p->devid, str, ESN_SIZE+2) == 0)
+        {
+            edt_parse_devinfo(str, &ei);
+            if (*ei.sn)
+                increment_sn(ei.sn);
+        }
+    }
+
+    if (!vfonly)
+    {
+        if (!proginfo && (!*pdata->esn) && (!*pdata->id))
+            proginfo = edt_ask_addinfo();
+
+        if (proginfo)
+        {
+            if (ask_info(edt_p->devid, &ei) != 0)
+                return -1;
+            edt_zero(pdata->esn, ESN_SIZE);
+            make_esn_string(pdata->esn, &ei);
+            edt_zero(pdata->optsn, OPTSN_SIZE);
+            strcpy(pdata->optsn, ei.optsn);
+            edt_zero(pdata->maclist, MACLIST_SIZE);
+            strcpy(pdata->maclist, ei.maclist);
+        }
+        else if (Option_hack)
+        {
+            strcpy(ei.opt, "lvds");
+            pad_sn(ei.sn);
+            make_esn_string(pdata->esn, &ei);
+        }
+    }
+    return proginfo;
+}
+
+
+    int
+save_info_file(u_int devid, char *info, int vb)
+{
+    FILE *fp;
+    char fname[32];
+
+    sprintf(fname, "pciload_%02x.esn",  devid);
+
+    if (edt_access(fname, 2) == 0)
+    {
+        /* if (vb) printf("overwriting existing device info file '%s'\n", fname); */
+    }
+    else if ((edt_access(fname, 0) == 0) || (edt_access(".", 2) != 0))
+    {
+        if (vb) printf("can't write or create device info file '%s'\n", fname);
+        return -1;
+    }
+
+    if ((fp = fopen(fname, "w")) == NULL )
+    {
+        if (vb) edt_perror(fname);
+        return -1;
+    }
+
+    fprintf(fp, "%s", info);
+    fclose(fp);
+    return 0;
+}
+
+/*
+ * return length of string, or 0 if too big or small 
+ */
+int read_info_file(u_int devid, char *esn, int size)
+{
+    FILE *fp;
+    int  ret = 0;
+    size_t n;
+    char fname[32];
+
+    sprintf(fname, "pciload_%02x.esn",  devid);
+
+    if ((fp = fopen(fname, "r")) == NULL )
+    {
+        /* edt_perror(str) ; */
+        return -1;
+    }
+
+    /* read the ESN string */
+    if ((!fgets(esn, size, fp)) || ((n = strlen(esn)) >= (size_t)size-1) || (n < 16)) /* arbitrary min. */
+    {
+        ret = -1;
+        esn[0] = '\0';
+    }
+
+    fclose(fp);
+    return ret;
+}
+
+    void
+increment_sn(char *sn)
+{
+    char *p;
+    char tmpsn[EDT_STRBUF_SIZE];
+    int num;
+
+    strcpy(tmpsn, sn);
+    p = &tmpsn[strlen(sn)];
+
+    while (p > tmpsn && (*(p-1) >= '0') && (*(p-1) <= '9'))
+        --p;
+
+    num = atoi(p);
+    *p = '\0';
+    sprintf(sn, "%s%04d", tmpsn, ++num);
+}
 

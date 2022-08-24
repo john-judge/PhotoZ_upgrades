@@ -63,8 +63,10 @@ typedef	struct _ts_raw_t {	/* Raw timecode format */
 
 
 
-
-//timecode_configuration
+/**
+ * @addtogroup timecode_configuration
+ * @{
+ */
 EDTAPI EdtDev * edt_spi_open(char *edt_interface, int unit, u_int spi_reg_base);  /* edt_interface is "pcd" or "pdv" or "pe53b", etc. */
 EDTAPI int    edt_spi_close(EdtDev *edt_p);
 EDTAPI int    edt_set_timecode_enable(EdtDev *edt_p, int enable);
@@ -74,15 +76,29 @@ EDTAPI void   edt_set_timecode_seconds_offset(EdtDev *edt_p, u_int seconds);
 EDTAPI void   edt_enable_timecode_programmable_year(EdtDev *edt_p, u_short year);
 EDTAPI void   edt_disable_timecode_programmable_year(EdtDev *edt_p);
 
-//timecode_display
+/** @} */ /* end timecode_configuration group */
+
+/**
+ * @addtogroup timecode_display
+ * @{
+ */
 EDTAPI u_char edt_spi_get_stat(EdtDev *edt_p);
 EDTAPI void   edt_spi_display_time(EdtDev *edt_p, int loops);
 
-//timecode_update
+/** @} */ /* end timecode_display group */
+
+/**
+ * @addtogroup timecode_update
+ * @{
+ */
 EDTAPI int    edt_get_timecode_version(EdtDev *edt_p);
 EDTAPI int    edt_spi_invoke_flash_loader(EdtDev *edt_p);
+/** @} */ /* end timecode_update group */
 
-//timecode_utility
+/**
+ * @addtogroup timecode_utility
+ * @{
+ */
 EDTAPI u_char edt_spi_get_byte(EdtDev *edt_p);
 EDTAPI u_char edt_spi_get_byte_nointr(EdtDev *edt_p);
 EDTAPI u_char edt_spi_put_byte(EdtDev *edt_p, u_char ch);
@@ -93,5 +109,7 @@ EDTAPI void   edt_spi_reg_write(EdtDev *edt_p, u_int desc, u_int val);
 EDTAPI u_char edt_crc16_lowbyte(u_char *buf, int len);
 EDTAPI u_char edt_crc16_highbyte(u_char *buf, int len);
 EDTAPI void   edt_spi_send_packet(EdtDev *edt_p, u_char *cmdbuf);
+/** @} */ /* end timecode_utility group */
+
 
 #endif /* INCLUDE_libedt_h */

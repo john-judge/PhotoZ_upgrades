@@ -1,13 +1,15 @@
 
 !include ../makefile.def
 
+
 CC = cl
 
-HEADER_DIR = ..
-PDVHOME= ..
+OPTIM = -O2
 
-CFLAGS = $(OPTIM) -EHsc -DWIN32 -nologo -I$(HEADER_DIR) 
-CCFLAGS = $(OPTIM) -EHsc -DWIN32 -nologo -I$(HEADER_DIR) 
+HEADER_DIR = ..
+
+CFLAGS = $(OPTIM) -MD -DWIN32 -nologo -I$(HEADER_DIR) 
+CCFLAGS = $(OPTIM) -MD -DWIN32 -nologo -I$(HEADER_DIR) 
 
 LIBS = pdvlib.lib edt_mmx.lib
 
@@ -17,25 +19,25 @@ DLLFLAGS = /dll /nologo /link50compat /map
 LIB32 = link -lib
 
 LIBOBJECTS = \
-	$(CFGNAME)\PdvInput.obj \
-	$(CFGNAME)\PdvConfig.obj \
-	$(CFGNAME)\PdvConfigSet.obj \
-	$(CFGNAME)\PdvDevice.obj \
-	$(CFGNAME)\PdvDeviceSet.obj
+	$(CFGNAME)/PdvInput.obj \
+	$(CFGNAME)/PdvConfig.obj \
+	$(CFGNAME)/PdvConfigSet.obj 
 
 
-PDVPLUSLIB=$(LIBDIR)\pdvplus.lib
+LIBDIR=../lib/$(ARCH)
+PDVPLUSLIB=$(LIBDIR)/pdvplus.lib
 
-$(PDVPLUSLIB) pdvplus: dir $(LIBOBJECTS) $(INCLUDES) 
+$(PDVPLUSLIB): dir $(LIBOBJECTS) $(INCLUDES) 
 	 link /lib /out:$(PDVPLUSLIB) $(LIBOBJECTS)
 
-dir:
-	@if not exist "$(CFGNAME)/" mkdir $(CFGNAME)
 
-clean: objclean
+dir:
+	-mkdir $(CFGNAME)
 
 objclean:
-	-del $(LIBOBJECTS) $(PDVPLUSLIB) 2>nul
+	-del  *.obj *.lib *.dll core *~ 
+
+
 
 
 #{}.c{$(CFGNAME)}.obj:

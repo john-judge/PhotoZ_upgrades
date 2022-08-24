@@ -22,8 +22,6 @@ public:
     CImageFileType *CanSave(const char * szFileName, EdtImage *pImage, 
 	const char *szTypeName = NULL);
 
-    bool CanSave(const char *szTypeName);
-
     int SaveImage(const char *szFileName, EdtImage *pImage, const char *szTypeName = NULL);
 
     CImageFileType *GetFileImageType(const char *szFileName);

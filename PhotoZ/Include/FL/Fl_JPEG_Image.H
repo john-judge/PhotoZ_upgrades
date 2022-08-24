@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_JPEG_Image.H 10732 2015-05-23 23:42:26Z matt $"
 //
 // JPEG image header file for the Fast Light Tool Kit (FLTK).
 //
@@ -40,5 +40,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_JPEG_Image.H 10732 2015-05-23 23:42:26Z matt $".
 //

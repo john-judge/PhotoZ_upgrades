@@ -7,7 +7,7 @@
 #include <FL/fl.h>
 #include <FL/gl.h>
 #include <FL/Fl_Gl_Window.h>
-
+#include "ArrayWindow.h"
 #include <vector>
 
 #define	stripeLength 1024

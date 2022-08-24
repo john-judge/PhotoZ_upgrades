@@ -138,12 +138,6 @@ testspeed(EdtDev * edt_p, int unit);
 char    filename[100];
 char    resp[50];
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -331,6 +325,7 @@ main(int argc, char **argv)
 	  case PCD40_ID:
 	  case PCD60_ID:
 	  case PCDA_ID:
+	  case PCDA16_ID:
 		break;
 
 	  default:

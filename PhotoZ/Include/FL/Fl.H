@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl.H 11945 2016-09-16 09:11:48Z manolo $"
 //
 // Main header file for the Fast Light Tool Kit (FLTK).
 //
@@ -670,9 +670,7 @@ int main() {
     Gets which particular mouse button caused the current event.
 
     This returns garbage if the most recent event was not a FL_PUSH or FL_RELEASE event.
-    \retval FL_LEFT_MOUSE
-    \retval FL_MIDDLE_MOUSE
-    \retval FL_RIGHT_MOUSE.
+    \retval FL_LEFT_MOUSE \retval FL_MIDDLE_MOUSE \retval FL_RIGHT_MOUSE.
     \see Fl::event_buttons()
   */
   static int event_button()	{return e_keysym-FL_Button;}
@@ -1416,5 +1414,5 @@ public:
 #endif // !Fl_H
 
 //
-// End of "$Id$".
+// End of "$Id: Fl.H 11945 2016-09-16 09:11:48Z manolo $".
 //

@@ -27,7 +27,7 @@
 static void
 usage(char *progname, char *err)
 {
-    fprintf(stderr, "%s", err);
+    fprintf(stderr, err);
     fprintf(stderr, "usage: %s [options] [bitfile]\n", progname);
     fprintf(stderr, "If bitfile is specified, it will be loaded.\n");
     fprintf(stderr, "If bitfile isn't specified, the name of loaded bitfile is displayed.\n");
@@ -51,12 +51,6 @@ usage(char *progname, char *err)
     exit(1);
 }
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -75,7 +69,6 @@ main(int argc, char **argv)
     int     ovr = 0;
     int     flags = 0;
     int     skip_load = 0;
-    unsigned int edt_dma_cfg_save;
     char    edt_devname[128];
     char    *basedir = NULL;
     char    bitname[256];
@@ -106,7 +99,7 @@ main(int argc, char **argv)
 
         case 'v':
         case 'V':
-            verbose = 3;
+            verbose = 2;
             break;
 
 
@@ -173,24 +166,11 @@ main(int argc, char **argv)
     if (argc < 1)
     {
         if ((edt_p = edt_open_quiet(edt_devname, unit)) != NULL) {
-
-
-	    if ( ID_HAS_COMBINED_FPGA(edt_p->devid) )
-	    {
-		printf("Interface bitfile on %s%d:  Combined with PCI/PCIe FPGA; use pciload instead.\n", edt_devname, unit);
-	    }
-	    else
-	    {
-
-		edt_bitpath pathbuf;
-		edt_get_bitpath(edt_p, pathbuf, sizeof(edt_bitpath));
-		printf("Interface bitfile on %s%d: %s\n", 
-		    edt_devname, unit, pathbuf[0] ? pathbuf : "None loaded");
-
-	    }
-
+            edt_bitpath pathbuf;
+            edt_get_bitpath(edt_p, pathbuf, sizeof(edt_bitpath));
+            printf("Interface bitfile on %s%d: %s\n", 
+                edt_devname, unit, pathbuf[0] ? pathbuf : "None loaded");
             edt_close(edt_p);
-
         } else {
             sprintf(errstr, "Opening card to get bitfile name failed: edt_open(%s%d)", 
                 edt_devname, unit);

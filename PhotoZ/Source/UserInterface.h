@@ -287,16 +287,6 @@ private:
   static void cb_Width(Fl_Value_Slider*, void*);
   inline void cb_of_i(Fl_Value_Slider*, void*);
   static void cb_of(Fl_Value_Slider*, void*);
-public:
-  Fl_Roller *rliScalarRoller;
-private:
-  inline void cb_rliScalarRoller_i(Fl_Roller*, void*);
-  static void cb_rliScalarRoller(Fl_Roller*, void*);
-public:
-  Fl_Float_Input *rliScalarTxt;
-private:
-  inline void cb_rliScalarTxt_i(Fl_Float_Input*, void*);
-  static void cb_rliScalarTxt(Fl_Float_Input*, void*);
   inline void cb_Correction_i(Fl_Light_Button*, void*);
   static void cb_Correction(Fl_Light_Button*, void*);
   inline void cb_RLI3_i(Fl_Button*, void*);
@@ -465,6 +455,8 @@ private:
   static void cb_Max5(Fl_Menu_*, void*);
   inline void cb_Half_i(Fl_Menu_*, void*);
   static void cb_Half(Fl_Menu_*, void*);
+  inline void cb_Half1_i(Fl_Menu_*, void*);
+  static void cb_Half1(Fl_Menu_*, void*);
   inline void cb_Amplitude_i(Fl_Menu_*, void*);
   static void cb_Amplitude(Fl_Menu_*, void*);
   inline void cb_SD_i(Fl_Menu_*, void*);
@@ -473,6 +465,10 @@ private:
   static void cb_Amp1(Fl_Menu_*, void*);
   inline void cb_Max6_i(Fl_Menu_*, void*);
   static void cb_Max6(Fl_Menu_*, void*);
+  inline void cb_Half2_i(Fl_Menu_*, void*);
+  static void cb_Half2(Fl_Menu_*, void*);
+  inline void cb_Half3_i(Fl_Menu_*, void*);
+  static void cb_Half3(Fl_Menu_*, void*);
   inline void cb_Trace_i(Fl_Light_Button*, void*);
   static void cb_Trace(Fl_Light_Button*, void*);
   inline void cb_Alpha_i(Fl_Light_Button*, void*);
@@ -507,8 +503,10 @@ private:
   static void cb_Amplitude1(Fl_Menu_*, void*);
   inline void cb_Max7_i(Fl_Menu_*, void*);
   static void cb_Max7(Fl_Menu_*, void*);
-  inline void cb_Half1_i(Fl_Menu_*, void*);
-  static void cb_Half1(Fl_Menu_*, void*);
+  inline void cb_Half4_i(Fl_Menu_*, void*);
+  static void cb_Half4(Fl_Menu_*, void*);
+  inline void cb_Half5_i(Fl_Menu_*, void*);
+  static void cb_Half5(Fl_Menu_*, void*);
   inline void cb_Max8_i(Fl_Menu_*, void*);
   static void cb_Max8(Fl_Menu_*, void*);
 public:

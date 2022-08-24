@@ -5,28 +5,12 @@
 
 #ifdef EDT_CAMLINK_EXPORTS
 
-#ifdef _NT_
 #define EDT_CAMLINK_API __declspec(dllexport)
-#else
-#define EDT_CAMLINK_API __attribute__((visibility("default")))
-#endif
 
 #else
 
-#ifdef _NT_
 #define EDT_CAMLINK_API __declspec(dllimport)
-#else
-#define EDT_CAMLINK_API // no dllimport equivalent for linux?
-#endif
 
-#endif
-
-#ifndef _NT_
-#define APIENTRY
-typedef unsigned long DWORD;
-typedef unsigned short WORD;
-typedef unsigned int UNINT32;
-typedef void * LPVOID;
 #endif
 
 #ifdef __cplusplus

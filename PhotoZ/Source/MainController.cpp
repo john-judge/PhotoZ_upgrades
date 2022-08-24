@@ -82,29 +82,19 @@ MainController::~MainController() {
 //=============================================================================
 //	Start the program
 //=============================================================================
-void MainController::start()					//this module runs at startup and the initcam calls give console messages indicating commands were executed correcly
+void MainController::start()
 {
-	//char command[80];
+	char command1[80];
 	ui->init();
 	cw->setPointXYZ();
 	ui->setValue();	
-	/* 
-	JMJ 12/26/2020 - replaced for little Dave; initcam is now called in Camera::init_cam
 
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	sprintf(command, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-	system(command);
-	*/
-	//dc->resetCamera();			// replaced for LittleDave works but disable while developing program
+	sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0 -f c:\\EDT\\pdv\\camera_config\\Red-Shirt-80x80.cfg");
+	system(command1);	//  initcam 
 	dw->init(dc);
 	aw->openImageFile("01-01.bmp");
-	setCameraProgram(7); // Default setting
-	//cout << "mc line 103  initialized camera " << endl;
+	setCameraProgram(7);
+
 	//
 	ui->show();
 	Fl::run();
@@ -126,7 +116,7 @@ void MainController::redraw()
 //=============================================================================
 void MainController::quit()
 {
-	char choice=fl_ask("Do you really want to quit Photoz-LilDave?");
+	char choice=fl_ask("Do you really want to quit Photoz-LilJoe?");
 	if(choice)
 	{
 		this->~MainController();

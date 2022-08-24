@@ -7,14 +7,14 @@ class UserInterface {open
   Function {UserInterface()} {open
   } {
     Fl_Window mainWindow {
-      label {PhotoZ (c) 2006 PYC} open
+      label {PhotoZ (c) 2021} open
       xywh {518 31 1374 1008} type Double resizable
       code0 {\#include "MainController.h"}
       code1 {extern MainController *mc;}
       code2 {\#include "RecControl.h"} visible
     } {
       Fl_Box {} {
-        label {PhotoZ LilJoe}
+        label {PhotoZ LilDave}
         xywh {5 5 140 25} box UP_BOX color 175 selection_color 4 labeltype EMBOSSED_LABEL labelfont 10 labelsize 20
       }
       Fl_Menu_Bar {} {
@@ -37,7 +37,7 @@ class UserInterface {open
           }
           MenuItem {} {
             label {open np file}
-            callback {mc->openDataFileNP();} selected
+            callback {mc->openDataFileNP();}
             xywh {0 0 30 20}
           }
           MenuItem {} {
@@ -78,7 +78,7 @@ class UserInterface {open
       } {
         Fl_Group {} {
           label Acquisition open
-          xywh {5 685 250 125} color 214
+          xywh {5 685 250 125} color 214 hide
         } {
           Fl_Button {} {
             label {Take RLI}
@@ -123,7 +123,7 @@ class UserInterface {open
         }
         Fl_Group {} {
           label Analysis open
-          xywh {5 685 250 125} color 199 hide
+          xywh {5 685 250 125} color 199
         } {
           Fl_Button {} {
             label {Go through Data}
@@ -253,7 +253,7 @@ class UserInterface {open
       } {
         Fl_Group {} {
           label Array open
-          xywh {260 685 375 285} color 23
+          xywh {260 685 375 285} color 23 hide
         } {
           Fl_Group {} {
             label {Display Selections} open
@@ -270,7 +270,7 @@ class UserInterface {open
               xywh {270 725 90 25}
             }
             Fl_Light_Button awShowDiodeNum {
-              label {Diode No}
+              label {Pixel No}
               callback {mc->setAwShowDiodeNum(o->value());}
               xywh {270 755 90 25}
             }
@@ -462,7 +462,7 @@ class UserInterface {open
           } {
             Fl_Group {} {
               label Main open
-              xywh {265 715 365 265} color 20 hide
+              xywh {265 715 365 265} color 20
             } {
               Fl_Light_Button {} {
                 label {RLI Division}
@@ -518,19 +518,10 @@ class UserInterface {open
                   xywh {365 900 255 25} type {Horz Knob} selection_color 1 align 4 when 4 minimum 5 maximum 95 step 5 value 50
                 }
               }
-              Fl_Roller rliScalarRoller {
-                callback {mc->setRliScalar(o->value());}
-                xywh {425 935 65 25} type Horizontal minimum 10 maximum 60000 step 10 value 3200
-              }
-              Fl_Input rliScalarTxt {
-                label {RLI Scalar}
-                callback {mc->setRliScalar(o->value());}
-                xywh {360 935 65 25} type Float when 8
-              }
             }
             Fl_Group {} {
               label Correction open
-              xywh {265 715 370 255} color 20
+              xywh {265 715 370 255} color 20 hide
             } {
               Fl_Light_Button {} {
                 label Correction
@@ -871,8 +862,8 @@ aw->setImageFileFormat(type);}
           }
         }
         Fl_Group {} {
-          label Filter open
-          xywh {270 720 365 250} color 20 hide
+          label Filter open selected
+          xywh {270 720 365 250} color 20
         } {
           Fl_Light_Button {} {
             label {T-Filter}
@@ -940,7 +931,7 @@ aw->setImageFileFormat(type);}
           } {
             Fl_Choice {} {
               label {Value:} open
-              xywh {690 670 165 25} down_box BORDER_BOX
+              xywh {685 670 165 25} down_box BORDER_BOX
             } {
               MenuItem {} {
                 label None
@@ -978,6 +969,11 @@ aw->setImageFileFormat(type);}
                 xywh {80 80 100 20} divider
               }
               MenuItem {} {
+                label {Half Width}
+                callback {mc->setTwValueType('J');}
+                xywh {90 90 100 20} divider
+              }
+              MenuItem {} {
                 label Amplitude
                 callback {mc->setTwValueType('A');}
                 xywh {10 10 100 20}
@@ -996,6 +992,16 @@ aw->setImageFileFormat(type);}
                 label {Max Amp Latency}
                 callback {mc->setTwValueType('L');}
                 xywh {30 30 100 20}
+              }
+              MenuItem {} {
+                label {Half Rise Time}
+                callback {mc->setTwValueType('K');}
+                xywh {0 0 30 20}
+              }
+              MenuItem {} {
+                label {Half Decay Time}
+                callback {mc->setTwValueType('k');}
+                xywh {0 0 30 20}
               }
             }
             Fl_Light_Button {} {
@@ -1094,6 +1100,11 @@ tw->redraw();}
                   MenuItem {} {
                     label {Half Amp Latency}
                     callback {mc->setTwTimeCourseType('H');}
+                    xywh {45 45 100 20}
+                  }
+                  MenuItem {} {
+                    label {Half Width}
+                    callback {mc->setTwTimeCourseType('J');}
                     xywh {45 45 100 20}
                   }
                   MenuItem {} {

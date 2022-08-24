@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Window.H 10820 2015-07-27 18:13:46Z AlbrechtS $"
 //
 // Window header file for the Fast Light Tool Kit (FLTK).
 //
@@ -648,5 +648,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Window.H 10820 2015-07-27 18:13:46Z AlbrechtS $".
 //

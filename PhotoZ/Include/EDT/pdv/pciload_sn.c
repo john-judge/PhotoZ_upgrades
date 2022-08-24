@@ -3,8 +3,7 @@
 	    case 'O':
 		if ((strlen(argv[i]) < 3)
 		 || ((strcmp(&argv[i][2], "ssp") != 0)
-		  && (strcmp(&argv[i][2], "drs") != 0)
-		  && (strcmp(&argv[i][2], "and") != 0)))
+		  && (strcmp(&argv[i][2], "drs") != 0)))
 		{
 		    usage("invalid '-O' option");
 		    ret = 1;

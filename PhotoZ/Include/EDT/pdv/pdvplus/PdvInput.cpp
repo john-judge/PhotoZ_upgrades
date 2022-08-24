@@ -35,12 +35,11 @@ extern "C" {
 
 #include "PdvInput.h"
 
+
 #ifdef _WIN32
 
 #define ShowMessage(message) \
     ::MessageBox(NULL, message, NULL, MB_OK|MB_ICONEXCLAMATION)
-
-#define snprintf(...) _snprintf(__VA_ARGS__) 
 
 #else
 
@@ -49,7 +48,6 @@ extern "C" {
 
 
 #endif
-
 
 #ifdef _WIN32
 #define SLASH "\\"
@@ -86,7 +84,8 @@ PdvInput::PdvInput(const char *devname, const int nUnit, const int nChannel)
 
     InitVariables();
 
-    Initialize();
+    Initialize(false);
+
 }
 
 
@@ -220,16 +219,6 @@ int PdvInput::GetDepth()
     return m_nDepth;
 }
 
-int PdvInput::GetNumTaps()
-{    
-    if (GetDevice() && !m_nTaps)
-    {
-        m_nTaps = ((edt_reg_read(GetDevice(), PDV_CL_DATA_PATH) & 0xf0) >> 4) + 1;
-    }
-
-    return m_nTaps;
-}
-
 int PdvInput::GetTimeouts()
 {    
     if (!GetDevice())
@@ -308,7 +297,7 @@ int PdvInput::ReadResponse(char *outbuf, int ishex, int expected_chars)
 {
     int ret;
 
-    char buf[2048];
+    char buf[1000];
 
     pdv_serial_wait(GetDevice(), GetDevice()->dd_p->serial_timeout, expected_chars) ;
 
@@ -332,7 +321,7 @@ int PdvInput::ReadResponse(char *outbuf, int ishex, int expected_chars)
 
 }
 
-bool PdvInput::SendCommand(const char* szCommand, int ishex, char *outbuf)
+bool PdvInput::SendCommand(char* szCommand, int ishex, char *outbuf)
 {
 
     outbuf[0] = 0;
@@ -364,7 +353,7 @@ bool PdvInput::SendCommand(const char* szCommand, int ishex, char *outbuf)
         int nb = 0;
         unsigned char hexbuf[256];
 
-        char *tmpbuf = (char *)szCommand;
+        char *tmpbuf = szCommand;
         char *tok;
 
         do 
@@ -380,7 +369,7 @@ bool PdvInput::SendCommand(const char* szCommand, int ishex, char *outbuf)
             }
             else
             {
-                tok = (char *)"";
+                tok = "";
             }
 
         } while (*tok);
@@ -859,13 +848,9 @@ bool PdvInput::GetNextBuffer(BYTE*& pRawBits)
         {
 
             if (m_bWaitNext)
-            {
                 pRawBits = pdv_wait_next_image_raw(GetDevice(), &nSkipped, true);
-            }
             else
-            {
                 pRawBits = pdv_wait_last_image_raw(GetDevice(), &nSkipped,true);
-            }
 
             edt_get_timestamp(GetDevice(), timevec, GetDevice()->donecount - 1);
         }
@@ -1223,12 +1208,28 @@ bool PdvInput::AddBufferImages()
     {
         int imagesize = GetImageSize();
 
-       m_nBufs = 0x3000000 / imagesize ; 
-
-        if (m_nBufs > 16)
+        // limit it to 12 max  for smaller cameras
+        if (imagesize <= 0x100000)
             m_nBufs = 16;
-        else if (m_nBufs < 3)
-            m_nBufs = 3;
+
+        // 8 buffers is usually about right for medium to large
+        else if (imagesize <= 0x400000)
+            m_nBufs = 12;
+
+        // for really big ones, just make it > 1, < 4, up to max
+        else
+        {
+            if (imagesize > 0x2000000)
+                m_nBufs = 2;
+            else m_nBufs = 0x2000000/imagesize;
+
+            if (m_nBufs > 8)
+                m_nBufs = 8;
+        }
+
+        // shouldnt happen, but... 
+        if (m_nBufs < 1)
+            m_nBufs = 1;
     }
 
     TRACE("Calling multibuf for %d bufs\n", m_nBufs);
@@ -1360,14 +1361,16 @@ bool PdvInput::Setup(const char *cfgPathName,
     if (IsBuffering())
         StopBuffering();
 
+
     m_bSetup = false;
+
 
     char szCurrentPath[_MAX_PATH+1];
     bool needchd = false; /* need to change directory */
 
     if (!getcwd(szCurrentPath,_MAX_PATH))
     {
-        setLastError("Unable to get Current Directory.");
+        ShowMessage( "Unable to get Current Directory.");
         return false;
     }
 
@@ -1388,7 +1391,7 @@ bool PdvInput::Setup(const char *cfgPathName,
     {
         if (chdir(szPdvRoot))
         {
-            setLastError( "Unable to Change To Directory.");
+            ShowMessage( "Unable to Change To Directory.");
             return false;
         } 
 
@@ -1397,14 +1400,14 @@ bool PdvInput::Setup(const char *cfgPathName,
 
 #ifdef _WIN32
     // Determine the path to the camera setup batch file
-    char szCommand[_MAX_PATH+25];
+    char szCommand[_MAX_PATH+1];
     sprintf(szCommand,".%sinitcam -u %d -c %d -f \"%s\"\n", 
         SLASH, GetUnitNumber(), GetChannelNumber(), 
         cfgFileName);
 #else
     //create path for config file
     // called by camsetup*_*.sh
-    char szPath[_MAX_PATH+25];
+    char szPath[_MAX_PATH+1];
     strcpy(szPath, cfgPathName);
     strcat(szPath, "/");
     strcat(szPath, cfgFileName);
@@ -1441,12 +1444,9 @@ bool PdvInput::Setup(const char *cfgPathName,
 
     if ( (fSetup = fopen(m_szBatchFile, "w")) == NULL )
     {   
-        char error_message[_MAX_PATH];
-
-        snprintf(error_message, _MAX_PATH-1,
-                 "Camera setup failed. Couldn't open file %s in %s for writing. Ensure that you have write permissions in %s and try again.", 
-                 m_szBatchFile, szPdvRoot, szPdvRoot);
-        setLastError(error_message);
+        edt_msg_printf_perror(EDTAPP_MSG_FATAL, 
+            "Camera setup failed. Couldn't open file %s in %s for writing", 
+            m_szBatchFile, szPdvRoot);
         return false;
     }
 
@@ -1468,16 +1468,9 @@ bool PdvInput::Setup(const char *cfgPathName,
 #ifndef _WIN32
     int rc = chmod(m_szBatchFile, 0755);
     if (rc == -1) 
-    {
-        char error_message[_MAX_PATH];
-
-        snprintf(error_message, _MAX_PATH-1,
-                 "Camera setup failed: chmod on %s failed\n",
-                 m_szBatchFile);
-        setLastError(error_message);
-
-        return false;
-    }
+        edt_msg_printf_perror(EDTAPP_MSG_FATAL,
+        "Camera setup failed: chmod on %s failed",
+        m_szBatchFile);
 #endif
 
     int ret =  runSetupBat(szOutputFile);
@@ -1488,6 +1481,7 @@ bool PdvInput::Setup(const char *cfgPathName,
     }
 
     return (bool) ret;
+
 }
 
 
@@ -1524,7 +1518,8 @@ void PdvInput::UpdateFromCamera()
 
 }
 
-bool PdvInput::Initialize(const char *devname,
+bool PdvInput::Initialize(bool bQuiet,
+                          const char *devname,
                           int nUnitNumber,
                           int nChannelNumber)
 {
@@ -1535,19 +1530,26 @@ bool PdvInput::Initialize(const char *devname,
 
     m_pCurCamera->SetDevUnitChannel(devname, nUnitNumber, nChannelNumber);
 
-    return Initialize();
+    return Initialize(bQuiet);
 }
 
-
-//note: bQuiet is obsolete; up to the caller now to check return value and throw message if appropriate
 bool PdvInput::Initialize(bool bQuiet)
 {
+    char msg[128];
     bool rc;
 
     rc = m_pCurCamera->Open();
 
     if (!rc)
+    {
+        if (!bQuiet)
+        {    
+            sprintf(msg, "pdv unit %d not found -- check board/driver installation\n", 
+                GetUnitNumber());
+            ShowMessage( msg );
+        }
         return false;
+    }
 
 #if 0
     /* Not sure why this is here,
@@ -1587,51 +1589,33 @@ EdtImage * PdvInput::GetCameraImage(EdtImage *pImage)
 
 }
 
+//
+// Do a ring buffer of live windows if more than one is defined
+//
+
+
+
 void PdvInput::SetHardwareInvert(bool bInvert)
 {
     pdv_invert(GetDevice(), bInvert);
 }
 
-bool PdvInput::GetHardwareInvert()
-{
-    return (bool)pdv_get_invert(GetDevice());
-}
-
-void PdvInput::SetFirstPixelCounter(bool bCounter)
-{
-    pdv_set_firstpixel_counter(GetDevice(), (int)bCounter);
-}
-
-bool PdvInput::GetFirstPixelCounter()
-{
-    return (bool)pdv_get_firstpixel_counter(GetDevice());
-}
-
-bool PdvInput::GetMinMaxShutter(int & low, int & high)
+void PdvInput::GetMinMaxShutter(int & low, int & high)
 {
     low = pdv_get_min_shutter(GetDevice());
     high = pdv_get_max_shutter(GetDevice());
-    if (low == high)
-        return false;
-    return true;
 }
 
-bool PdvInput::GetMinMaxGain(int & low, int & high)
+void PdvInput::GetMinMaxGain(int & low, int & high)
 {
     low = pdv_get_min_gain(GetDevice());
     high = pdv_get_max_gain(GetDevice());
-    if (low == high)
-        return false;
-    return true;
 }
 
-bool PdvInput::GetMinMaxLevel(int & low, int & high)
+void PdvInput::GetMinMaxLevel(int & low, int & high)
 {
     low = pdv_get_min_offset(GetDevice());
     high = pdv_get_max_offset(GetDevice());
-    if (low == high)
-        return false;
-    return true;
 }
 
 void PdvInput::SetWaitForScreenUpdate(bool bState)
@@ -1655,15 +1639,6 @@ bool PdvInput::IsClink()
     if (GetDevice())
     {
         return (pdv_is_cameralink(GetDevice()));
-    }
-    return false;
-}
-
-bool PdvInput::IsFox()
-{
-    if (GetDevice())
-    {
-        return (edt_is_dvfox(GetDevice()));
     }
     return false;
 }
@@ -1824,7 +1799,6 @@ void PdvInput::StopAcquiring()
         {
             pdv_start_image(GetDevice());
 
-
             pdv_stop_continuous(GetDevice());
 
         }
@@ -1912,9 +1886,7 @@ void PdvInput::StartImages(const int n)
 
         }
         else if (n == 0)
-        {
             pdv_start_images(GetDevice(), 0);
-        }
 
     }
 }
@@ -2149,6 +2121,7 @@ char * PdvInput::SerialTerminator()
 bool PdvInput::runSetupBat(char *szOutputFile)
 {
 
+
     system(m_szBatchFile);
 
     // Check the results in the output file
@@ -2182,7 +2155,7 @@ bool PdvInput::runSetupBat(char *szOutputFile)
         edt_msleep(500);
 
 
-        Initialize();
+        Initialize(false);
 
     }
 
@@ -2283,10 +2256,6 @@ void PdvInput::InitVariables()
     pingpong = false;
     fval_done = false;
     m_acquired_bufnum = 0;
-    m_nDepth = 0;
-    m_nTaps = 0;
-    m_szBatchFile[0] = '\0';
-    m_sLastError = "none";
 
 }
 
@@ -2474,7 +2443,7 @@ bool PdvInput::HasDevice()
 {
     if (!GetDevice())
     {
-        if (!Initialize())
+        if (!Initialize(false))
         {
             return false;
         }

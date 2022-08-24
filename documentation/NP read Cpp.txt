@@ -1,0 +1,119 @@
+void SM_readNPdata(char *filename)
+{
+	int handle, i, k;
+
+	if (strstr(filename, ".tif"))
+	{
+		SM_readTIFF_stack(filename, 0);
+		return;
+	}
+
+	SM_SetHourCursor();
+
+	setSmDataName(filename);
+    if ((handle = _open(SM_dataname,O_BINARY | O_RDONLY)) == -1)
+		return;
+
+	if (strcmp(last_dataname, SM_dataname))
+		firstDataFrame = 0;
+	strcpy(last_dataname, SM_dataname);
+
+	_lseek(handle,0L,SEEK_SET);
+	_read(handle,(char *)NP_header,sizeof(NP_header));
+	readNPheader(&numDataFrames, &disp_num_row, &disp_num_col, file_cameraName, &SM_exposure);
+	file_num_col = disp_num_col;
+	file_num_row = disp_num_row;
+
+	firstDataFrame = 0;
+	numTraceFrames = numDataFrames;
+	int len = disp_num_col * disp_num_row + 8 * file_BNC_ratio;
+
+	if (image_data != NULL)
+		_aligned_free(image_data);
+	image_data = (signed short int *)_aligned_malloc(numTraceFrames*len * sizeof(signed short int), 2);
+
+	if (firstDataFrame > 0)
+		_lseeki64(handle,2560L+((unsigned _int64)firstDataFrame)*len *2,SEEK_SET);
+	_read(handle,(signed short *)image_data, len*numTraceFrames*2);
+	if (numTraceFrames < numDataFrames-firstDataFrame)
+		_lseeki64(handle,2880L+((unsigned _int64)numDataFrames)*len *2,SEEK_SET);
+	alloc_dark_data(disp_num_col,disp_num_row);
+	if (dark_data != NULL)
+		_read(handle,(signed short *)dark_data,disp_num_col*disp_num_row*2);
+	_close(handle);
+	addFileList();
+
+	//rearrange camera and BNC data
+	signed short int *tmp_data = (signed short int *)_aligned_malloc(numTraceFrames*len * sizeof(signed short int), 2);
+	memcpy(tmp_data, image_data, numTraceFrames*len * sizeof(signed short int));
+	signed short int *src_pt, *dst_pt;
+	src_pt = tmp_data;
+	dst_pt = image_data;
+	for (k = 0; k < numTraceFrames; k++) {
+		src_pt = tmp_data + k;
+		for (i = 0; i < disp_num_col*disp_num_row; i++) {
+			*dst_pt++ = *src_pt;
+			src_pt += numTraceFrames;
+		}
+	}
+	int BNC_Length = numTraceFrames * file_BNC_ratio * 8 * 2;
+	src_pt = tmp_data + disp_num_col * disp_num_row*numTraceFrames;
+	memcpy(BNC_data, src_pt, BNC_Length);
+	_aligned_free(tmp_data);
+	signed short *BNC_pt = BNC_data;
+	for (i = 0; i < BNC_Length / 2; i++)
+		*BNC_pt++ = (signed short)(*BNC_pt*10 / 32.767);
+	BNC_exist = TRUE;
+	OM[SM_BNCPNL].state = OM_DISPLAY;
+	OM[SM_BNCGNUP].state = OM_ARROW;
+	OM[SM_BNCGNDN].state = OM_ARROW;
+	for (k = 0; k < 4; k++) {
+		OM[SM_BNC5 + k].state = OM_RADIOBUTTON;
+		OM[SM_BNC5 + k].dx = 20;
+	}
+	if (!window_layout) {
+		OM[SM_BNCPNL].dy = 400;
+		OM[SM_BNC_FLTR].y = OM[SM_BNCPNL].y + OM[SM_BNCPNL].dy - 30;
+	}
+	else {
+		OM[SM_BNCPNL].dx = 400;
+		OM[SM_BNC_FLTR].x = OM[SM_BNCPNL].x + OM[SM_BNCPNL].dx - 40;
+	}
+	if (BNC_filter_flag)
+		OM[SM_BNC_FLTR].attr = OM_HOT;
+	else
+		OM[SM_BNC_FLTR].attr = OM_COLD;
+	numBNC_chan = 8;
+
+	//Get file time
+	struct stat attrib;
+	stat(SM_dataname, &attrib);
+	fileTime = gmtime(&(attrib.st_mtime));
+
+	if (single_img_size < (unsigned long)disp_num_col*disp_num_row) {
+		if (single_img_data != NULL)
+			_aligned_free(single_img_data);
+		single_img_size = (unsigned long)disp_num_col*disp_num_row;
+		single_img_data = (signed short int *)_aligned_malloc(single_img_size * sizeof(signed short int), 2);
+	}
+
+	SetNewFileRead(0);
+	SM_SetNonHourCursor(crossCursorOn ? crossCursor : arrowCursor); }
+
+void readNPheader(int *images, int *rows, int *columns, char *camera, double *exposure) {
+	char NPcam_gain_ar[][4] = {"30X", "10X", "3X", "1X"};
+
+	if (NP_header[389] > 1 && NP_header[392] == 1)
+		*exposure = 1000.0 / NP_header[399];
+	else
+		*exposure = NP_header[388] / 1000.0;
+	*exposure /= 1000;
+	int div_factor = NP_header[390];
+	if (div_factor >= 10)
+		*exposure *= div_factor;
+	*images = NP_header[4];
+	*columns = NP_header[384];
+	*rows = NP_header[385];
+	file_BNC_ratio = NP_header[391];
+	sprintf(camera, "NPfile-Gain%s-Bin%d", NPcam_gain_ar[NP_header[389]-2], NP_header[386]);
+}

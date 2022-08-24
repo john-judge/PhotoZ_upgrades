@@ -1,24 +1,21 @@
-/**
- *  EdtImgStats.h: interface for the EdtImgStats class.
- *
-*/
+// EdtImgStats.h: interface for the EdtImgStats class.
+//
+//////////////////////////////////////////////////////////////////////
 
 #if !defined(EDTIMGSTATS_H)
 #define EDTIMGSTATS_H
 
-// basic one-d statisticsof integer values
 
 class EdtImgStats  
 {
 
 public:
 
-	int 	m_nN,
+	long	m_nN,
 			m_nMin,
 			m_nMax,
 			m_nMode,
-			m_nMedian,
-            m_nModeFreq;
+			m_nMedian;
 
 	double m_dMean,
 			m_dSum,
@@ -42,7 +39,6 @@ public:
 		m_nMin = 0;
 		m_nMax = 0;
 		m_nMode = 0;
-        m_nModeFreq = 0;
 		m_nMedian = 0;
 		
 
@@ -50,4 +46,4 @@ public:
 
 };
 
-#endif // 
+#endif // !defined(AFX_EDTIMGSTATS_H__B7DF20F6_1B2B_11D2_8DE4_00A0C932D513__INCLUDED_)

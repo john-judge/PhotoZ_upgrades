@@ -262,7 +262,7 @@ void MainController::loadSelected()		// repurposed to load saved ROIs
 			file >> diodeIndex;
 			if (j > 0)
 			{
-				cout << "mcaw line 267 regionindex " << RegionIndex << " diode " << diodeIndex << endl;
+				cout << "mcaw line 267 regionindex " << RegionIndex << " pixel " << diodeIndex << endl;
 				aw->addToSelectedList(diodeIndex, 1);
 			}
 		}

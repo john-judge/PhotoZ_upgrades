@@ -20,9 +20,7 @@ LIBOBJS= \
      $(CFGNAME)/pdv_irig.obj \
      $(CFGNAME)/edt_si570.obj \
      $(CFGNAME)/lib_two_wire.obj \
-     $(CFGNAME)/edt_optstring.obj \
      $(CFGNAME)/chkbuf.obj \
-     $(CFGNAME)/edt_si5338.obj \
      $(CFGNAME)/edt_os_nt.obj
 
 TARGETS= \
@@ -37,21 +35,17 @@ TARGETS= \
     dumpit.exe \
     dvinfo.exe \
     edt_sysinfo.exe \
-    gen_tiffs.exe \
     initcam.exe \
     irigdump.exe \
     new_strobe.exe \
-    optstr.exe \
     pdb.exe \
-    pdbcls10b.exe \
     pdvplayback.exe \
     rcxload.exe \
     rcxmake.exe \
-    send_tiffs.exe \
     serial_cmd.exe \
     setdebug.exe \
     setperiod.exe \
-    simple_bc.exe \
+    send_tiffs.exe \
     simple_clsend.exe \
     simple_event.exe \
     simple_etrig.exe \
@@ -77,11 +71,9 @@ TARGETS= \
     clsimvar.exe \
     pdvterm.exe \
     sample.exe \
-    set_si5338.exe \
     win_sysinfo.exe
 
 CPP_LIBOBJS=
 
-CPP_TARGETS= \
-    pdvcom.exe
+CPP_TARGETS=
 

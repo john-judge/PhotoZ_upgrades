@@ -14,8 +14,6 @@ extern class RecControl *recControl;
 extern class DapController *dc;
 extern class DapController *dapControl;
 
-extern class Camera *camera;
-
 extern class LiveFeed *lf;
 extern class DataArray *dataArray;
 extern class SignalProcessor *sp;

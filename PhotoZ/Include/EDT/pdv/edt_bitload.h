@@ -52,12 +52,12 @@ typedef struct EdtBitfile {
     int is_file;
     char *filename;
     
-    u_int full_buffer_size;        /* current size of valid data */
-    u_int buffer_allocated;   /* actual allocated size - can be bigger than buffer_size */
+    int full_buffer_size;        /* current size of valid data */
+    int buffer_allocated;   /* actual allocated size - can be bigger than buffer_size */
     u_char *full_buffer;         /* data */
-    u_int cur_index;
+    int cur_index;
     u_char *data;  /* start of actual data */
-    u_int data_size; /* size - header */
+    int data_size; /* size - header */
     HANDLE f;
 
     EdtBitfileHeader hdr;
@@ -137,6 +137,8 @@ EDTAPI int edt_bitfile_read_header(const char *bitpath,
 EDTAPI int edt_get_bitfile_header(EdtBitfile *bp,
 				  EdtBitfileHeader *bfh);
 
+
+
 EDTAPI int edt_access_bitfile(const char *tmppath, int perm);
 EDTAPI int edt_oc192_rev2_fname_hack(EdtDev *edt_p, const char *bitname, char *hacked_bitname); 
 EDTAPI int edt_program_mezzanine(EdtDev *edt_p, const u_char *buf, u_int size, int channel);
@@ -179,7 +181,7 @@ EDTAPI int edt_get_x_header(FILE * xfile, char *header, int *size);
 #define ALT_MEZZANINE   1
 
 EDTAPI int edt_bitfile_load_file(EdtBitfile *bfd, const char *name);
-EDTAPI int edt_bitfile_load_array(EdtBitfile *bfd, u_char *data, u_int size);
+EDTAPI int edt_bitfile_load_array(EdtBitfile *bfd, u_char *data, int size);
 EDTAPI int edt_bitfile_open_file(EdtBitfile *bfd, const char *name, u_char writing);
 EDTAPI void edt_bitfile_init(EdtBitfile *bitfile);
 

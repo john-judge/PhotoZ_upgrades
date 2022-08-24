@@ -124,6 +124,9 @@ void Data::reset()
 	maxAmp=0;
 	maxAmpLatency=0;
 	halfAmpLatency=0;
+	halfWidth = 0;
+	halfDecayTime = 0;
+	halfRiseTime = 0;
 }
 
 //=============================================================================
@@ -210,14 +213,13 @@ void Data::calRli()
 	int i;
 	for (i = 0; i < num_bdiodes; i++)
 	{
-//		rli = double(rliLow - rliHigh) / 3278;
-		rli = double(rliHigh) / 3278;
+		rli = double(rliLow - rliHigh) / 3278;
 	}
 
-	/*if (rli <= 0 || (rliMax - rliHigh) < -200)	// No RLI or Saturated
+	if (rli <= 0 || (rliMax - rliHigh) < -200)	// No RLI or Saturated
 	{
 		rli = -1;
-	}*/															//		commented out to test rli acquisition
+	}
 
 }
 double Data::getRli()
@@ -279,7 +281,7 @@ void Data::measureProperties()
 	double halfAmp=maxAmp*perAmp;
 	halfAmpLatency=start;
 
-	for(i=start;i<=maxAmpLatency;i++)
+	for(i=start;i<=maxAmpLatency;i++)			// calculate halfAmpLatency
 	{
 		if(proData[i]==halfAmp)
 		{
@@ -288,17 +290,35 @@ void Data::measureProperties()
 		}
 		else if(proData[i]>halfAmp)
 		{
-			halfAmpLatency=i-1+(halfAmp-proData[i-1])/(proData[i]-proData[i-1]);
+			halfAmpLatency=i-(proData[i]-halfAmp)/(proData[i]-proData[i-1]);
 			break;
 		}
 	}
-
+	
+	for (i = maxAmpLatency+1; i <= start+width; i++)			// calculate time to reach halfAmp in the decay
+	{
+		if (proData[i] == halfAmp)
+		{
+			halfWidth = i;								//halfWidth is half-end-point which is concerted to the real halfWidth below
+			break;
+		}
+		else if (proData[i] < halfAmp)
+		{
+			halfWidth = i-(halfAmp - proData[i]) / (proData[i] - proData[i - 1]);
+			break;
+		}
+	}
 	//-------------------------------------------------------
 	maxAmpLatencyPt=(int) maxAmpLatency;
+	halfRiseTime = (maxAmpLatency-halfAmpLatency)*intPts;
+//	halfDecayTime = (halfWidth-maxAmpLatency)*intPts;
 	maxAmpLatency=maxAmpLatency*intPts;
 	maxAmpLatencyArray[recordNo]=maxAmpLatency;
+	halfWidth = (halfWidth-halfAmpLatency)*intPts;
 	halfAmpLatency=halfAmpLatency*intPts;
+	halfDecayTime = halfWidth - halfRiseTime;
 	halfAmpLatencyArray[recordNo]=halfAmpLatency;
+	halfWidthArray[recordNo] = halfWidth;
 
 	//-------------------------------------------------------
 	// Slope
@@ -401,11 +421,30 @@ double Data::getHalfAmpLatency(int input)
 	return halfAmpLatencyArray[input];
 }
 
+double Data::getHalfWidth(int input)
+{
+	return halfWidthArray[input];
+}
+
 //=============================================================================
 double Data::getHalfAmpLatency()
 {
 	return halfAmpLatency;
 }
+
+double Data::getHalfWidth()
+{
+	return halfWidth;
+}
+double Data::getHalfRiseTime()
+{
+	return halfRiseTime;
+}
+double Data::getHalfDecayTime()
+{
+	return halfDecayTime;
+}
+
 
 //=============================================================================
 double Data::getAmp(int pt)
@@ -422,9 +461,7 @@ double Data::getSD()
 	double sum2=0,sum1=0;
 	double data;
 
-	int numPts = dc->getNumPts();
-
-	for (i = startPt; i < max(numPts, startPt + num); i++)
+	for(i=startPt;i<startPt+num;i++)
 	{
 		data=proData[i];
 		sum1+=data;
@@ -462,6 +499,10 @@ double* Data::getMaxAmpLatencyArray()
 double* Data::getHalfAmpLatencyArray()
 {
 	return halfAmpLatencyArray;
+}
+double* Data::getHalfWidthArray()
+{
+	return halfWidthArray;
 }
 
 //=============================================================================
@@ -574,7 +615,8 @@ void Data::rliDividing()
 	int numPts=dc->getNumPts();
 	for(i=0;i<numPts;i++)
 	{
-		proData[i]/=(rli*2165);			//factor determined empirically to give value of 1.0 with shutter opening data
+		proData[i] /= (rli*2.165);		//factor divided by 1000 so scaling in tracewindow OK, now should give 0.001 with shutter
+//		proData[i]/=(rli*2165);			//factor determined empirically to give value of 1.0 with shutter opening data
 	}
 }
 

@@ -76,11 +76,6 @@ EdtBufHeader::EdtBufHeader(EdtBufDataHdr *bhdr)
 
 }
 
-EdtBufHeader::~EdtBufHeader()
-{
-
-}
-
 
 /// Size in bytes of the header 
 // 

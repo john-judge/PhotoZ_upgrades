@@ -1,0 +1,87 @@
+#include <cstring>
+
+//========================================================================================
+int main(int argc, const char * argv[])
+{
+	return 0;
+}
+
+//========================================================================================
+class DC
+{
+public:
+	int getNumPts();
+};
+
+//========================================================================================
+class AW
+{
+public:
+	int getNumSelectedDiodesAverage(int region);
+	int* getSelectedDiodesAverage(int region);
+};
+
+//========================================================================================
+class Data
+{
+public:
+	double* getRawDataMem();
+};
+
+//========================================================================================
+class DataArray
+{
+	DC* dc;
+	AW* aw;
+	double* aveData;
+	Data *array_data_ROI;
+	
+	void aveROIData(Data** dataPtrPtr, int region);
+	Data* getROIAve(int region);
+};
+
+//----------------------------------------------------------------------------------------
+void DataArray::aveROIData(Data** dataPtrPtr, int region)
+{
+	//number of points in the trace
+	int numPts = dc->getNumPts();         
+	
+	//number of diodes in an region of interest (ROI)
+	int numSelectedDiodesAverage = aw->getNumSelectedDiodesAverage(region);       
+	
+	//pointer to the indexes of the diodes in an ROI
+	int *selectedDiodesAverage = aw->getSelectedDiodesAverage(region);          
+	
+	for (int k = 0; k < numPts; k++)
+	{
+		//performs average over the traces in the ROI
+		double value = 0;
+		for (int j = 0; j < numSelectedDiodesAverage; j++)                         
+		{
+			// I believe this works but am not sure. The averaging must be over the indexes in the ROI
+			value += dataPtrPtr[(selectedDiodesAverage[j])]->getRawDataMem()[k];
+		}
+		value /= numSelectedDiodesAverage;
+		
+		//average flourescence of the area that needs to be passed to TraceWindow::drawValue
+		aveData[k] = value;
+	}
+}
+
+//----------------------------------------------------------------------------------------
+// tried to create a new data object that can be used by TraceWindow as data = dataArray->getROIAve(region);
+Data *DataArray::getROIAve(int region)                                      
+{
+	// If array_data_ROI is null, allocate memory to it.
+	if(array_data_ROI == nullptr)
+	{
+		array_data_ROI = new Data();
+	}
+	
+	// Copy aveData to array_data_ROI.
+	memcpy(array_data_ROI->getRawDataMem(), aveData, sizeof(double) * dc->getNumPts());
+	
+	return array_data_ROI;
+}
+
+//========================================================================================

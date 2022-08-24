@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Tile.H 11726 2016-05-09 11:25:57Z AlbrechtS $"
 //
 // Tile header file for the Fast Light Tool Kit (FLTK).
 //
@@ -37,5 +37,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Tile.H 11726 2016-05-09 11:25:57Z AlbrechtS $".
 //

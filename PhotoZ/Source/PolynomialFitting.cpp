@@ -80,7 +80,7 @@ void PolynomialFitting::setCoefficients()
 	int endPt=startPt+numPts;
 	int length=dc->getNumPts();
 
-	for(i=3;i<length;i++)
+	for(i=3;i<length;i++)				//set to 7 to skip bad frames in old data
 	{
 		if(i>=startPt && i<endPt)
 		{
@@ -120,7 +120,7 @@ void PolynomialFitting::setCoefficients()
 }
 
 //=============================================================================
-void PolynomialFitting::calA()
+void PolynomialFitting::calA()		// calculate the A's for fit()
 {
 	int i;
 
@@ -143,14 +143,11 @@ void PolynomialFitting::fit()
 	double value;
 	int length=dc->getNumPts();
 
-	for(i=3;i<length;i++)
+	for(i=0;i<length;i++)
 	{
 		value=((A[0]*i+A[1])*i+A[2])*i+A[3];
 		data[i]-=value;
 	}
-	data[0] = data[6];
-	data[1] = data[7];
-	data[2] = data[8];
 }
 
 //=============================================================================

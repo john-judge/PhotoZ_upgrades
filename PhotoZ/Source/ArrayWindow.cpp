@@ -6,14 +6,13 @@
 #include <math.h>
 #include <fstream>
 
-#include <windows.h>
-
 #include <FL/Fl.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/fl_draw.h>
 #include <FL/fl_ask.h>
 #include <FL/fl_file_chooser.h>
 #include <FL/Fl_Output.H>
+
 
 #include "ArrayWindow.h"
 #include "UserInterface.h"
@@ -23,9 +22,8 @@
 #include "DAPController.h"
 #include "DataArray.h"
 #include "SignalProcessor.h"
-#include "LiveFeed.h"
+#include "LiveFeed.h"				//new
 #include "Definitions.h"
-#include "OpenCVImage.h"
 
 #include <iostream>
 
@@ -36,9 +34,7 @@ extern char txtBuf[];
 ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 :Fl_Double_Window(X,Y,W,H)
 {
-	image = new Image();
-
-	bg_image = new Fl_OpenCV(0, 0, 1, 1);
+	image=new Image();
 
 	// indexes of the FP diodes will be negative
 	for (int i = 0; i < NUM_FP_DIODES; i++)
@@ -46,24 +42,16 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 
 	fg=FL_WHITE;
 	bg=FL_BLACK;
-	background = BG_SIGNAL_TO_NOISE; // JMJ updated default to SNR background
-	showTrace = 0; // JMJ 7/6/21 - Disable trace in AW by default. It's not that useful for lil Dave, and GUI performance is now a concern.
-	showRliValue = 0;
-	showDiodeNum = 0;
+	background=BG_None;
+	showTrace=1;
+	showRliValue=0;
+	showDiodeNum=0;
 
-	yScale  = pow((0.2*log2(1 + 1)),1); // yScale and yScale2 = 100 in photoz 3.0
+	yScale  = pow((0.2*log2(1 + 1)),1); // pow means x to power of y; yScale and yScale2 = 100 in photoz 3.0
 	yScale2 = pow((0.2*log2(1 + 1)),1);
 	xScale=1;
 	xShift=0;
 	continuous = 0;							//new
-
-	// 12/12/2020 JMJ +6 lines
-	zoomFactor = 1;
-	xPan = 0;
-	yPan = 0;
-	xDragLast = 0;
-	yDragLast = 0;
-	isDragActive = false;
 }
 
 //=============================================================================
@@ -143,7 +131,7 @@ void ArrayWindow::setYScale2(double p)
 //=============================================================================
 double ArrayWindow::getYScale2()
 {
-	return yScale2;
+  return yScale2;
 }
 
 //=============================================================================
@@ -183,7 +171,7 @@ void ArrayWindow::setBackground(int p)
 }
 
 //=============================================================================
-void ArrayWindow::changeNumDiodes()			// for binning
+void ArrayWindow::changeNumDiodes()			// new ; for binning
 {
 	int num_bdiodes = dataArray->num_binned_diodes();
 	int change = num_bdiodes - (int) diodes.size();
@@ -211,153 +199,73 @@ void ArrayWindow::changeNumDiodes()			// for binning
 	resizeDiodes();
 }
 
-void ArrayWindow::set_drag_active() {
-	isDragActive = true;
-}
-
-void ArrayWindow::set_drag_inactive() {
-	isDragActive = false;
-}
-
-bool ArrayWindow::get_drag_active() {
-	return isDragActive;
-}
-
-void ArrayWindow::release_drag() {
-
-	// clear drag location
-	set_drag_inactive();
-
-	// drag buffers get cleared in scheduled AW redraw
-	xPan += (Fl::event_x() - xDragLast);
-	yPan += (Fl::event_y() - yDragLast);
-
-	resizeDiodes(); // updated xPan and yPan in Diode widget properties
-	redraw();
-}
-
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
 	int mouseButton;
-	double dBinning;
-	double scrollAmt, tmpZoomFactor;
-
-	bool verbose = false; // Set to true to receive debugging output to stdout
-
 	switch(event)
 	{
-	case FL_RELEASE: // JMJ 12/12/2020
-		if (Fl::event_button() == 1) {
-			if (!get_drag_active()) return Fl_Double_Window::handle(event);
-			release_drag();
-			if (verbose) cout << "dragged to new center: (" << xPan << ", " << yPan << ")\n";
-			return Fl_Double_Window::handle(event);
-		}
-	case FL_DRAG: // JMJ 12/12/2020
-		if (Fl::event_button() == 1) {
-
-			// save the location where the drag starts
-			if(verbose && !isDragActive) cout << "activated drag\n";
-			set_drag_active();
-
-			return Fl_Double_Window::handle(event);
-		}
-	case FL_PUSH:
-			
-		xDragLast = Fl::event_x();
-		yDragLast = Fl::event_y();
-
-		mouseButton=Fl::event_button();
-		//cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
-		//==============
-		// Ignornance
-		//==============
-		if(Fl::event_state(FL_SHIFT))	// Shift Key is Down
-		{
-			if(mouseButton==1)		// Ignore
+		case FL_PUSH:
+			mouseButton=Fl::event_button();
+//			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
+			//==============
+			// Ignornance
+			//==============
+			if(Fl::event_state(FL_SHIFT))	// Shift Key is Down
 			{
-				redraw();
-				tw->redraw();
-				if(ui->mapGroup->visible())
+				if(mouseButton==1)		// Ignore
 				{
-					cw->redraw();
-				}
+					redraw();
+					tw->redraw();
+					if(ui->mapGroup->visible())
+					{
+						cw->redraw();
+					}
 					
-				return Fl_Double_Window::handle(event);
+					return Fl_Double_Window::handle(event);
+				}
+				else if(mouseButton==3)	// Clear ignored list with shift right click
+				{
+					dataArray->clearIgnoredFlag();
+					dataArray->process();
+					redraw();
+					tw->redraw();
+					if(ui->mapGroup->visible())
+					{
+						cw->redraw();
+					}
+					return 1;
+				}				 
 			}
-			else if(mouseButton==3)	// Clear ignored list with shift right click
+			/*else if (Fl::event_state(FL_ALT))	// Alt Key is Down
 			{
-				dataArray->clearIgnoredFlag();
-				dataArray->process();
+				while (Fl::event_state(FL_ALT)) {
+					redraw();
+				}
+				tw->redraw();
+					return Fl_Double_Window::handle(event);
+			}*/
+			//==============
+			// Selection
+			//==============
+			if(mouseButton==1)
+			{
+					redraw();
+					tw->redraw();
+					return Fl_Double_Window::handle(event);
+			}
+
+			else if(mouseButton==3)		// Clear selected
+			{
+				if(!Fl::event_state(FL_CTRL))	clearSelected(0);
+				if (Fl::event_state(FL_CTRL))	clearSelected(1);
 				redraw();
 				tw->redraw();
-				if(ui->mapGroup->visible())
-				{
-					cw->redraw();
-				}
 				return 1;
-			}				 
-		}
-		else if (Fl::event_state(FL_ALT))	// Alt Key is Down: reset view
-		{
-			cout << "resetting array window \n";
-			zoomFactor = 1;
-			xPan = 0;
-			yPan = 0;
-			xDragLast = 0;
-			yDragLast = 0;
-
-			redraw();
-			Fl_Double_Window::handle(event);
-			return 1;
-		}
-		//==============
-		// Selection
-		//==============
-		if(mouseButton==1) // left-click
-		{
-			redraw();
-			tw->redraw();
-			Fl_Double_Window::handle(event);
-			return 1;
-		}
-
-		else if(mouseButton==3)		// right-click: Clear selected
-		{
-			if(!Fl::event_state(FL_CTRL))	clearSelected(0);
-			if (Fl::event_state(FL_CTRL))	clearSelected(1);
-			redraw();
-			tw->redraw();
-			return 1;
-		}
-		return Fl_Double_Window::handle(event);
-	case FL_MOUSEWHEEL: // JMJ 12/12/2020
-		scrollAmt = Fl::event_dy() > 0 ? -0.2 : 0.2;
-		tmpZoomFactor = zoomFactor;
-		zoomFactor = std::min((const double)50, max(0.8, zoomFactor + scrollAmt));
-
-		if (zoomFactor != tmpZoomFactor) {
-			// As we zoom, automatically adjust binning ~ # raw / zoom
-			dBinning = (int)std::max((const double)1, dataArray->raw_height() * dataArray->raw_width() / (zoomFactor * DEFAULT_BINNING_FACTOR));
-
-			mc->set_digital_binning(dBinning);
-
-			// clear selected. TO DO: save selected, but separate at each zoom level
-			if (!Fl::event_state(FL_CTRL))	clearSelected(0);
-			if (Fl::event_state(FL_CTRL))	clearSelected(1);
-
-			if (verbose) {
-				cout << "zooming to factor: " << zoomFactor \
-					<< "\tbinning: " << dBinning << "\n";
 			}
-			resizeDiodes();
-			redraw();
-				
-		}
-		return Fl_Double_Window::handle(event);
-	default:
-		return Fl_Double_Window::handle(event);
+			return Fl_Double_Window::handle(event);
+		default:
+			return Fl_Double_Window::handle(event);
 	}
 }
 
@@ -448,15 +356,18 @@ void ArrayWindow::draw()
 
 	drawBackground();
 	
-	if(showTrace) {
+	if(showTrace)
+	{
 		drawTrace();
 	}
 
-	if(showRliValue) {
+	if(showRliValue)
+	{
 		drawRliValue();
 	}
 
-	if(showDiodeNum) {
+	if(showDiodeNum)
+	{
 		drawDiodeNum();
 	}
 	
@@ -473,29 +384,45 @@ void ArrayWindow::clear()
 //=============================================================================
 void ArrayWindow::drawBackground()
 {
-	switch (background) {
-		case BG_None:
-			return;
-		case BG_Image:
-			return image->draw();
-		case BG_Rli:
-			return drawRli();
-		case BG_Max_Amplitude:
-			return drawMaxAmp();
-		case BG_Spike_Amp:
-			return drawSpikeAmp();
-		case BG_Max_Amp_Latency:
-			return drawMaxAmpLatency();
-		case BG_Half_Amp_Latency:
-			return drawHalfAmpLatency();
-		case BG_SIGNAL_TO_NOISE:
-			return drawSignalToNoise();
-		case BG_EPSP_Latency:
-			return drawEPSPLatency();
-		case BG_Live_Feed:
-			return lf->drawBackground();
-		default:
-			return;
+	if(background==BG_None)
+	{
+		return;
+	}
+	else if(background==BG_Image)
+	{
+		image->draw();
+	}
+	else if(background==BG_Rli)
+	{
+		drawRli();
+	}
+	else if(background==BG_Max_Amplitude)
+	{
+		drawMaxAmp();
+	}
+	else if(background==BG_Spike_Amp)
+	{
+		drawSpikeAmp();
+	}
+	else if(background==BG_Max_Amp_Latency)
+	{
+		drawMaxAmpLatency();
+	}
+	else if(background==BG_Half_Amp_Latency)
+	{
+		drawHalfAmpLatency();
+	}
+	else if (background == BG_SIGNAL_TO_NOISE)
+	{
+		drawSignalToNoise();
+	}
+	else if(background==BG_EPSP_Latency)
+	{
+		drawEPSPLatency();
+	}
+	else if(background==BG_Live_Feed)
+	{
+		lf->drawBackground();
 	}
 }
 
@@ -524,11 +451,15 @@ void ArrayWindow::drawRli()
 	{
 		ratio=dataArray->getRliRatio(i);
 
-		if(ratio<0 || ratio>1) {
+		if(ratio<0 || ratio>1)
+		{
 			fl_color(char(155),0,0);
-		} else {
+		}
+		else
+		{
 			colorControl->setGrayScale(ratio);
 		}
+
 		get_diode(i)->drawBackground();
 	}
 }
@@ -747,13 +678,13 @@ void ArrayWindow::drawScale()
 }
 
 //=============================================================================
-void ArrayWindow::drawTrace() {
-	int drawnCount = 0;
-	for (int i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++) {		//  modified to vary diode number with binning
-		if (get_diode(i)->drawTrace(dataArray->getProDataMem(i)))
-			drawnCount++;
+void ArrayWindow::drawTrace()
+{
+	int i;
+	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)		//  modified to vary diode number with binning
+	{
+		get_diode(i)->drawTrace(dataArray->getProDataMem(i));
 	}
-	//cout << "Number of bin traces rendered in array window: " << drawnCount - NUM_FP_DIODES << " of " << dataArray->num_binned_diodes() << "\n";
 }
 
 //=============================================================================
@@ -788,19 +719,21 @@ void ArrayWindow::addToSelectedList(int index, int average)	// index is the diod
 	else {
 	if(currentRegionIndex<0) currentRegionIndex=0;			// with some sequences currentRegionsIndex was -1 and that caused crashes due to vector overflow
 //		cout << "aw line 698 currentRegionIndex " << currentRegionIndex << endl;
-		if (selectedDiodesAverage[currentRegionIndex].size() == 0) {
+		if (selectedDiodesAverage[currentRegionIndex].size() == 0)
+		{
 			int cI = colorControl->getColorIndex();
 			get_diode(index)->setColorIndex(cI);
 			selectedDiodesAverage[currentRegionIndex].push_back(cI);
 /*			char regionStr[14];
 			sprintf(regionStr , "Region %d", currentRegionIndex);
-			Fl_Output(1051, 950 + numRegions * 30, 50, 65, regionStr);*/
-//			ui->allRegionsDisplay->add(newRegion);
-			this->numRegions += 1;
+			Fl_Output(1051, 950 + numRegions * 30, 50, 65, regionStr);
+			ui->allRegionsDisplay->add(newRegion);*/
+				if (numRegions < 100)	this->numRegions += 1;
+				else	fl_alert(">100 ROIs not allowed!\n");
 		}
 		else {
-			get_diode(index)->setColorIndex(selectedDiodesAverage[currentRegionIndex][0]);
-		}
+				get_diode(index)->setColorIndex(selectedDiodesAverage[currentRegionIndex][0]);
+			}
 		selectedDiodesAverage[currentRegionIndex].push_back(index);
 		tw->redraw();
 	redraw();
@@ -991,13 +924,12 @@ void ArrayWindow::resizeDiodes()
 	int array_height = dataArray->binned_height();
 	int num_bdiodes = dataArray->num_binned_diodes();
 
-	int diode_width = std::min(int(w() * num * zoomFactor / (den * array_width)), 
-							   int(h() * num / (den * array_height)));
-	int diode_height = diode_width * zoomFactor;
+	int diode_width = min(w() * num / (den * array_width), h() * num / (den * array_height));
+	int diode_height = diode_width;
 
 	// Center the array
-	int array_xoffset = (int)((w() - diode_width*array_width) / 2 + xPan);
-	int array_yoffset = (int)((h() - diode_height*array_height) / 2 + yPan);
+	int array_xoffset = (w() - diode_width*array_width) / 2;
+	int array_yoffset = (h() - diode_height*array_height) / 2;
 	if (array_yoffset + array_height * diode_height > h())
 		array_yoffset = do_yoffset + do_height;
 
@@ -1008,6 +940,7 @@ void ArrayWindow::resizeDiodes()
 		int y = array_yoffset + diode_height * (i / array_width);
 		diodes[i]->resize(x, y, diode_width, diode_height);
 	}
+//	cout << "aw line 945 " << endl;
 	for (i = 0; i < NUM_FP_DIODES; i++)
 	{
 		int x = (w()/2) - (NUM_FP_DIODES * do_width / 2) + (do_width * i);
@@ -1045,7 +978,7 @@ void ArrayWindow::saveBGData()
 {
 	//==================================================
 	// Get file name
-	char *fileName=fl_file_chooser("Save background data (all diodes) to a file",
+	char *fileName=fl_file_chooser("Save background data (all pixels) to a file",
 		"*.dat","Data.dat");
 
 	if(!fileName)
@@ -1072,10 +1005,6 @@ void ArrayWindow::saveBGData()
 	else if(background==BG_Half_Amp_Latency)
 	{
 		dataArray->setHalfAmpLatency2DataFeature();
-	}
-	else if (background == BG_Rli)
-	{
-		dataArray->setRli2DataFeature();
 	}
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)

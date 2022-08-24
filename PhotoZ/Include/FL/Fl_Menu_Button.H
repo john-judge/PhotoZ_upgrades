@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Menu_Button.H 10513 2015-01-10 22:05:15Z greg.ercolano $"
 //
 // Menu button header file for the Fast Light Tool Kit (FLTK).
 //
@@ -81,5 +81,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Menu_Button.H 10513 2015-01-10 22:05:15Z greg.ercolano $".
 //

@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Tree_Item_Array.H 11534 2016-04-05 20:35:29Z AlbrechtS $"
 //
 
 #ifndef _FL_TREE_ITEM_ARRAY_H
@@ -109,5 +109,5 @@ public:
 #endif /*_FL_TREE_ITEM_ARRAY_H*/
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Tree_Item_Array.H 11534 2016-04-05 20:35:29Z AlbrechtS $".
 //

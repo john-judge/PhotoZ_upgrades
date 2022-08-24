@@ -208,19 +208,19 @@ void TraceWindow::saveTraces()
 {
 	//==================================================
 	// Get Number of Selected Diodes
-	int numSelectedDiodes=aw->getNumSelectedDiodes();
+	int numSelectedDiodes = aw->getNumSelectedDiodes();
 	int numRegions = aw->getNumRegions();
-	if(numSelectedDiodes<1)
+	if (numSelectedDiodes < 1 && numRegions <1)
 	{
 		return;
 	}
 
 	//==================================================
 	// Get file name
-	char *fileName=fl_file_chooser("Please enter the name of the Dat file",
-		"*.dat","Traces.dat");
+	char *fileName = fl_file_chooser("Please enter the name of the Dat file",
+		"*.dat", "Traces.dat");
 
-	if(!fileName)
+	if (!fileName)
 	{
 		return;
 	}
@@ -228,40 +228,39 @@ void TraceWindow::saveTraces()
 	//==================================================
 	// Open file
 	fstream file;
-	file.open(fileName,ios::out);
+	file.open(fileName, ios::out);
 
 	//==================================================
 	// Get Selected Diode Array
-	int *selectedDiodes=aw->getSelectedDiodes();
-	int i,j;
-	int numPts=dc->getNumPts();
+	int *selectedDiodes = aw->getSelectedDiodes();
+	int i, j;
+	int numPts = dc->getNumPts();
 
-	if(saveTracesStartPt>=numPts)
+	if (saveTracesStartPt >= numPts)
 	{
-		saveTracesStartPt=0;
+		saveTracesStartPt = 0;
 	}
 
-	if(saveTracesEndPt>=numPts)
+	if (saveTracesEndPt >= numPts)
 	{
-		saveTracesEndPt=numPts-1;
+		saveTracesEndPt = numPts - 1;
 	}
 
 	//==================================================
 	// pt
-	if(save2FileType=='p')
+	if (save2FileType == 'p')
 	{
-		file<<"Pt";
+		file << "Pt";
 
-		for(i=0;i<numSelectedDiodes+numRegions;i++)
+		for (i = 0; i < numSelectedDiodes + numRegions; i++)		//save diode #  and ROI index 
 		{
-			file<<"\tD"<<selectedDiodes[i]+1;
+			if (i < numSelectedDiodes) file << "\tD" << selectedDiodes[i] + 1;
 			if (i >= numSelectedDiodes && i < numSelectedDiodes + numRegions)	file << "\tROI" << i - numSelectedDiodes + 1;
 		}
-		file<<"\n";
-		for(i=saveTracesStartPt;i<=saveTracesEndPt;i++)
+		file << "\n";
+		for (i = saveTracesStartPt; i <= saveTracesEndPt; i++)
 		{
-			file<<i;
-
+			file << i;
 			for (j = 0; j < numSelectedDiodes + numRegions; j++)
 			{
 				if (j < numSelectedDiodes)						// do the diodes
@@ -284,7 +283,7 @@ void TraceWindow::saveTraces()
 					file << "\t" << sum;
 				}
 			}
-		file<<"\n";			//new line after adding data to all columns 
+		file << "\n";			//new line after adding data to all columns 
 		}
 	}
 file.close();
@@ -385,7 +384,11 @@ void TraceWindow::saveTimeCourse()
 			{
 				timeCourse=data->getHalfAmpLatencyArray();
 			}
-
+			else if (timeCourseType == 'J')
+			{
+				timeCourse = data->getHalfWidthArray();
+			}
+			
 			//===================
 			// Normalization
 			if(timeCourseNormalizationFlag)
@@ -589,7 +592,8 @@ void TraceWindow::drawTrace(int dataNo, int currentRegion)
 	fl_push_matrix();
 	{
 		// Translation & Scaling
-		if(dataArray->getFpFlag(dataNo) && currentRegion==-1)	// Field Potential? fix ROI display bug originally found in lilJoe
+
+		if (dataArray->getFpFlag(dataNo) && currentRegion == -1)		// Field Potential? && currentRegion added to correct bug in scaling of ROI traces 9/2/2020
 		{
 			fl_scale(xScale,-fpYScale);
 		}
@@ -792,6 +796,16 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 			yScaleTmp/=30;
 		}
 	}
+	else if (timeCourseType == 'J')	// 30 msec -> 1 mV
+	{
+		timeCourse = data->getHalfWidthArray();
+
+		if (!timeCourseNormalizationFlag)
+		{
+			fpYScaleTmp /= 30;
+			yScaleTmp /= 30;
+		}
+	}
 
 	double latencyStart=dataArray->getLatencyStart();
 	// Set Color
@@ -926,6 +940,16 @@ void TraceWindow::drawRef(int dataIndex)
 		{
 			fpYScaleTmp/=30;
 			yScaleTmp/=30;
+		}
+	}
+	else if (timeCourseType == 'J')
+	{
+		ref = (data->getHalfWidthArray())[dataArray->getRecordXNo(1)];
+
+		if (!timeCourseNormalizationFlag)
+		{
+			fpYScaleTmp /= 30;
+			yScaleTmp /= 30;
 		}
 	}
 
@@ -1159,11 +1183,13 @@ void TraceWindow::drawValue(int numRegions)
 		{
 			txtBuf=d2txt(data->getMaxSlopeLatency());
 		}
-		// Max Slope
-		else if(valueType=='9')	
+
+		// Max Slope latency
+		else if (valueType == '8')
 		{
-			txtBuf=d2txt(data->getMaxSlope());
+			txtBuf = d2txt(data->getMaxSlopeLatency());
 		}
+
 		//Max Slope Latency
 		else if (valueType == 'p')
 		{
@@ -1193,6 +1219,21 @@ void TraceWindow::drawValue(int numRegions)
 		else if(valueType=='H')	
 		{
 			txtBuf=d2txt(data->getHalfAmpLatency());
+		}
+
+		// Width at half-height    **NEW**
+		else if (valueType == 'J')
+		{
+			txtBuf = d2txt(data->getHalfWidth());
+		}
+
+		else if (valueType == 'K')
+		{
+			txtBuf = d2txt(data->getHalfRiseTime());
+		}
+		else if (valueType == 'k')
+		{
+			txtBuf = d2txt(data->getHalfDecayTime());
 		}
 
 		if (valueType != 'N')

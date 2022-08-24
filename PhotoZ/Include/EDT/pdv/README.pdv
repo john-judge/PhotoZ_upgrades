@@ -1,20 +1,15 @@
-                      Quick Start-Up Guide
-                 and Supplemental Information
-                            for the
-                 PCI DV, PCIe DV and and VisionLink
-               Digital Camera Interface User's Guides
-                   Engineering Design Team, Inc.
-                          www.edt.com
-                   Last Updated 02/01/2016
+Quick Start-Up Guide,
+Manual Corrections and Additions for the
+PCIDV Digital Camera Interface User's Guide
+Engineering Design Team, Inc.
+www.edt.com
 
-  Use of this software is subject to the terms of use for EDT products.
-    Read EDTtermsOfUse.txt in the installation directory for details. 
+Last Updated 10/01/2012
 
 ---------------------------------------------------------------------------
 
 CONTENTS
 
-0. Location of files
 1. Introduction
 2. Device Driver versions
 3. IMPORTANT Note About Updating The Firmware
@@ -24,55 +19,34 @@ CONTENTS
 7. List Of Included Files
 
 ---------------------------------------------------------------------------
-
-0. Location of files.
-
-   By default, the PCI CD utilities, libraries and diagnostics are located
-   in the following (referred to herein as the "installation directory"):
-
-    On Windows:     C:\EDT\pdv
-    On Linux:      /opt/EDTpdv
-    On MacOS:      /Applications/EDT/pdv
-
----------------------------------------------------------------------------
 1. Introduction
 
    This README file contains quick start information, changes and additions
-   for your EDT Digital Imaging (Visionlink and PCI/PCIe DV, or PDV for short)
-   product. For complete documentation and software updates, go to edt.com, and
-   click on the Download Hub or navigate to the specific product page.
+   for your EDT Digital Imaging (PDV) product. For complete documentation, go
+   to www.edt.com -> Support -> Documentation.
 
    Also see the other README.xxx files in this folder for information on
-   specific tasks, and CHANGELOG_PDV.txt for changes between versions.
-
+   specific uses.
 ---------------------------------------------------------------------------
 2. Device driver versions
 
-   Windows drivers versions 5.x cover Windows 7, 8 and 10 (32 & 64); they
-   also work on XP and Vista 32/64 and Vista , although support for that
-   is limited.  Linux driver versions 5.x cover all currently supported
-   architectures. Mac OS 5.3.x drivers cover MacOS 10.6, 32- and 64-bit.
-   MacOS 5.2.x drivers cover MacOS 10.5 32-bit.
+   Windows drivers versions 5.x cover 32-bit XP systems, and Vista and Win7
+   32 and 64-bit systems.  Linux 5.x and device drivers cover all currently
+   supported architectures. Mac OS 5.3.x drivers cover MacOS 10.6, 32- and
+   64-bit.  MacOS 5.2.x drivers cover MacOS 10.5 32-bit.
 
 ---------------------------------------------------------------------------
 
 3. IMPORTANT NOTE About Updating The Firmware
 
-   VisionLink F1 and F4
-   As of this writing, version 04 firmware was the latest (shows up in pciload
-   output as 'visionlinkf1-04.rpd' and 'visionlinkf4-04.rpd'). Running
-   pciload without any arguments will show you what firmware your board(s)
-   is/are running. If it's earlier than 04, we recommend you update -- see
-   the Firmware section in the users guide for how to do that.
-
-   All PCIe DV and FOX 
+   All PCI Express DV and FOX boards
    5.3.3.1 and newer packages contain important firmware updates to all PCI
    Express DV boards. Run 'pciload verify' to see if your board has the most
    current firmware; if not we recommend updating, via 'pciload update'. See
    the changelog (CHANGELOG_PDV.txt) and users guide for details.
 
    PCI DV FOX
-   Versions 4.1.2.1 and newer include IMPORTANT updates to the PCI DV FOX
+   Versions 4.1.2.1 and later contain IMPORTANT updates to the PCI DV FOX
    board's flash PROM. EDT STRONGLY RECOMMENDS that PCI DV FOX customers
    update the flash PROM on their boards to the new dvtlk4 version after
    installing this package -- see section 4 below for instructions.
@@ -100,22 +74,19 @@ CONTENTS
 
    By default, the PDV files are installed in C:\EDT\pdv.
 
-   It is recommended that the vlviewer files be installed the same location
-   as the PDV files, default being C:\EDT\pdv.
+   The installation procedure will install two new icons on your screen,
+   "PdvShow" and "Pdv Utilities". PdvShow is an interactive camera capture/
+   display application. The first time it is run, it will automatically
+   bring up a camera configuration window presenting you with a choice for
+   which camera will be used.  Be sure the camera is plugged in and powered
+   ON before making the choice and proceeding.
 
-   The installation procedure will install two new icons:
-   
-   "vlviewer"
-   The vlviewer application is an interactive camera capture/display application, 
-   which is documented separately.
-
-   "PDV Utilities" 
    The Pdv Utilities icon simply opens up a DOS command prompt window, in
-   the installation directory (usually C:\EDT\pdv), which is where the EDT
-   programs, utilities, libraries and examples reside. The most useful
+   the installation directory (usually C:\EDT\Pdv), which is where the EDT
+   programs, utilities, libraries and examples reside.  The most useful
    examples/diagnostics are take, simple_take, simplest_take, serial_cmd,
-   edtinfo and dvinfo. You can run any of these programs with the -h flag
-   for description and usage. The C source code and makefiles for the
+   edtinfo and dvinfo.  You can run any of these programs with the -h flag
+   for description and usage.  The C source code and makefiles for the
    examples, diagnostics and libraries are included in the same directory.
    clseredt.dll is EDT's Camera Link standard serial DLL, and is installed
    in the location defined by the Camera Link specification as well as the
@@ -126,17 +97,16 @@ CONTENTS
    A note on compiling the EDT software: a makefile is supplied which will
    work with Microsoft Visual Studio's compiler and its make utility, "nmake".
    If you'd like to try using GNU tools with Cygwin or MinGW, first read
-   the included file README.free_compiler. A visual studio 2008 solution
-   and project files can be found in the projects.vs2008 subdirectory.
+   the included file README.free_compiler.
 
    To test only the interface, you can run the board in simulator mode without
    a camera. The method differs depending on the board in use. With Camera
    Link boards, use the device's "phantom" channel 2 which produces a 16-bit
-   gray ramp internally. Access channel 2 via the -c 2 flag in applications, e.g.
-        
+   gray ramp internally. Access channel 2 via the -pdvn_2 flag with pdvshow, or
+   the -c 2 flag in all other applications, e.g.
+
+      pdvshow -pdv0_2
       take -u 0 -c 2
- 
-   or via the `-u <unit> -c 2` flags with vlviewer (documented separately).
 
    On non camera-link boards such as the PCI DVa, sumulation is accomplished
    by initializing with one of the "EDT 8-bit generic simulator" entries from
@@ -146,30 +116,31 @@ CONTENTS
  Linux, MacOS
     
    By default, the PCI DV files are installed in /opt/EDTpdv.
-
-   vlviewer if desired is installed via `tar xzvf vlv-linux.tgz`.
    
-   After installing the hardware and software, connect the board to the camera
-   using the appropriate cable, and make sure your camera is powered on.
-   
-   To test camera capture, use vlviewer (documented separately) or the command
-   line utilities, by going to /opt/EDTpdv, running:
-     initcam -f camera_config/<file>
-   (where <file> is one of the .cfg files in the camera config directory) then
-   running "take". 
+   After installing the hardware and software, connect the interface to
+   the board using the appropriate cables, and make sure the camera is
+   powered on. Then go to /opt/EDTpdv, run camconfig, and choose your
+   camera from the list provided. If you don't have a camera yet or
+   want to test just the interface,  choose one of the "EDT 8 bit generic
+   simulator" configurations.
 
-   The most useful examples/diagnostics are take, simple_take, simplest_take, 
-   serial_cmd, edtinfo and dvinfo. Many other simple_*.c examples are provided;
-   you can run any of these programs with the -h flag for description and usage.
-   The C source code for the examples, diagnostis and libraries is included in 
-   the same directory.
+   Once you have configured for your camera (or simulator), you can run
+   take to test acquisition images.  take -h gives the usage.
+
+   A GTK-based image capture/display appliction is installed under the
+   pdv_flshow directory. To compile it, navigate to /opt/EDTpdv and run
+   'make pdvshow'.  Typically that's all that will be needed, and the
+   result will be a "pdvshow" executable in the EDTpdv directory.  If
+   the GTK is not installed (and the build fails to do so), you may
+   need to do that manually. 
+   
+   Other than pdv_flshow, the most useful examples/diagnostics are take,
+   simple_take, simplest_take, serial_cmd, edtinfo and dvinfo. Many other
+   simple_*.c examples are provided; you can run any of these programs
+   with the -h flag for description and usage.  The C source code for the
+   examples, diagnostis and libraries is included in the same directory.
 
    For a more detailed explanation of the software, see the User's guide.
-
- For vlviewer specific support please visit the following links:
-   Issues: https://gitlab.com/engineering-design-team/vlviewer/-/issues
-   Wiki: https://gitlab.com/engineering-design-team/vlviewer/-/wikis/home
-
 
 ---------------------------------------------------------------------------
 
@@ -255,8 +226,8 @@ Moved -- see CHANGELOG_PDV.txt
 
 ---------------------------------------------------------------------------
 
-7. Partial list Of Included Files (note: Linux and Mac OS versions don't have
-   the .exe. extension on executables)
+7. List Of Included Files (note: Linux and Mac OS versions don't have the .exe.
+   extension on executables)
 
 README          this file
 bitload.exe     utility program to load the camera xilinx firmware
@@ -266,7 +237,6 @@ camera_config/bitfiles/*.bit camera-class specific downloadable FPGA files
 camtest,
 camtest.bat      utility to count # of lines/pixels per line (continuous cameras only)
 camconfig (Linux, MacOS) GUI to configure the board for a camera
-CHANGELOG_PDV.txt list of changes version to version
 cl_speed.exe,    measures bus bandwidth on a cameralink board
 cl_speed.c              
 cl_logic.exe,    mini-logic analyzer for Camera Link, to use first re-
@@ -275,7 +245,7 @@ checkcam.exe,    program called by camtest to do the actual work
 checkcam.c
 countbits.exe,   utility program that counts the number of bit changes
 countbits.c      in a raw image file, to check for stuck bits, etc.
-pdv_dependent.h  header file for library use, referenced by edtinc.h
+pdv_dependent.h
 dvinfo.exe,      runs diagnostic tests, useful for tech support (email to edt) 
 dvinfo.c
 edtdef.h         header file used by PCI DV and DMA libraries
@@ -294,36 +264,28 @@ initcam.c        device driver/camera initialization program (source, executable
 initcam.h        header file for initcam
 initcam.exe,     initializes the board for a specific camera
 initcam.c
-libedt.c,        EDT DMA interface library source and header
+libedt.c         EDT DMA interface library source and header
 libedt.h
 libedt.so        EDT DMA interface library (unix/linux)
-libpdv.c,        PCI DV interface library source and header
+libpdv.c,         PCI DV interface library source and header
 libpdv.h
 libpdv.so        PCI DV interface library (unix/linux)
 pdvlib.lib       PCI DV interface library (windows)
-libdvu.c,        Digital video utility library module, source code 
+libdvu.c         Digital video utility library module, source code 
 libdvu.h
 libsdv.c         SDV porting library (source, header, dll binary)
 pciload.exe      utility program for field upgrades of PCI I/F PROMs
 pdb.exe,         register-level debug / utility program
 pdb.c
+pdvshow/        source code for windows pdvshow GUI application
 pdvplus/        source code for windows pdvshow PCI DV interface layer
-pdv_initcam.c   iamera initialization library subroutines
-projects.vs2008/ visual studio solution and project files (Windows only)
-README.Clink.Dual using EDT camera link FGs with two base mode camera
-README.Clink.Dual.html  ditto
-README.clsiminit initializing an EDT similator board  
-README.free_compiler hints on using MinGW compiler with edt libs/applications
-README.lnx_pkg_reqs linux package requirements for using EDT boards / apps
-README.pdv      quick start information for EDT pdv and visionlink boards
-README.pdv.utils text output when starting a Pdv Utilities command window
-README64.utils   text output when starting a Pdv Utilities command window (64-bits)
-README.send_tiffs using send_tiffs to send tiff files with a simulator
-README.time     using an optional EDT time distribution board
-rcxload.c       firmware updater for RCX modules
+pdvshow.exe     Image capture/display/save GUI application for WinNT or Linux
+pdv_initcam.c   Camera initialization library subroutines
+rcxload.c       Firmware updater for RCX modules
 rcxload
-rcxmake.c       firmware updater support files (not for customer use)
+rcxmake.c       Firmware updater support files (not for customer use)
 rcxmake.exe
+pdv_flshow/     source for gtk based version of pdvshow (GUI capture/display)
 readcfg.c       camera configuration file library subroutines
 sdvlib.h        sdv porting library header file
 sdvlib.so       sdv porting library dynamic link library
@@ -345,12 +307,7 @@ speedtest.exe,   utility program that tests speed of the interface/PCI bus
 speedtest.c   
 take.exe,       example/diagnostic program for shows acquire/save with
 take.c          many options/variations (complex version of simple_take)
-validate_pdvinst.sh, validation scripts; primarily for EDT validation testing 
-validate_pdvdev.sh,  and diagnostic use
-validate_pdvsim.sh
 version         version number of this package
-vlv-linux.tgz (Linux only) - vlviewer application code
-vlviewer-installer.exe (Windows only) - vlviewer application installer
 watchstat.exe   diagnostic to monitor signals the board/camera
 watchstat.c
 xtest.exe,      in some versions of PDV package but really not useful for

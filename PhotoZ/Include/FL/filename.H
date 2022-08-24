@@ -1,5 +1,5 @@
 /*
- * "$Id$"
+ * "$Id: filename.H 9704 2012-10-19 11:23:51Z manolo $"
  *
  * Filename header file for the Fast Light Tool Kit (FLTK).
  *
@@ -97,8 +97,8 @@ struct dirent {char d_name[1];};
  * It would be best to create a <dirent.h> file that does this...
  */
 #    include <sys/types.h>
-#    define fl_dirent_h_cyclic_include
-#    include <dirent.h>
+#    define fl_direct_h_cyclic_include
+#    include <direct.h>
 #    undef fl_dirent_h_cyclic_include
 #  endif
 
@@ -172,5 +172,5 @@ int _fl_filename_isdir_quick(const char *name);
 /** @} */
 
 /*
- * End of "$Id$".
+ * End of "$Id: filename.H 9704 2012-10-19 11:23:51Z manolo $".
  */

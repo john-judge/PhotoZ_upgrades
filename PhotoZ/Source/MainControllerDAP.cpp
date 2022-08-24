@@ -23,7 +23,7 @@ char* i2txt(int);
 void MainController::setResetOnset(const char *txt)
 {
 	
-	double value=atof(txt);
+	float value=atof(txt);
 	//std::cout << txt;
 	if(value<0) value=0;
 
@@ -36,7 +36,7 @@ void MainController::setResetOnset(const char *txt)
 //=============================================================================
 void MainController::setResetDuration(const char *txt)
 {
-	double value=atof(txt);//temporary might need to change back to atoi
+	float value=atof(txt);//temporary might need to change back to atoi
 	if(value<0) value=0;
 
 	dc->reset->setDuration(value);
@@ -48,7 +48,7 @@ void MainController::setResetDuration(const char *txt)
 //=============================================================================
 void MainController::setShutterOnset(const char *txt)
 {
-	double value=atof(txt);
+	float value=atof(txt);
 	if(value<0) value=0;
 
 	dc->shutter->setOnset(value);
@@ -60,7 +60,7 @@ void MainController::setShutterOnset(const char *txt)
 //=============================================================================
 void MainController::setShutterDuration(const char *txt)
 {
-	double value=atof(txt);
+	float value=atof(txt);
 	if(value<0) value=0;
 
 	dc->shutter->setDuration(value);
@@ -72,7 +72,7 @@ void MainController::setShutterDuration(const char *txt)
 //=============================================================================
 void MainController::setStiOnset(int ch, const char *txt)
 {
-	double value=atof(txt);
+	float value=atof(txt);
 	if(value<0) value=0;
 	//value += 3.5*(1/(double)Camera::FREQ[dc->getCameraProgram()]);
 
@@ -94,7 +94,7 @@ void MainController::setStiOnset(int ch, const char *txt)
 //=============================================================================
 void MainController::setStiDuration(int ch, const char *txt)
 {
-	double value=atof(txt);
+	float value=atof(txt);
 	if(value<0) value=0;
 
 	if(ch==1)
@@ -115,7 +115,7 @@ void MainController::setStiDuration(int ch, const char *txt)
 //=============================================================================
 void MainController::setAcquiOnset(const char *txt)
 {
-	double value=atof(txt);
+	float value=atof(txt);
 	if(value<0) value=0;
 
 	dc->setAcquiOnset(value);
@@ -130,13 +130,13 @@ void MainController::setNumPts(const char *txt)
 
 	int numPts=atoi(txt);
 	double intPts=dapControl->getIntPts();
-//	numPts = numPts;
-	// Check the length of duration
+	numPts = numPts;
+	// Chech the length of duration
 	if(numPts<10)
 	{
 		numPts=10;
 	}
-	cout << " mcdap line 139 " << numPts << endl;
+
 	dapControl->setNumPts(numPts);
 	dapControl->setDuration();
 
@@ -158,13 +158,8 @@ void MainController::set_digital_binning(const char* txt)
 {
 
 	int dbinning = atoi(txt);
-	set_digital_binning(dbinning);
-
-}
-void MainController::set_digital_binning(int dbinning)
-{
-	if (dbinning < 1) dbinning = 1;
-
+	if (dbinning < 1)
+		dbinning = 1;
 	/*if (dbinning == 1) {
 		ui->awFpYScale->value(4.65*log2(dbinning + 1));
 		ui->awYScale->value(4.65*log2(dbinning + 1));
@@ -172,20 +167,20 @@ void MainController::set_digital_binning(int dbinning)
 		setAwYScale(4.65*log2(dbinning + 1));
 	}
 	else {
-	if ((4.65*log(dbinning + 1)) >= 10)
-	{
-		setAwFpYScale(10);
-		setAwYScale(10);
-		ui->awFpYScale->value(10);
-		ui->awYScale->value(10);
-	}
-	else
-	{
-		ui->awFpYScale->value(4.65*log(dbinning + 1));
-		ui->awYScale->value(4.65*log(dbinning + 1));
-		setAwFpYScale(4.65*log(dbinning + 1));
-		setAwYScale(4.65*log(dbinning + 1));
-	}
+		if ((4.65*log(dbinning + 1)) >= 10)
+		{
+			setAwFpYScale(10);
+			setAwYScale(10);
+			ui->awFpYScale->value(10);
+			ui->awYScale->value(10);
+		}
+		else
+		{
+			ui->awFpYScale->value(4.65*log(dbinning + 1));
+			ui->awYScale->value(4.65*log(dbinning + 1));
+			setAwFpYScale(4.65*log(dbinning + 1));
+			setAwYScale(4.65*log(dbinning + 1));
+		}
 	}*/
 
 
@@ -209,24 +204,22 @@ void MainController::set_digital_binning(int dbinning)
 void MainController::setCameraProgram(int p)
 {
 	dc->setCameraProgram(p);
-	//Camera cam;
-	//cam.setCamProgram(p);
 	dc->setDuration();
 	
 	// Resize the array
 	aw->clearSelected(0);
-	dataArray->changeRawDataSize(Camera::DISPLAY_WIDTH[p], Camera::DISPLAY_HEIGHT[p]);
+	dataArray->changeRawDataSize(Camera::WIDTH[p], Camera::HEIGHT[p]);
 	aw->changeNumDiodes();
 	cw->changeNumDiodes();
 	cw->setPointXYZ();
 	sp->changeNumDiodes();
-	cout << "mcDAP line 216 setCamProg p WIDTH and HEIGHT "<< p<<"  "<< Camera::DISPLAY_WIDTH[p]<<"  " << Camera::DISPLAY_HEIGHT[p]<<"\n";
+	   
 	// Redraw DAP window
 	dw->redraw();
 
 	// Update user interface
 	char buff[16];
-	sprintf_s(buff, 16,"%6.0f",dapControl->getAcquiDuration());
+	sprintf_s(buff, 16,"%6.0f",dapControl->getAcquiDuration());		// Acquisition duration
 	ui->acquiDuration->value(buff);
 	redraw();
 }

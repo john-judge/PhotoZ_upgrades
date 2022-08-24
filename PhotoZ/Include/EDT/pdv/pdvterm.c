@@ -186,7 +186,7 @@ print_ascii_string(char *buf_p)
 
     printify((u_char *) buf_p, (u_char *) printify_tmpbuf, (int)strlen(buf_p), 1);
 
-    printf("%s", printify_tmpbuf);
+    printf(printify_tmpbuf);
     fflush(stdout);
 }
 

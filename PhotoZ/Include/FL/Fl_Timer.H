@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Timer.H 8864 2011-07-19 04:49:30Z greg.ercolano $"
 //
 // Timer header file for the Fast Light Tool Kit (FLTK).
 //
@@ -73,6 +73,6 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Timer.H 8864 2011-07-19 04:49:30Z greg.ercolano $".
 //
 

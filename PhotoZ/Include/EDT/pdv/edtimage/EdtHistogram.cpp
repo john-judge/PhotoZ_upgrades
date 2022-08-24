@@ -22,10 +22,10 @@ EdtHistogram::EdtHistogram()
 
     int i;
     for (i = 0;i< EDT_MAX_COLOR_PLANES;i++)
-        m_pHist[i] = NULL;
+	m_pHist[i] = NULL;
 
     for (i = 0;i< 32;i++)
-        m_BitCounts[i] = 0;
+	m_BitCounts[i] = 0;
 }
 
 EdtHistogram::~EdtHistogram()
@@ -38,7 +38,7 @@ void EdtHistogram::Setup(EdtImage * pImage)
     int newbins;
 
     if (!pImage || !pImage->IsAllocated())
-        return; // Error
+	return; // Error
 
     newbins = (pImage->GetMaxValue() - pImage->GetMinValue() + 1);
 
@@ -47,16 +47,16 @@ void EdtHistogram::Setup(EdtImage * pImage)
 
     if (newbins != m_nBins || pImage->GetNColors() != m_nColors)
     {
-        Destroy();
+	Destroy();
 
-        m_nBins = newbins;
-        if (newbins > 256 && newbins < 0x10000)
-        {
-            newbins = 0x10000;
-        }
-        for (int i = 0; i < pImage->GetNColors();i++)
-            m_pHist[i] = new int[newbins];
-        m_nColors = pImage->GetNColors();
+	m_nBins = newbins;
+	if (newbins > 256 && newbins < 0x10000)
+	{
+	    newbins = 0x10000;
+	}
+	for (int i = 0; i < pImage->GetNColors();i++)
+	    m_pHist[i] = new int[newbins];
+	m_nColors = pImage->GetNColors();
 
     }
 
@@ -69,85 +69,85 @@ void EdtHistogram::Compute(EdtImage *pImage, bool bClear)
 
 {
     if (!pImage || !pImage->IsAllocated())
-        return; // Error
+	return; // Error
 
     Setup(pImage);
     if (bClear)
-        Clear();
+	Clear();
 
     int row,
-        col;
+	col;
 
     int nWidth = pImage->GetWidth();
     int nHeight = pImage->GetHeight();
 
     if (m_nSubSample < 1)
-        m_nSubSample = 1;
+	m_nSubSample = 1;
 
     for (int band = 0;band < pImage->GetNColors();band++)
     {
 
-        switch(pImage->GetType())
-        {
-        case TypeBYTE:
-            {
-                byte **bp = (byte **) pImage->GetPixelRows();
+	switch(pImage->GetType())
+	{
+	case TypeBYTE:
+	    {
+		byte **bp = (byte **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = 0; col < nWidth;col += m_nSubSample)
-                        m_pHist[band][bp[row][col]] += 1;
-            }
-            break;
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = 0; col < nWidth;col += m_nSubSample)
+			m_pHist[band][bp[row][col]] += 1;
+	    }
+	    break;
 
-        case TypeBGR:
-            {
-                byte **bp = (byte **) pImage->GetPixelRows();
+	case TypeBGR:
+	    {
+		byte **bp = (byte **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = (2-band) ; col < nWidth*3;col += m_nSubSample*3)
-                        m_pHist[band][bp[row][col]] += 1;
-            }
-            break;
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = (2-band) ; col < nWidth*3;col += m_nSubSample*3)
+			m_pHist[band][bp[row][col]] += 1;
+	    }
+	    break;
 
-        case TypeBGRA:
-            {
-                byte **bp = (byte **) pImage->GetPixelRows();
+	case TypeBGRA:
+	    {
+		byte **bp = (byte **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = (2-band) ; col < nWidth*4;col += m_nSubSample*4)
-                        m_pHist[band][bp[row][col]] += 1;
-            }
-            break;
-        case TypeRGB:
-            {
-                byte **bp = (byte **) pImage->GetPixelRows();
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = (2-band) ; col < nWidth*4;col += m_nSubSample*4)
+			m_pHist[band][bp[row][col]] += 1;
+	    }
+	    break;
+	case TypeRGB:
+	    {
+		byte **bp = (byte **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = (band) ; col < nWidth*3;col += m_nSubSample*3)
-                        m_pHist[band][bp[row][col]] += 1;
-            }
-            break;
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = (band) ; col < nWidth*3;col += m_nSubSample*3)
+			m_pHist[band][bp[row][col]] += 1;
+	    }
+	    break;
 
-        case TypeRGBA:
-            {
-                byte **bp = (byte **) pImage->GetPixelRows();
+	case TypeRGBA:
+	    {
+		byte **bp = (byte **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = (band) ; col < nWidth*4;col += m_nSubSample*4)
-                        m_pHist[band][bp[row][col]] += 1;
-            }
-            break;
-        case TypeUSHORT:
-            {
-                ushort_t **sp = (ushort_t **) pImage->GetPixelRows();
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = (band) ; col < nWidth*4;col += m_nSubSample*4)
+			m_pHist[band][bp[row][col]] += 1;
+	    }
+	    break;
+	case TypeUSHORT:
+	    {
+		ushort_t **sp = (ushort_t **) pImage->GetPixelRows();
 
-                for (row = 0;row < nHeight;row += m_nSubSample)
-                    for (col = 0; col < nWidth;col += m_nSubSample)
-                        m_pHist[band][sp[row][col]] += 1;
-            }
+		for (row = 0;row < nHeight;row += m_nSubSample)
+		    for (col = 0; col < nWidth;col += m_nSubSample)
+			m_pHist[band][sp[row][col]] += 1;
+	    }
 
-            break;
-        }
+	    break;
+	}
     }
 
     m_nSum = (nWidth / m_nSubSample) * (nHeight / m_nSubSample);
@@ -160,77 +160,76 @@ void EdtHistogram::ComputeStatistics(EdtImgStats * pStats)
     for (int band = 0;band < m_nColors;band++)
     {
 
-        pStats[band].Clear();
-        int gvn;
-        int gv;
-        bool bMinSet = false;
-        bool bMaxSet = false;
+	pStats[band].Clear();
+	int gvn;
+	int gv;
+	bool bMinSet = false;
+	bool bMaxSet = false;
 
-        int mode_max = 0;
-        pStats[band].m_nMode = 0;
+	int mode_max = 0;
+	pStats[band].m_nMode = 0;
 
-        // compute n;
+	// compute n;
 
-        for (gv = 0; gv < m_nBins;gv++)
-        {
-            pStats[band].m_nN += m_pHist[band][gv];
-        }
+	for (gv = 0; gv < m_nBins;gv++)
+	{
+	    pStats[band].m_nN += m_pHist[band][gv];
+	}
 
-        int halfn = pStats[band].m_nN / 2;
-        int nRunning = 0;
+	int halfn = pStats[band].m_nN / 2;
+	int nRunning = 0;
 
-        for (gv = 0; gv < m_nBins;gv++)
-        {
-            if (gvn = m_pHist[band][gv])
-            {
-                if (!bMinSet)
-                {
-                    pStats[band].m_nMin = gv;
-                    bMinSet = true;
-                }
+	for (gv = 0; gv < m_nBins;gv++)
+	{
+	    if (gvn = m_pHist[band][gv])
+	    {
+		if (!bMinSet)
+		{
+		    pStats[band].m_nMin = gv;
+		    bMinSet = true;
+		}
 
-                pStats[band].m_nMax = gv;
+		pStats[band].m_nMax = gv;
 
-                nRunning += gvn;
+		nRunning += gvn;
 
-                if (nRunning >= halfn)
-                {
-                    pStats[band].m_nMedian = gv;
-                    halfn = pStats[band].m_nN + 1;
-                }
+		if (nRunning >= halfn)
+		{
+		    pStats[band].m_nMedian = gv;
+		    halfn = pStats[band].m_nN + 1;
+		}
 
-                if (gvn > mode_max)
-                {
-                    pStats[band].m_nMode = gv;
-                    pStats[band].m_nModeFreq = gvn;
-                    mode_max = gvn;
-                }
+		if (gvn > mode_max)
+		{
+		    pStats[band].m_nMode = gv;
+		    mode_max = gvn;
+		}
 
-                float fgvn = (float) gvn * (float) gv;
+		float fgvn = (float) gvn * (float) gv;
 
-                pStats[band].m_dSum += fgvn;
-                pStats[band].m_dSSQ += (fgvn * gv);
+		pStats[band].m_dSum += fgvn;
+		pStats[band].m_dSSQ += (fgvn * gv);
 
-            }
-        }
+	    }
+	}
 
-        if (pStats[band].m_nN > 1)
-        {
-            pStats[band].m_dMean = pStats[band].m_dSum / pStats[band].m_nN;
+	if (pStats[band].m_nN > 1)
+	{
+	    pStats[band].m_dMean = pStats[band].m_dSum / pStats[band].m_nN;
 
-            double d = (pStats[band].m_dSSQ / pStats[band].m_nN) -
-                (pStats[band].m_dMean * pStats[band].m_dMean);
+	    double d = (pStats[band].m_dSSQ / pStats[band].m_nN) -
+		(pStats[band].m_dMean * pStats[band].m_dMean);
 
-            pStats[band].m_dSD = sqrt(fabs(d));
-        }
+	    pStats[band].m_dSD = sqrt(fabs(d));
+	}
 
-        // find median
+	// find median
 
     }
 }
 
 void
-    EdtHistogram::CountBits()
+EdtHistogram::CountBits()
 
 {
     m_nBits = 0;
@@ -239,13 +238,13 @@ void
 
     while (nBins)
     {
-        m_nBits++;
-        nBins >>= 1;
+	m_nBits++;
+	nBins >>= 1;
     }
 
     for (i=0;i<GetNBits();i++)
     {
-        m_BitCounts[i] = 0;
+	m_BitCounts[i] = 0;
     }
 
     int band;
@@ -254,22 +253,22 @@ void
     {
 
 
-        for (i=0; i< m_nBins;i++)
-        {
-            int val = i;
-            int index = (band * 8);
+	for (i=0; i< m_nBins;i++)
+	{
+	    int val = i;
+	    int index = (band * 8);
 
-            while (val)
-            {
-                if (val & 1)
-                    m_BitCounts[index] += m_pHist[band][i];
+	    while (val)
+	    {
+		if (val & 1)
+		    m_BitCounts[index] += m_pHist[band][i];
 
-                val >>= 1;
-                index ++;
+		val >>= 1;
+		index ++;
 
-            }
+	    }
 
-        }
+	}
 
     }
 
@@ -279,24 +278,24 @@ void
 void EdtHistogram::Destroy()
 {
     for (int i = 0;i< EDT_MAX_COLOR_PLANES;i++)
-        if (m_pHist[i])
-        {
-            delete[] m_pHist[i];
-            m_pHist[i]= NULL;
-        }
+	if (m_pHist[i])
+	{
+	    delete[] m_pHist[i];
+	    m_pHist[i]= NULL;
+	}
 
-        m_nBins = 0;
-        m_nColors = 1;
+	m_nBins = 0;
+	m_nColors = 1;
 }
 
 // reset hist to all zeros
 void EdtHistogram::Clear()
 {
     for (int i=0;i< EDT_MAX_COLOR_PLANES; i++)
-        if (m_pHist[i])
-        {
-            memset(m_pHist[i],0, m_nBins * sizeof(int));
-        }
+	if (m_pHist[i])
+	{
+	    memset(m_pHist[i],0, m_nBins * sizeof(int));
+	}
 
 }
 
@@ -304,8 +303,8 @@ void EdtHistogram::MakeCumulative()
 {
     for (int band = 0;band < m_nColors;band++)
     {
-        for (int i = 1;i<m_nBins;i++)
-            m_pHist[band][i] += m_pHist[band][i-1];
+	for (int i = 1;i<m_nBins;i++)
+	    m_pHist[band][i] += m_pHist[band][i-1];
     }
 
 }
@@ -318,9 +317,9 @@ int EdtHistogram::GetModeValue()
     int nModeValue = 0;
     for (int band = 0;band < m_nColors;band++)
     {
-        for (int i = 0;i<m_nBins;i++)
-            if (m_pHist[band][i] > nModeValue)
-                nModeValue = m_pHist[band][i];
+	for (int i = 0;i<m_nBins;i++)
+	    if (m_pHist[band][i] > nModeValue)
+		nModeValue = m_pHist[band][i];
     }
 
     return nModeValue;

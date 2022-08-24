@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_PNG_Image.H 8864 2011-07-19 04:49:30Z greg.ercolano $"
 //
 // PNG image header file for the Fast Light Tool Kit (FLTK).
 //
@@ -42,5 +42,5 @@ private:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_PNG_Image.H 8864 2011-07-19 04:49:30Z greg.ercolano $".
 //

@@ -29,7 +29,7 @@ public:
 	void select(int altDown = 0, int shiftDown = 0);
 
 	// Draw
-	bool drawTrace(double *proData);
+	void drawTrace(double *proData);
 	void drawRliValue(double);
 	void drawDiodeNum();
 

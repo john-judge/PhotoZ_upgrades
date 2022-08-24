@@ -1,8 +1,11 @@
 /*
  * pdvspeed
  *
- * check bus throughput using a PCI/PCIe DV c-link  or VisionLink board,
- * using the camera link channel 2 simulator
+ * check bus throughput using a PCI DV c-link board, using the
+ * camera link channel 2 simulator
+ *
+ * works only on the pci dv c-link board, not applicable (so far)
+ * on dv, dvk or dva.
  */
 #include "edtinc.h"
 
@@ -21,78 +24,6 @@ void intro(char *progname);
 #define SLASH "/"
 #endif
 
-#define BADSPEED    "\
-Reeeeally slow or 0 -- this indicates a problem. check for misconfiguration,\n\
-bad PCI slot, etc.\n"
-
-#define SLOWPCI  "\
-This indicates a slow bus, or a heavily loaded 33MHz PCI bus. Data loss\n\
-(timeouts) are likely with all but the slowest cameras; remove other\n\
-bandwidth \"hogs\" or move the board (or upgrade to a system with) a 66 MHz\n\
-or faster PCI bus.\n"
-
-#define SLOWPCIE  "\
-This indicates a slow or heavily-loaded PCIe bus, or the board is in a slot that\n\
-has (or negoatiated to) fewer PCI Express lanes than the board is designed for.\n\
-It may be fast enough for some cameras, but if you have a fast camera or need to\n\
-optimize for speed for any other reason, try shutting down other processes, remo-\n\
-ving other bandwidth \"hogs\", or moving the board to a different slot or system.\n"
-
-#define NOMINALPCI "\
-Indicates the board has most of the bandwidth on a 66MHz or faster PCI\n\
-bus and is operating at the nominal speed for a board of this type\n"
-
-#define NOMINALALL "\
-For PCI boards, indicates the board has most of the bandwidth on a 66MHz or\n\
-faster PCI bus or and is operating at the nominal speed for a board of this type.\n\
-Express boards, indicates a slow or heavily-loaded PCIe bus, or the board is in\n\
-slot that has (or negoatiated to) fewer PCI Express lanes than the board is de-\n\
-signed for. It may be fast enough for some cameras, but if you have a fast camera\n\
-or need to optimize for speed for any other reason, try shutting down other proc-\n\
-esses, removing other bandwidth \"hogs\", or moving the board to a different slot\n\
-or system.\n"
-
-#define NOMINALPCIE  "\
-Indicates the board has adequate PCI Express bandwidth and is operating at\n\
-the nominal speed for a board of this type\n"
-
-#define FASTPCI  "\
-This seems too fast for a board of this type. If you are experiencing problems with\n\
-the board, contact EDT (provide this output).\n"
-
-#define FASTPCIE "\
-This seems too fast for a board of this type. If you are experiencing problems with\n\
-the board, contact EDT (provide this output).\n"
-
-typedef struct {
-    int id;
-    int slow;
-    int nominal;
-    int fast;
-    char slow_msg[1024];
-    char nominal_msg[1024];
-    char fast_msg[1024];
-} speedstruct ;
-
-speedstruct speed_table[32] = 
-{
-    { PDV_ID,         10000000,  45000000,  120000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDVK_ID,        10000000,  45000000,  120000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDV44_ID,       10000000,  45000000,  120000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDVA_ID,        10000000,  45000000,  230000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDVA16_ID,      10000000,  45000000,  230000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDVCL_ID,       10000000,  95000000,  230000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PDVFOX_ID,      10000000,  95000000,  230000000, SLOWPCI,  NOMINALPCI,  FASTPCI},
-    { PE4DVCL_ID,     50000000, 180000000,  700000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE4DVAFOX_ID,   50000000, 250000000,  700000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE8DVFOX_ID,    50000000, 800000000, 1200000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE8DVAFOX_ID,   50000000, 800000000, 1200000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE8DVCL_ID,     50000000, 800000000, 1200000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE1DVVL_ID,     20000000, 350000000,  600000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE4DVVL_ID,     50000000, 800000000, 1200000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { PE4DVVLFOX_ID,  50000000, 800000000, 1200000000, SLOWPCIE, NOMINALPCIE, FASTPCIE},
-    { 0,              10000000, 800000000, 1200000000, SLOWPCI,  NOMINALALL,  FASTPCIE}
-};
     static int
 grepit(char *buf, char *pat)
 {
@@ -111,11 +42,9 @@ grepit(char *buf, char *pat)
 
 main(int argc, char **argv)
 {
-    int i, idx;
     double fake_speed = -1.0; /* for debugging only */
     int skip_intro = 0;
     int unit=0;
-    int devid;
     double bps;
     char progname[64];
     char edt_devname[64];
@@ -219,8 +148,6 @@ main(int argc, char **argv)
     edt_flash_get_fname_auto(pdv_p, xilinx_name);
     /* printf("xilinx_name %s\n", xilinx_name); */
     if ((strcmp(xilinx_name, "pdvcamlk") != 0)
-            && (strcmp(xilinx_name, "visionlinkf1") != 0)
-            && (strcmp(xilinx_name, "visionlinkf4") != 0)
             && (strcmp(xilinx_name, "pdvcamlk2") != 0)
             && (strcmp(xilinx_name, "pedvcamlk32") != 0)
             && (strcmp(xilinx_name, "pe8dvcamlk") != 0)
@@ -234,13 +161,11 @@ main(int argc, char **argv)
         edt_msg(EDTAPP_MSG_WARNING, errstr);
     }
 
-    devid = pdv_p->devid;
-
     pdv_close(pdv_p);
 
     sprintf(cmdstr, ".%sinitcam -u %d -c 2 -f camera_config%sgeneric16cl.cfg", SLASH, unit, SLASH);
     system(cmdstr);
-    sprintf(cmdstr, ".%stake -J -u %d -c 2 -N 4 -l 500 > cl_speed.out", SLASH, unit);
+    sprintf(cmdstr, ".%stake -j -u %d -c 2 -N 4 -l 100 > cl_speed.out", SLASH, unit);
     system(cmdstr);
     sprintf(cmdstr, "%s cl_speed.out", CAT);
     system(cmdstr);
@@ -261,30 +186,54 @@ main(int argc, char **argv)
     }
 
     if (fake_speed >= 0)
-        bps = fake_speed * 1048576;
+        bps = fake_speed * 1000000;
 
-    printf("\nThroughput was measured at %1.2lf Megabytes per second.\n\n", bps/1048576.0);
+    printf("\nThroughput was measured at %1.2lf Megabytes per second.\n\n", bps/1000000.0);
 
-    i = 0;
-    idx = 0;
-    while (speed_table[i].id < 0xffff) /* failsafe-ish */
+    if (bps == 0)
+        printf("This indicates a problem. check for misconfiguration, bad PCI slot, etc.\n");
+    else if ((bps > 0) && (bps < 45000000))
     {
-        if ((devid == speed_table[i].id) || (speed_table[i].id == 0)) /* last one */
-        {
-            idx = i;
-            break;
-        }
-        ++i;
+        printf("This indicates a very slow bus, or a heavily loaded 33MHz bus. Data loss\n");
+        printf("(timeouts) are likely with all but the slowest cameras; remove other\n");
+        printf("bandwidth \"hogs\" or move the board (or upgrade to a system with) a 66 MHz\n");
+        printf("or faster PCI bus\n");
     }
-
-    if (bps < speed_table[idx].slow)
-        puts(BADSPEED);
-    else  if (bps < speed_table[idx].nominal)
-        puts(speed_table[idx].slow_msg);
-    else  if (bps < speed_table[idx].fast)
-        puts(speed_table[idx].nominal_msg);
-    else puts(speed_table[idx].fast_msg);
-
+    else if ((bps >= 45000000) && (bps < 65000000))
+    {
+        printf("This indicates a slow bus, or a moderately loaded 33MHz bus. Data loss may\n");
+        printf("occur if your camera is very fast; if timeouts or image breakup is seen,\n");
+        printf("remove other bandwidth \"hogs\" or move the board to (or migrate to a system\n");
+        printf("with) a 66 MHz or faster PCI bus.\n");
+    }
+    else if ((bps >=65000000) && (bps < 130000000))
+    {
+        printf("This indicates the board is on a normally loaded 33 MHz PCI bus, or a 66+\n");
+        printf("MHz bus that's heavily loaded or is being shared with some other 33 MHz\n");
+        printf("Board. This can work for a cameras of slow to moderate speed, but if image\n");
+        printf("breakup or timeouts are seen, it is recommended that you optimize by either\n");
+        printf("removing other bandwidth \"hogs\" or migrating to a system with a 66 MHz or\n");
+        printf("faster PCI bus.\n");
+    }
+    else if ((bps >= 130000000) && (bps < 180000000))
+    {
+        printf("This indicates the board is on a 66MHz or faster PCI bus but is saturated,\n");
+        printf("possibly because the bus is being shared by some other board that generates\n");
+        printf("significtant bus traffic. Not optimal, but may be okay unless the camera is\n");
+        printf("relatively fast or high-bandwidth. If image breakup or timeouts are seen,\n");
+        printf("remove any other bandwidth \"hogs\", or otherwise attempt to isolate the\n");
+        printf("EDT board or migrate to a faster or more lightly-loaded bus.\n");
+    }
+    else if ((bps >= 180000000) && (bps < 250000000))
+    {
+        printf("Indicates the board has most of the bandwidth on a 66MHz or faster PCI\n");
+        printf("bus, or PCI express. This is the optimal condition for an EDT PCI or 4-lane\n");
+        printf("PCIe board. If it's an 8-lane board then it's working but slow.\n\n");
+    }
+    else if (bps >= 250000000)
+    {
+        printf("This must be a 4 or 8-lane PCI express board. Lookin' good.\n");
+    }
 }
 
     void

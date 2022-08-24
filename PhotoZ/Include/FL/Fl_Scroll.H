@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Scroll.H 10799 2015-07-18 23:59:54Z AlbrechtS $"
 //
 // Scroll header file for the Fast Light Tool Kit (FLTK).
 //
@@ -205,5 +205,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Scroll.H 10799 2015-07-18 23:59:54Z AlbrechtS $".
 //

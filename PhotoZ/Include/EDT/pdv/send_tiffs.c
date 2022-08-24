@@ -13,6 +13,7 @@
 #include "edtinc.h"
 #include "clsim_lib.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,11 +221,13 @@ edt_get_tif_info(image_info_t *img_details)
     TIFFGetField(image, TIFFTAG_BITSPERSAMPLE, &img_details->depth);
     TIFFGetField(image, TIFFTAG_SAMPLESPERPIXEL, &img_details->bands);
 
-    if (img_details->width == 0 || img_details->height == 0 || img_details->depth == 0 || img_details->bands == 0)
-    {
-        printf("Error: invalid size parameter(s) -- has clsiminit been run?\n");
-        exit(1);
-    }
+    /* is_valid_tiff checks for width, height, depth, otherwise we'd do
+     * better error checking here. */
+
+    assert(img_details->width != 0); 
+    assert(img_details->height != 0); 
+    assert(img_details->depth != 0); 
+    assert(img_details->bands != 0); 
 
     if (img_details->bands == 3)
         image_size = width * height * bits2bytes(depth);
@@ -309,12 +312,7 @@ load_next_imagefile(PdvDev *pdv_p,
             current_image + 1, total_images,
             image_details[current_image].filename);
 
-    
-    if ((image_details[current_image].data = (unsigned char *)edt_alloc(buffer_size)) == NULL)
-    {
-        printf("Error: could not allocate buffer (possible memory overflow)\n");
-        exit(1);
-    }
+    assert((image_details[current_image].data = (unsigned char *)edt_alloc(buffer_size)) != NULL);
 
     image_details[current_image].size = fill_buffer(&image_details[current_image],
             image_details[current_image].data, buffer_size);
@@ -816,9 +814,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    buffers = edt_buffer_addresses(pdv_p);
-
-
     /*
      * fill all but the last ring buffer, and get the details about
      * the images stored in those buffers.
@@ -845,7 +840,8 @@ int main(int argc, char *argv[])
         edt_set_event_func(pdv_p, EDT_PDV_EVENT_FVAL, (EdtEventFunc) setup_clsim_event, &cbinfo, 1);
 
 
-    ((int)current_image == edt_min((int)num_buffers - 1, (int)num_images));
+    assert((int)current_image == edt_min((int)num_buffers - 1, (int)num_images));
+    /* assert(current_image == (int)num_buffers - 1 || current_image == num_images); */
 
     edt_start_buffers(pdv_p, current_image);
 
@@ -1113,11 +1109,10 @@ int fill_buffer(image_info_t *img_details, u_char *buffer, int max_size)
 
     /* is_valid_tiff checks for width, height, depth, otherwise we'd do
      * better error checking here. */
-    if (width == 0 || height == 0 || depth == 0 || bands == 0)
-    {
-        printf("Error: invalid size parameter(s) -- has clsiminit been run?\n");
-        exit(1);
-    }
+    assert(width != 0); 
+    assert(height != 0); 
+    assert(depth != 0); 
+    assert(bands != 0);
 
     /* Print out info about image for the heck of it.  */
     edt_msg_output(lp,MAXVRB, "fill_buffer(): Image: %s Width: %d Height: %d Depth: %d Bands %d\n", 
@@ -1135,6 +1130,8 @@ int fill_buffer(image_info_t *img_details, u_char *buffer, int max_size)
     /* Read in the possibly multiple strips */
     stripMax = TIFFNumberOfStrips (image);
     stripSize = TIFFStripSize(image);
+
+    /* assert(image_size == TIFFNumberOfStrips(image) * TIFFStripSize(image)); */
 
     imageOffset = 0;
 

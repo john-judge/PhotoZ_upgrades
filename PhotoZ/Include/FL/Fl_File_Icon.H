@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_File_Icon.H 8864 2011-07-19 04:49:30Z greg.ercolano $"
 //
 // Fl_File_Icon definitions.
 //
@@ -155,5 +155,5 @@ class FL_EXPORT Fl_File_Icon {			//// Icon data
 #endif // !_Fl_Fl_File_Icon_H_
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_File_Icon.H 8864 2011-07-19 04:49:30Z greg.ercolano $".
 //

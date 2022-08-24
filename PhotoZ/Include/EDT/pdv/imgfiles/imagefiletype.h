@@ -13,7 +13,7 @@ extern "C" {
 #include "edtinc.h"
 }
 
-#include "edtimage/EdtImage.h"
+#include "edtimage/edtimage.h"
 
 typedef HANDLE FileHandle;
 

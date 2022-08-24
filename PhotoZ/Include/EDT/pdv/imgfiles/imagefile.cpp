@@ -2,7 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "edtimage/EdtImage.h"
+#include "edtimage/edtimage.h"
 
 #include "imagefile.h"
 

@@ -8,8 +8,6 @@
 #include <sys/stat.h>		// _stat
 #include <direct.h>			// _chdir(),_mkdir()
 #include <io.h>				// access()
-
-#define _WINSOCKAPI_    // stops windows.h including winsock.h
 #include <windows.h>
 
 #include <FL/Fl.H>
@@ -369,7 +367,7 @@ int FileController::getDirFileName(char *dir,char *filename)
 	
 	if(!input)
 	{
-		cout << " line 330 no input file " << endl;
+//		cout << " line 330 no input file " << endl;
 		return 0;// Canceled
 	}
 

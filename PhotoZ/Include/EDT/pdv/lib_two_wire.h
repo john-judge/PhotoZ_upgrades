@@ -7,12 +7,6 @@
 #define EDTFATAL EDTLIB_MSG_FATAL
 #define EDTWARN EDTLIB_MSG_WARNING
 
-#ifdef __cplusplus
-
-extern "C" {
-
-#endif
-
 
 /*
 * Library to read a 2 wire protocol device
@@ -314,11 +308,5 @@ EDTAPI int edt_two_wire_reg_dump(EdtDev *edt_p,
 		      EdtRegisterDescriptor *map, 
 		      u_int base_desc, 
 		      u_int device);
-
-#ifdef __cplusplus
-
-}
-
-#endif
 
 #endif

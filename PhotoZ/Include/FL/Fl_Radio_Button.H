@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Radio_Button.H 10386 2014-10-19 20:17:17Z AlbrechtS $"
 //
 // Radio button header file for the Fast Light Tool Kit (FLTK).
 //
@@ -32,5 +32,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Radio_Button.H 10386 2014-10-19 20:17:17Z AlbrechtS $".
 //

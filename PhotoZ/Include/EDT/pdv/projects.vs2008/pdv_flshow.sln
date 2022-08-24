@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2041
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pdv_flshow", "pdv_flshow.vcxproj", "{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgfiles", "imgfiles.vcxproj", "{A989418A-7E56-43A7-B2C9-E6CD9C277E94}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpdv", "libpdv.vcxproj", "{41741A34-46C8-41AC-A8CF-8CD660436632}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pdvplus", "PdvPlus.vcxproj", "{2BCBCEEC-9EF7-4D4D-878D-927B6D32E665}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libtiff", "libtiff.vcxproj", "{B3A747CD-3767-4461-8A61-46D231070DF9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mmx_lib", "mmx_lib.vcproj", "{FCB87133-CE07-4D29-A4E4-8895013C4B7B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}.Debug|Win32.Build.0 = Debug|Win32
+		{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}.Release|Win32.ActiveCfg = Release|Win32
+		{614BB7E5-86C3-4F44-B63B-E69882ADEBA8}.Release|Win32.Build.0 = Release|Win32
+		{A989418A-7E56-43A7-B2C9-E6CD9C277E94}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A989418A-7E56-43A7-B2C9-E6CD9C277E94}.Debug|Win32.Build.0 = Debug|Win32
+		{A989418A-7E56-43A7-B2C9-E6CD9C277E94}.Release|Win32.ActiveCfg = Release|Win32
+		{A989418A-7E56-43A7-B2C9-E6CD9C277E94}.Release|Win32.Build.0 = Release|Win32
+		{41741A34-46C8-41AC-A8CF-8CD660436632}.Debug|Win32.ActiveCfg = Debug|Win32
+		{41741A34-46C8-41AC-A8CF-8CD660436632}.Debug|Win32.Build.0 = Debug|Win32
+		{41741A34-46C8-41AC-A8CF-8CD660436632}.Release|Win32.ActiveCfg = Release|Win32
+		{41741A34-46C8-41AC-A8CF-8CD660436632}.Release|Win32.Build.0 = Release|Win32
+		{2BCBCEEC-9EF7-4D4D-878D-927B6D32E665}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2BCBCEEC-9EF7-4D4D-878D-927B6D32E665}.Debug|Win32.Build.0 = Debug|Win32
+		{2BCBCEEC-9EF7-4D4D-878D-927B6D32E665}.Release|Win32.ActiveCfg = Release|Win32
+		{2BCBCEEC-9EF7-4D4D-878D-927B6D32E665}.Release|Win32.Build.0 = Release|Win32
+		{B3A747CD-3767-4461-8A61-46D231070DF9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B3A747CD-3767-4461-8A61-46D231070DF9}.Debug|Win32.Build.0 = Debug|Win32
+		{B3A747CD-3767-4461-8A61-46D231070DF9}.Release|Win32.ActiveCfg = Release|Win32
+		{B3A747CD-3767-4461-8A61-46D231070DF9}.Release|Win32.Build.0 = Release|Win32
+		{FCB87133-CE07-4D29-A4E4-8895013C4B7B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FCB87133-CE07-4D29-A4E4-8895013C4B7B}.Debug|Win32.Build.0 = Debug|Win32
+		{FCB87133-CE07-4D29-A4E4-8895013C4B7B}.Release|Win32.ActiveCfg = Release|Win32
+		{FCB87133-CE07-4D29-A4E4-8895013C4B7B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {847F12C6-6E28-4304-A718-CF2A6F3CCECA}
+	EndGlobalSection
+EndGlobal

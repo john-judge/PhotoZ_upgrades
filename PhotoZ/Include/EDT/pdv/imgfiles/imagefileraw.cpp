@@ -4,11 +4,10 @@
 
 #include "stdio.h"
 #include "fcntl.h"
-#include "edtimage/EdtImage.h"
+#include "edtimage/edtimage.h"
 #include "imagefileraw.h"
-// #include "sys/types.h"
 
-#include "dispatch/ErrorHandler.h"
+#include "edtimage/ErrorHandler.h"
 
 #define WIDTHBYTES(bits) (((bits) + 31) / 32 * 4)
 

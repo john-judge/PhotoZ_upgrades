@@ -21,13 +21,10 @@ Signature      = "$WINDOWS NT$"
 Class          = Edt
 ClassGuid      = {D9A3E4B1-DA21-4c51-804B-5947E48EA81C}
 Provider       = %EDT%
-DriverVer=11/05/2020,5.5.10.0
-CatalogFile=pdvwdf.cat
+DriverVer=04/25/2013,5.4.1.1
 
 [DestinationDirs]
 DefaultDestDir  = 12
-pdvwdf.CopyFiles = 12
-CoInstaller_CopyFiles = 11
 
 ;-------------------------------------------------------------------------
 ; Class Section
@@ -51,7 +48,6 @@ ExcludeFromSelect = *
 
 [SourceDisksFiles]
 pdvwdf.sys     = 1
-WdfCoinstaller01009.dll = 1 ; make sure the number matches with SourceDisksNames
 
 [SourceDisksNames]
 1=%DISK_NAME%,
@@ -83,8 +79,6 @@ WdfCoinstaller01009.dll = 1 ; make sure the number matches with SourceDisksNames
 %pdvwdf.DRVDESC%=pdvwdf_Inst, PCI\VEN_123D&DEV_009D
 %pdvwdf.DRVDESC%=pdvwdf_Inst, PCI\VEN_123D&DEV_009E
 %pdvwdf.DRVDESC%=pdvwdf_Inst, PCI\VEN_123D&DEV_009F
-%pdvwdf.DRVDESC%=pdvwdf_Inst, PCI\VEN_123D&DEV_00A3
-%pdvwdf.DRVDESC%=pdvwdf_Inst, PCI\VEN_123D&DEV_00A9
 
 [pdvwdf_Inst.NT]
 CopyFiles      = pdvwdf.CopyFiles
@@ -107,6 +101,9 @@ ServiceBinary  = %12%\pdvwdf.sys
 ;-------------------------------------------------------------------------
 ; WDF Coinstaller installation
 ;-------------------------------------------------------------------------
+[DestinationDirs]
+CoInstaller_CopyFiles = 11
+pdvwdf.CopyFiles = 12
 
 [pdvwdf_Inst.NT.CoInstallers]
 AddReg         = CoInstaller_AddReg
@@ -114,6 +111,9 @@ CopyFiles      = CoInstaller_CopyFiles
 
 [CoInstaller_CopyFiles]
 WdfCoinstaller01009.dll
+
+[SourceDisksFiles]
+WdfCoinstaller01009.dll = 1 ; make sure the number matches with SourceDisksNames
 
 [CoInstaller_AddReg]
 HKR,,CoInstallers32,0x00010000, "WdfCoinstaller01009.dll,WdfCoInstaller"

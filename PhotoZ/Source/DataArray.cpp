@@ -20,11 +20,6 @@
 #include "Diode.h"
 #include "UserInterface.h"
 
-#define _WINSOCKAPI_    // stops windows.h including winsock.h
-#include <windows.h>
-#include "psapi.h"   //add these to the beginning of file
-
-
 using namespace std;
 //=============================================================================
 // Constructor and Destructor
@@ -40,7 +35,7 @@ DataArray::DataArray(int input)
 	numAveRec=5;
 
 	m_raw_depth = 14;
-	digital_binning = max(1, DEFAULT_ARRAY_WIDTH * DEFAULT_ARRAY_HEIGHT / DEFAULT_BINNING_FACTOR);
+	digital_binning = 1;
 
 	record1No=0;
 	record2No=0;
@@ -57,17 +52,16 @@ DataArray::DataArray(int input)
 
 	raw_diode_data = NULL;				//new 
 	array_data = NULL;
-	/*for (int i = 0; i < 50; i++) {
+/*	for (int i = 0; i < 50; i++) {
 		array_data_ROI[i] = new Data;
 	}*/
 	fp_data = NULL;
 	dataFeature = NULL;
 
 	alloc_raw_mem(DEFAULT_ARRAY_WIDTH, DEFAULT_ARRAY_HEIGHT);
-	alloc_trial_mem(numTrials, numPts);
 	alloc_binned_mem();
-
-
+	alloc_trial_mem(numTrials, numPts);
+//	aveData = new double[numPts];			appears not to be necessary
 }
 
 //=============================================================================
@@ -104,10 +98,6 @@ void DataArray::alloc_raw_mem(int w, int h)
 
 	m_raw_width = w;
 	m_raw_height = h;
-	cout << " da line 106 - num_raw " << num_raw <<"  "  << m_raw_width<<"  "  <<m_raw_height<<endl;
-	
-	digital_binning = max(1,w * h / DEFAULT_BINNING_FACTOR); // JMJ 12/13/2020 - default binning limits number of bins to ~2000
-//	cout << "line 102 " << sizeof(short**)*num_raw << endl;
 }
 
 //=============================================================================
@@ -138,6 +128,7 @@ void DataArray::alloc_trial_mem(int trials, int pts)
 			memset(raw_diode_data[i][j], 0, sizeof(short) * pts);
 		}
 	}
+
 	numTrials = trials;
 	numPts = pts;
 	maxRli = 0.0;
@@ -164,29 +155,15 @@ void DataArray::release_trial_mem()
 //=============================================================================
 void DataArray::alloc_binned_mem()
 {
-	MEMORYSTATUSEX memInfo;
-	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-	GlobalMemoryStatusEx(&memInfo);
-	DWORDLONG totalVirtualMem = memInfo.ullTotalPageFile;
-	DWORDLONG virtualMemUsed = memInfo.ullTotalPageFile - memInfo.ullAvailPageFile;
-
-	PROCESS_MEMORY_COUNTERS_EX pmc;
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	SIZE_T virtualMemUsedByMe = pmc.PrivateUsage;
-
-/*	cout << "Total Virtual Mem\t\t"<<totalVirtualMem << " bytes\n memUsed\t\t\t" << virtualMemUsed << " bytes \n";
-	cout << "memory Used by program\t\t" << virtualMemUsedByMe << " bytes \n";
-	cout << "size of allocation\t\t" << num_binned_diodes() * sizeof(Data) << "\n";
-	cout << "size of data\t\t\t" << sizeof(Data) << "\nNum Diodes\t\t\t" << num_binned_diodes()<<"\n";*/
-		
 	array_data = new Data[num_binned_diodes()];
 	fp_data = new Data[num_diodes_fp()];
+//	array_data_ROI = new Data[50];							// added to extract properties of ROI ave
 	dataFeature = new double[num_binned_diodes()];
 	for (int i = 0; i < num_binned_diodes(); i++)
 	{
 		dataFeature[i] = 0.0;
 	}
-	for (int i = 0; i < 50; i++) {
+	for (int i = 0; i < 100; i++) {
 		array_data_ROI[i] = new Data;
 	}
 }
@@ -200,7 +177,7 @@ void DataArray::release_binned_mem()
 
 	array_data = fp_data = NULL;
 	dataFeature = NULL;
-	for (int i = 0; i < 50; i++) {
+	for (int i = 0; i < 100; i++) {			//Sarwagya suggestion 8/28/2020  also changes in DataArray() and ~DataArray()
 		array_data_ROI[i]->~Data();
 		delete array_data_ROI[i];
 	}
@@ -215,7 +192,7 @@ void DataArray::get_binned_diode_trace(int bin_diode, int trial_start,	int trial
 	int count = 0;
 	double rwh = m_raw_height;				//these 3 lines round row_length so that binning works for n = 3 and 6 
 	double binning = digital_binning;
-	int row_length = max(1, 0.7 + (rwh / binning));		//	int row_length = m_raw_height / digital_binning;  //	previous version before fix
+	int row_length = 0.7 + (rwh / binning);		//	int row_length = m_raw_height / digital_binning;  //	previous version before fix
 	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;		//	int raw_diode = bin_diode * digital_binning; this version is incorrect (MJ) 
 	int x = raw_diode % m_raw_width;
 	int y = raw_diode / m_raw_height;
@@ -258,7 +235,7 @@ void DataArray::get_binned_rli(int bin_diode, short &low, short &high, short &ma
 	l = h = m = 0;
 	double rwh = m_raw_height;				//these 3 lines round  row_length so that binning works for n = 3 and 6 
 	double binning = digital_binning;
-	int row_length = max(1, 0.7 + (rwh / binning));
+	int row_length = 0.7 + (rwh / binning);
 	int raw_diode = (bin_diode / row_length)*digital_binning*m_raw_width + (bin_diode%row_length)*digital_binning;// key fix of bug from undergrad version
 	int x = raw_diode % m_raw_width;
 	int y = raw_diode / m_raw_height;
@@ -326,7 +303,8 @@ void DataArray::changeNumPts(int pts)
 
 //=============================================================================
 void DataArray::changeRawDataSize(int w, int h)
-{	
+{
+	//numPts = Camera::FREQ[];
 	if (m_raw_width == w && m_raw_height == h)
 		return;
 
@@ -336,9 +314,10 @@ void DataArray::changeRawDataSize(int w, int h)
 
 	// release all memory
 	release_mem();
+
 	alloc_raw_mem(w, h);
-	alloc_trial_mem(trials, pts);
 	alloc_binned_mem();
+	alloc_trial_mem(trials, pts);
 }
 
 //=============================================================================
@@ -391,9 +370,9 @@ void DataArray::binning(int binning)
 }
 
 //=============================================================================
-int DataArray::num_raw_array_diodes()	
+int DataArray::num_raw_array_diodes()
 {
-	return raw_width() * raw_height();		//divide by 4 because each pdv channel has 1/4 of the diodes. Update: Don't do that.
+	return raw_width() * raw_height();
 }
 
 //=============================================================================
@@ -405,7 +384,6 @@ int DataArray::num_raw_diodes()
 //=============================================================================
 int DataArray::num_binned_diodes()
 {
-//	cout << "da line 384 "<< binned_width() * binned_height()<< "\n";
 	return binned_width() * binned_height();
 }
 
@@ -450,6 +428,7 @@ void DataArray::aveROIData(int region)
 	}
 
 	aveData = new double[numPts];
+
 	for (int i = 0; i < numPts; i++)
 	{
 		double sum = 0;
@@ -550,12 +529,11 @@ void DataArray::calRli()
 	{
 		get_binned_rli(i, low, high, max);
 		double diff = (double) (high - low);
-//		rli = diff/ 3276.8;
-		rli = double(high) / 3278;
-/*		if (rli <= 0) // No RLI
+		rli = diff/ 3276.8;
+		if (rli <= 0) // No RLI
 		{
-			rli = -1;  //commented out to test rli acquisition
-		}*/
+			rli = -1;
+		}
 		array_data[i].setRli(rli);
 	}
 }
@@ -879,6 +857,7 @@ void DataArray::average()
 void DataArray::resetData()
 {
 	int i,j;
+
 	for (i = 0; i < num_raw_diodes(); i++)
 	{
 		for (j = 0; j < numTrials; j++)
@@ -948,9 +927,7 @@ void DataArray::loadTrialData(int trialNo)
 }
 
 //=============================================================================
-// The specification for the format of INPUT is determined in Camera.cpp
-// They are read out in image-major order, i.e. quadrants of img0, quadrants of img1, ... 
-void DataArray::arrangeData(int trialNo, unsigned short* input)		// used in DapControllerAcqui with input from camera (memory)
+void DataArray::arrangeData(int trialNo, short* input)		// used in DapControllerAcqui with input from camera (memory)
 {
 	int i,j;
 
@@ -1418,7 +1395,6 @@ void DataArray::setMaxAmp2DataFeature()
 				maxValue=dataFeature[i];
 			}
 		}
-
 		// Normalization if feature is on.
 		if(nor2ArrayMaxFlag)
 		{

@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: Fl_Single_Window.H 10583 2015-02-17 15:42:25Z AlbrechtS $"
 //
 // Single-buffered window header file for the Fast Light Tool Kit (FLTK).
 //
@@ -54,5 +54,5 @@ public:
 #endif
 
 //
-// End of "$Id$".
+// End of "$Id: Fl_Single_Window.H 10583 2015-02-17 15:42:25Z AlbrechtS $".
 //

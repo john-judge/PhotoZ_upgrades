@@ -29,14 +29,9 @@
 #define STOP_CMD "NO"
 #define OK_CMD "OK"
 #define MC_CMD "MC"
-#define HEX_CMD "HC"
 #define LONG_CMD "LC"
 #define LONG_STRING "LONG1234567890987654321ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()-_=+]}[{'\";:.>,</?`~\\|"
 #define LONG_RESP   "RESP1234567890987654321ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()-_=+]}[{'\";:.>,</?`~\\|"
-
-#define HEX_MSG_LEN 16
-unsigned char Hex_Message[]  = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0x00, 0xf1, 0xe2, 0xd3, 0xc4, 0xb5, 0xa6, 0x97, 0x86 } ;
-unsigned char Hex_Response[] = {0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x00, 0x81, 0xa1, 0xb2, 0xc3, 0xd4, 0xe5, 0xf6, 0x07, 0x18 } ;
 
 
 /* to pause (do_pause=1) or not to pause (do_pause=0), this is the answer */
@@ -79,7 +74,7 @@ int kbhit()
 {
     int numchars ;
     /* int n, ch ;*/
-    ioctl(0, FIONREAD, &numchars) ;
+    ioctl(0, FIONREAD, (int)&numchars) ;
 
     /* for (n=0; n<numchars; n++)  ch=getchar() ;*/
     return(numchars);
@@ -138,27 +133,6 @@ send_test_message(PdvDev *pdv_p, char *message, char *response, int response_len
         return 1;
 
     edt_msg(TESTER_DEBUG,"Sent <%s>, got <%s>\n", message, response);
-
-    return 0;
-
-}
-
-    int
-send_test_message_hex(PdvDev *pdv_p, unsigned char *message, int len, unsigned char *response, int response_len)
-
-{
-    int rc;
-
-    pdv_serial_binary_command(pdv_p, (char *) message, len);
-
-    response[0] = 0;
-
-    rc = pdv_serial_wait(pdv_p, SEND_WAIT_TIME, response_len);
-
-    if (pdv_serial_read(pdv_p, response, rc) != rc)
-        return 1;
-
-    /* edt_msg(TESTER_DEBUG,"Sent <%s>, got <%s>\n", message, response); */
 
     return 0;
 
@@ -262,7 +236,7 @@ print_mode_code(int wire, int value1, int value2, int do_title)
     static void 
 usage (char *progname, char *err)
 {
-    printf("%s", err);
+    printf(err);
     printf("usage: %s [Options]\n", progname);
     puts(ABOUT_TEXT);
     puts("");
@@ -282,14 +256,12 @@ usage (char *progname, char *err)
     puts("\nOptions only for Simulator:");
     puts("-F freq     pass pixel clock frequency argument to clsiminit");
 
-    puts("\nOptions only for Framegrabber under test:");
+    puts("\nOptions only for C-Link under test:");
     puts("-c channel  channel of pdv unit under test (default 0)");
     puts("-l loops    number of loops");
     puts("-p          pause between errors");
     puts("-H <host>   specifies host to log results to (default: none)");
     puts("-nodma      test serial only");
-    puts("-noascii    skip ascii serial, only test hex serial\n");
-    puts("-nohex      skip hex serial, only test ascii serial\n");
     puts("-noserial   test DMA only");
     puts("-compat     compatability mode, use if rcv (EDT FG) side is < EDT v5.3.3.8");
     exit(1);
@@ -467,8 +439,6 @@ test_dma(PdvDev *uut)
 
     int x, y, width, height;
 
-    int timeouts = 0, last_timeouts = 0;
-
     int init;
 
     edt_msg(TESTER_INFO,"Testing DMA ... ");
@@ -483,17 +453,10 @@ test_dma(PdvDev *uut)
         exit(1);
     }
 
-    pdv_multibuf(uut, 3);
 
-    image = pdv_image(uut);
-    bytes_returned = size;
-    bytes_returned = edt_get_timeout_count(uut);
+    image = edt_alloc(size);
 
-    if ((timeouts = pdv_timeouts(uut)) > last_timeouts)
-    {
-        last_timeouts = timeouts;
-        bytes_returned = edt_get_timeout_count(uut);
-    }
+    bytes_returned = pdv_read(uut, image, size);
 
     if (!edt_little_endian()) do_swab((u_short*)image,bytes_returned/2);
     if (check_rgb_cls_buffer(image, size))
@@ -562,6 +525,7 @@ test_dma(PdvDev *uut)
         }
 
     }
+    edt_free(image);
     if (errors) 
 
         assert_error();
@@ -579,7 +543,6 @@ initialize_unit_under_test(int unit, int channel, int do_init, int baudrate)
 {
     char command_string[128];
     PdvDev *pdv_p;
-    int ret = 0;
 
     /* run  */
 #ifndef VXWORKS
@@ -588,7 +551,7 @@ initialize_unit_under_test(int unit, int channel, int do_init, int baudrate)
 
     edt_msg(TESTER_INFO, "\nsystem(\"%s\")\n", command_string), 
 
-    ret = system(command_string);
+    system(command_string);
 #else
     sprintf(command_string, "-u %d -c %d -f %s",unit, channel, camera);
     initcam (command_string) ;
@@ -617,16 +580,15 @@ initialize_unit_under_test(int unit, int channel, int do_init, int baudrate)
 }
 
     int
-run_test(PdvDev *pdv_p, int do_ascii, int do_hex, int do_dma, int do_mc, int compat)
+run_test(PdvDev *pdv_p, int do_serial, int do_dma, int do_mc, int compat)
 
 {   
     int errors = 0;
     char response[128];
-    unsigned char hresponse[128];
     /* open communication with tester */
 
     /* Test Mode Codes */
-    if (do_ascii || do_hex)
+    if (do_serial)
     {
         send_test_message(pdv_p, START_CMD, response, RESPONSE_LEN);
         if (strcmp(response,READY_CMD))
@@ -637,7 +599,7 @@ run_test(PdvDev *pdv_p, int do_ascii, int do_hex, int do_dma, int do_mc, int com
 
         }
 
-        if (!compat && do_ascii)
+        if (!compat)
         {
             send_test_message(pdv_p, LONG_CMD, response, RESPONSE_LEN);
             if (strcmp(response,OK_CMD))
@@ -654,29 +616,6 @@ run_test(PdvDev *pdv_p, int do_ascii, int do_hex, int do_dma, int do_mc, int com
             if (strcmp(response,LONG_RESP))
             {
                 edt_msg(TESTER_ERROR,"Error in serial: sent %s got %s expected %s\n", LONG_STRING, response, LONG_RESP);
-                errors += 1;
-                assert_error();
-            }
-        }
-
-        if (!compat && do_hex)
-        {
-
-            send_test_message(pdv_p, HEX_CMD, response, RESPONSE_LEN);
-            if (strcmp(response,OK_CMD))
-            {
-                edt_msg(TESTER_ERROR,"Error in serial setting up hex command\n");
-                edt_msg(TESTER_ERROR,"Possible version mismatch. If your receiving system (EDT framegrabber) is on\n");
-                edt_msg(TESTER_ERROR, "a system running EDT package version 5.3.3.7 or earler, use the -compat\n");
-                edt_msg(TESTER_ERROR, "option on the sending (this) side. For more info, run clink_tester --help.\n");
-                errors += 1;
-                assert_error();
-            }
-
-            send_test_message_hex(pdv_p, Hex_Message, HEX_MSG_LEN, hresponse, HEX_MSG_LEN);
-            if (memcmp(hresponse, Hex_Response, HEX_MSG_LEN))
-            {
-                edt_msg(TESTER_ERROR,"Error in serial: sent %*x got %%x expected %%x\n", HEX_MSG_LEN, Hex_Message, HEX_MSG_LEN, hresponse, HEX_MSG_LEN, Hex_Response);
                 errors += 1;
                 assert_error();
             }
@@ -715,7 +654,7 @@ run_test(PdvDev *pdv_p, int do_ascii, int do_hex, int do_dma, int do_mc, int com
 /* loghost s/b NULL if logging is unwanted */
     int
 clink_testsub(int unit, int channel, int loops, int do_init, int baudrate, 
-        char *loghost, int do_ascii, int do_hex, int do_dma, int do_mc, int compat)
+        char *loghost, int do_serial, int do_dma, int do_mc, int compat)
 
 {
     PdvDev *pdv_p;
@@ -759,7 +698,7 @@ clink_testsub(int unit, int channel, int loops, int do_init, int baudrate,
 
     for (current_loop = 0; current_loop < loops; ++current_loop) 
     {
-        total_errors += run_test(pdv_p, do_ascii, do_hex, do_dma, do_mc, compat);
+        total_errors += run_test(pdv_p, do_serial, do_dma, do_mc, compat);
         edt_msg_output(lp, TESTER_INFO,"%d loops %d errors\n", current_loop+1, total_errors);
     }
 
@@ -804,7 +743,6 @@ clink_test_cam(int unit, int channel, int do_init, int baudrate)
 
     char query[128];
     char response[128];
-    unsigned char hresponse[128];
     int done = 0;
     int rc = 0;
     int rdval = 0;
@@ -827,7 +765,7 @@ clink_test_cam(int unit, int channel, int do_init, int baudrate)
 
         edt_msg(TESTER_INFO, "system(\"%s\")\n", command_string), 
 
-        rc = system(command_string);
+        system(command_string);
 #else
         sprintf(command_string, "-u %d -c %d %s -f %s -s", 
                 unit, channel, freq_arg, camera); 
@@ -844,13 +782,11 @@ clink_test_cam(int unit, int channel, int do_init, int baudrate)
 
     pdv_serial_read_enable(pdv_p);
     pdv_set_baud(pdv_p, baudrate);
-    /* pdv_set_baud(pdv_p, 19200); */
+    /* pdv_set_baud(pdv_p, 115200); */
 
     pdv_set_serial_delimiters(pdv_p,NULL, NULL);
 
     /* pdv_cls_set_lvcont(pdv_p, 1); */
-
-    printf("Baud rate         :    %d\n", pdv_p->dd_p->serial_baud);
 
     query[0] = 0;
     response[0] = 0;
@@ -899,27 +835,14 @@ clink_test_cam(int unit, int channel, int do_init, int baudrate)
                     edt_msg(TESTER_INFO,"%s\n", LONG_STRING);
                     len = 2; /* set response length back to default for short cmds */ 
                 }
-                else if (!strcmp(query, HEX_CMD))
-                {
-                    strcpy(response,OK_CMD);
-                    edt_msg(TESTER_INFO,"%s\n", HEX_CMD);
-                    len = HEX_MSG_LEN; /* setting length for hex buffer next */
-                }
-                else if ((rc == HEX_MSG_LEN) && (!memcmp(query, Hex_Message, HEX_MSG_LEN)))
-                {
-                    memcpy(hresponse, Hex_Response, HEX_MSG_LEN);
-                    edt_msg(TESTER_INFO,"%*x\n", HEX_MSG_LEN, Hex_Response);
-                    len = 2; /* set response length back to default for short cmds */ 
-                }
 
                 else
                     strcpy(response,"??");
 
                 edt_msg(TESTER_DEBUG,"Response: <%s>\n", response);
 
-                if (memcmp(query, Hex_Message, HEX_MSG_LEN) == 0)
-                    pdv_serial_binary_command(pdv_p, (char *)Hex_Response, HEX_MSG_LEN);
-                else pdv_serial_command(pdv_p, response);
+
+                pdv_serial_command(pdv_p, response);
             }
             query[0] = 0;
             response[0] = 0;
@@ -939,12 +862,7 @@ clink_test_cam(int unit, int channel, int do_init, int baudrate)
 }
 
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
+
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -963,14 +881,13 @@ main(int argc, char **argv)
     PdvDev *pdv_p ;
     char *progname;
     char *loghost = NULL;
-    int do_ascii = 1;
-    int do_hex = 1;
+    int do_serial = 1;
     int do_dma = 1;
     int do_mc = 1;
     int do_init = 1; 
     int compat = 0;
     int verbosity = 0;
-    int baudrate = 19200; /* should we just test fastest (115200?) */
+    int baudrate = 19200;
 
 #ifdef NO_MAIN
     char **argv  = 0 ;
@@ -1070,14 +987,7 @@ main(int argc, char **argv)
                 if (!strcmp(argv[0],"-nomc"))
                     do_mc = FALSE;
                 else if (!strcmp(argv[0],"-noserial"))
-                {
-                    do_ascii = FALSE;
-                    do_hex = FALSE;
-                }
-                else if (!strcmp(argv[0],"-noascii"))
-                    do_ascii = FALSE;
-                else if (!strcmp(argv[0],"-nohex"))
-                    do_hex = FALSE;
+                    do_serial = FALSE;
                 else if (!strcmp(argv[0], "-nodma"))
                     do_dma = FALSE;
                 break;
@@ -1127,7 +1037,7 @@ main(int argc, char **argv)
 
         pdv_close(pdv_p);
         elapsed = edt_dtime(); /* init */
-        clink_testsub(unit, channel, loops, do_init, baudrate, loghost, do_ascii, do_hex, do_dma, do_mc, compat);
+        clink_testsub(unit, channel, loops, do_init, baudrate, loghost, do_serial, do_dma, do_mc, compat);
         elapsed = edt_dtime();  /* gives delta time */
 
         edt_msg(TESTER_ERROR, "\n%d loops in %f seconds (%f loops/sec)\n",

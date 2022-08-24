@@ -225,7 +225,7 @@ pw8(EdtDev *edt_p, int addr, int value)
             {
                 if ((Mapaddr = edt_mapmem(edt_p, 0, 256)) == 0)
                     exit(1);
-                printf("Mapaddr %p\n", Mapaddr);
+                printf("Mapaddr %x\n", Mapaddr);
             }
             rcxload_mmap_intfc_write(edt_p, (u_int)addr, (u_char)value) ;
         }
@@ -251,7 +251,7 @@ pr8(EdtDev *edt_p, int addr)
         {
             if ((Mapaddr = edt_mapmem(edt_p, 0, 256)) == 0)
                 exit(1);
-            printf("Mapaddr %p\n", Mapaddr);
+            printf("Mapaddr %x\n", Mapaddr);
         }
         ret = rcxload_mmap_intfc_read(edt_p, (u_int)addr) ;
     }
@@ -987,7 +987,7 @@ main(int argc, char **argv)
 
         if (!(edt_is_dvfox(edt_p) || edt_is_dvcl(edt_p)))
         {
-            printf("pdv%d is not an EDT Camera Link framegrabber board\n", unit);
+            printf("pdv%d is not an EDT fiber optic board\n", unit);
             exit(0);
         } 
 
@@ -1017,7 +1017,7 @@ main(int argc, char **argv)
     if (!fp)
     {
         int i, nunits = 0, saw_rcx = 0;
-        u_int ids[] = {PDVFOX_ID, PE4DVAFOX_ID, PE8DVAFOX_ID, PDVCL_ID, PE4DVVLFOX_ID, PE4DVCL_ID, PE8DVCL_ID, PE1DVVL_ID, PE4DVVL_ID, 0xFFFF};
+        u_int ids[7] = {PDVFOX_ID, PE4DVAFOX_ID, PE8DVAFOX_ID, PDVCL_ID, PE4DVCL_ID, PE8DVCL_ID, 0xFFFF};
         Edt_bdinfo *boards = edt_detect_boards_ids(NULL, -1, ids, &nunits, verbose);
 
         for (i=0; i<nunits; i++)
@@ -1047,7 +1047,6 @@ main(int argc, char **argv)
                         printf("opened channel %d\n", edt_p->channel_no);
 
                     /* dva fox defaults to 2.5GB but RCXCL program mode is  1.25, so ... */
-                    /* (what about PE4DVVLFOX? If ever) */
                     if (edt_p->devid == PE4DVAFOX_ID || edt_p->devid == PE8DVAFOX_ID)
                     {
                         u_short reg = pr8(edt_p, 0xf4);
@@ -1130,7 +1129,7 @@ main(int argc, char **argv)
     {
         if (n != sizeof(block_header))
         {
-            printf("Truncated block header -- expected %d bytes, got %d)\n", (int)sizeof(block_header), (int)n);
+            printf("Truncated block header -- expected %d bytes, got %d)\n", sizeof(block_header), n);
             printf("exiting\n");
             exit(1);
         }
@@ -1286,7 +1285,7 @@ main(int argc, char **argv)
 
                     if (gettok(tbuf, &bufp))
                     {
-                        if (sscanf(tbuf,"%s", (char *)&blockname) != 1)
+                        if (sscanf(tbuf,"%s", &blockname) != 1)
                             error_out(ln, "burn (bad block name)");
 
                         bp = bl_cmd->next;
@@ -1332,7 +1331,7 @@ main(int argc, char **argv)
 
                     if (gettok(tbuf, &bufp))
                     {
-                        if (sscanf(tbuf,"%s", (char *)&blockname) != 1)
+                        if (sscanf(tbuf,"%s", &blockname) != 1)
                             error_out(ln, "verify (bad block name)");
 
                         bp = bl_cmd->next;

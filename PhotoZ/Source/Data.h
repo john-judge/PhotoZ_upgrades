@@ -4,7 +4,7 @@
 #ifndef Data_H
 #define Data_H
 
-#define Max_Num_Files 50		// has big impact on memory demand and increase with changes to camera cfgs with more traces
+#define Max_Num_Files 500
 
 //=============================================================================
 class Data
@@ -37,6 +37,9 @@ private:
 	double maxAmp;			// Maximal Amplitude
 	double maxAmpLatency;	// The Latency of the Maximal Amplitude Point
 	double halfAmpLatency;
+	double halfDecayTime;
+	double halfRiseTime;
+	double halfWidth;
 	double maxSlopeLatency;
 	int maxAmpLatencyPt;
 
@@ -50,6 +53,7 @@ private:
 	double maxAmpArray[Max_Num_Files];		// Maximal Amplitude
 	double maxAmpLatencyArray[Max_Num_Files];
 	double halfAmpLatencyArray[Max_Num_Files];
+	double halfWidthArray[Max_Num_Files];
 
 	//=====================================================
 	// Fitting
@@ -115,7 +119,10 @@ public:
 
 	double getMaxAmpLatency();
 	double getHalfAmpLatency();
+	double getHalfWidth();
 	double getMaxSlopeLatency();
+	double getHalfRiseTime();
+	double getHalfDecayTime();
 
 	int getMaxAmpLatencyPt();
 
@@ -144,12 +151,14 @@ public:
 	double getMaxAmp(int recordIndex);
 	double getMaxAmpLatency(int);
 	double getHalfAmpLatency(int);
+	double getHalfWidth(int);
 
 	double* getRliArray();
 	double* getAmpArray();
 	double* getMaxAmpArray();
 	double* getMaxAmpLatencyArray();
 	double* getHalfAmpLatencyArray();
+	double* getHalfWidthArray();
 
 	void resetTimeCourse();
 

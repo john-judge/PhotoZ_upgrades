@@ -44,12 +44,6 @@
  * Firmware Update Functions
  */
 
-/**
- * @defgroup timecode_utility Utility Functions
- * @ingroup libedt_timing
- * Utility Functions
- */
-
 
 #include <time.h>
 //#include "libedt_timing.h"
@@ -62,6 +56,7 @@
 /* 	SRXL-2:			0x5c */
 /* 	CLINK:			0x31 */
 
+
 /**
  * @brief Read an SPI access register using the correct register base address.
  * 
@@ -70,7 +65,6 @@
  * 
  * @return The value returned from the register read.
  * 
- * @ingroup timecode_utility
  */
 u_int
 edt_spi_reg_read(EdtDev *edt_p, u_int desc)
@@ -94,7 +88,6 @@ edt_spi_reg_read(EdtDev *edt_p, u_int desc)
  * @param desc  One of the SPI_ access macros from libedt_timing.h
  * @param val  Value to write to the SPI register.
  * 
- * @ingroup timecode_utility
  */
 void
 edt_spi_reg_write(EdtDev *edt_p, u_int desc, u_int val)
@@ -123,7 +116,6 @@ edt_spi_reg_write(EdtDev *edt_p, u_int desc, u_int val)
  *
  * See the included example program timing_test.c.
  * 
- * @ingroup timecode_configuration
  */
 EdtDev *
 edt_spi_open(char *edt_interface, int unit, u_int spi_reg_base)   /* edt_interface is "pcd" or "pdv" or "pe53b", etc. */
@@ -154,7 +146,6 @@ edt_spi_open(char *edt_interface, int unit, u_int spi_reg_base)   /* edt_interfa
  * 
  * @return The value from edt_close().
  *
- * @ingroup timecode_configuration
  */
 int
 edt_spi_close(EdtDev *edt_p)
@@ -169,7 +160,6 @@ edt_spi_close(EdtDev *edt_p)
  * 
  * @return The byte obtained from the SPI interface.
  *
- * @ingroup timecode_utility
  */
 u_char
 edt_spi_get_byte(EdtDev *edt_p)
@@ -265,7 +255,6 @@ edt_spi_fifo_empty(EdtDev *edt_p)
  * 
  * @return The byte sent to the SPI interface.
  *
- * @ingroup timecode_utility
  */
 u_char
 edt_spi_put_byte(EdtDev *edt_p, u_char ch)
@@ -281,7 +270,6 @@ edt_spi_put_byte(EdtDev *edt_p, u_char ch)
  * 
  * @return The value of the EDT SPI status register.
  *
- * @ingroup timecode_display
  */
 u_char
 edt_spi_get_stat(EdtDev *edt_p)
@@ -296,7 +284,6 @@ edt_spi_get_stat(EdtDev *edt_p)
  * 
  * @return No return value.
  *
- * @ingroup timecode_utility
  */
 void
 edt_spi_flush_fifo(EdtDev *edt_p)
@@ -437,8 +424,6 @@ edt_spi_get_time_pkt(EdtDev *edt_p)
  * inserted into the DMA data stream by the board FPGA firmware.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_display
  */
 void
 edt_spi_display_time(EdtDev *edt_p, int loops)
@@ -556,8 +541,6 @@ edt_spi_display_time(EdtDev *edt_p, int loops)
  * in rebooting the msp430.
  *
  * See the included utility program msp430_load.c.
- *
- * @ingroup timecode_update
  */
 int
 edt_spi_invoke_flash_loader(EdtDev *edt_p)
@@ -626,7 +609,6 @@ edt_spi_invoke_flash_loader(EdtDev *edt_p)
  * 
  * @return A pointer to the argument string.
  *
- * @ingroup timecode_utility
  */
 char *
 edt_spi_putstr(EdtDev *edt_p, char *str)
@@ -741,7 +723,6 @@ edt_spi_send_binary(EdtDev *edt_p, u_char val)				/* Send binary data to SPI; es
  * 	CKL = INV [ B1 XOR B3 XOR ... XOR Bn–1 ]
  * 	CKH = INV [ B2 XOR B4 XOR ... XOR Bn ]
  *
- * @ingroup timecode_utility
  */
 void
 edt_spi_send_packet(EdtDev *edt_p, u_char *cmdbuf)
@@ -772,8 +753,6 @@ edt_spi_send_packet(EdtDev *edt_p, u_char *cmdbuf)
  * Obtain the version of the IRIG-B firmware running on the msp430.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_update
  */
 int
 edt_get_timecode_version(EdtDev *edt_p)
@@ -805,8 +784,6 @@ edt_get_timecode_version(EdtDev *edt_p)
  * is complete.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 int
 edt_set_timecode_enable(EdtDev *edt_p, int enable)
@@ -852,8 +829,6 @@ edt_set_timecode_enable(EdtDev *edt_p, int enable)
  * defined in libedt_timing.h.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 void
 edt_set_timecode_raw(EdtDev *edt_p, int enable)
@@ -890,8 +865,6 @@ edt_set_timecode_raw(EdtDev *edt_p, int enable)
  * it with the current PPS.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 void
 edt_set_timecode_seconds_offset(EdtDev *edt_p, u_int seconds)
@@ -928,8 +901,6 @@ edt_set_timecode_seconds_offset(EdtDev *edt_p, u_int seconds)
  * back to the default internal 16 Mhz clock.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 void
 edt_set_msp430_clock(EdtDev *edt_p, int clock_sel, int clock_hz)
@@ -1000,8 +971,6 @@ edt_set_msp430_clock(EdtDev *edt_p, int clock_sel, int clock_hz)
  * to 1, the year is incremented by 1.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 void
 edt_enable_timecode_programmable_year(EdtDev *edt_p, u_short year)
@@ -1033,8 +1002,6 @@ edt_enable_timecode_programmable_year(EdtDev *edt_p, u_short year)
  * IRIG-B signal.
  *
  * See the included example program timing_test.c.
- *
- * @ingroup timecode_configuration
  */
 void
 edt_disable_timecode_programmable_year(EdtDev *edt_p)

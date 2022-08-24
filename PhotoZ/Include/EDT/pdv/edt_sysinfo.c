@@ -41,14 +41,8 @@
 
 int Ndiags = 0;
 
-/* print a little border with a newline first */
-void topborder(FILE *out) {
-    fputs("\n------------------------------------------------------\n", out);
-    return;
-}
-
-/* print a little border, no newline */
-void bottomborder(FILE *out) {
+/* print a little border */
+void border(FILE *out) {
     fputs("------------------------------------------------------\n", out);
     return;
 }
@@ -56,7 +50,7 @@ void bottomborder(FILE *out) {
 /* print title followed by border */
 void header(const char *title, FILE *out) {
     fputs(title, out);
-    bottomborder(out);
+    border(out);
     return;
 }
 
@@ -77,17 +71,17 @@ void copy_named(const char *in_name, FILE *out)
     FILE *in = fopen(in_name, "r");
     char *errstr = (char *) calloc(1, 32 + strlen(in_name));
 
-    topborder(out);
+    border(out);
     if (NULL == in) {
         sprintf(errstr, "Error opening input file \"%s\"", in_name);
         edt_perror(errstr);
         free(errstr);
         fprintf(out, "Error opening input file \"%s\" (errno: %d)\n", 
             in_name, errno);
-        bottomborder(out);
+        border(out);
     } else {
         fprintf(out, "contents of file %s:\n", in_name);
-        bottomborder(out);
+        border(out);
         fflush(stdout);
         copy(in, out);
     }
@@ -114,9 +108,9 @@ void do_cmd(const char *cmd, FILE *outfile)
     FILE *cmdout;
     char *errstr = (char *) calloc(1, 32 + strlen(cmd));
 
-    topborder(outfile);
+    border(outfile);
     fprintf(outfile, "doing command \"%s\":\n", cmd);
-    bottomborder(outfile);
+    border(outfile);
     fflush(stdout);
     cmdout = popen(cmd, "r");
     fflush(outfile);
@@ -206,7 +200,6 @@ int main (int argc, char **argv) {
     /* pciload (on everything but p53b) */
 #ifndef P53B
     do_cmd(PREPATH "pciload", out);
-    do_cmd(PREPATH "pciediag", out);
 #endif
 
 #ifdef PDV
@@ -221,10 +214,10 @@ int main (int argc, char **argv) {
     */
 #endif
 
-    /* system name, kernel, type, etc. */
+
+    /* system type: uname on unix, winapi on windows (done later) */
 #ifndef _NT_
     do_cmd("uname -a", out);
-    do_cmd("lsb_release -a", out);
 #endif
 
     /*  dmesg, cpu & memory info (from /proc on linux, psrinfo on sun, 
@@ -236,7 +229,7 @@ int main (int argc, char **argv) {
     do_cmd("isainfo -kv", out);
 #elif __linux__
     do_cmd("dmesg", out);
-    do_cmd("/sbin/lspci -v", out);
+    do_cmd("lspci -v", out);
     copy_named("/proc/cpuinfo", out);
     copy_named("/proc/meminfo", out);
 #endif
@@ -262,7 +255,6 @@ int main (int argc, char **argv) {
     /* now to windows specific stuff. */
 #ifdef _NT_
     do_cmd(PREPATH "win_sysinfo", out);
-#endif
 
     try_copy_named(PREPATH "install_pdv.log", out);
     try_copy_named(PREPATH "install_pcd.log", out);
@@ -270,6 +262,7 @@ int main (int argc, char **argv) {
     try_copy_named(PREPATH "install_srxl.log", out);
     try_copy_named(PREPATH "install_drx16.log", out);
     try_copy_named(PREPATH "install_v4.log", out);
+#endif
 
     printf("\n%d diagnostics complete. Please include the file %s in any\n", Ndiags, out_name);
     printf("technical coorespondence with EDT.\n\n");

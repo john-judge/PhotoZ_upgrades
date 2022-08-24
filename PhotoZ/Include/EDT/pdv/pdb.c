@@ -25,228 +25,6 @@ else if	(strcmp(tbuf, "rp") == 0) {
 
 */
 
-/**
-* A convenience routine to access the EDT LCR_DEMOD registers.  Passed the Block
-* and offset for a 32-bit word.
-*
-* @param edt_p pointer to edt device structure returned by #edt_open or
-* #edt_open_channel
-* @param block     integer register block selector
-* @param offset    integer block offset
-*
-* @return The value of the 32-bit register.
-*
-* \Example
-* u_int reg24 = edt_lcr_demod_read(edt_p, 2, 1);
-*
-* @see edt_lcr_demod_write, edt_reg_read.
-*/
-
-
-u_int
-edt_lcr_demod_read(EdtDev * edt_p, u_int block, u_int offset)
-{
-
-    //u_int   regAddr = ((block & 0x0f) << 23) | (offset & 0x007fffff);
-    u_int   regAddr = ((block & 0x0f) << 25) | (offset & 0x01ffffff);
-    u_int data;
-
-    //regAddr <<= 2;
- 
-
-    //if (edt_p->mapaddr == 0)
-
-	//edt_p->mapaddr = ( caddr_t)edt_mapmem(edt_p, 0x10000, edt_get_mappable_size(edt_p, 1)) ;
-
-
-    //printf("edt_lcr_demod_read:  addr %08x\n", regAddr);
-
-    //*((unsigned int *)((u_char *)edt_p->mapaddr + 0xE0004)) = regAddr;
-    edt_bar1_write(edt_p, 0xE0004, regAddr);
-
-    //return *((unsigned int *)((u_char *)edt_p->mapaddr + 0xE0008));
-    data = edt_bar1_read(edt_p, 0xE0008);
-    //printf("edt_lcr_demod_read:  addr %08x data %08x\n", regAddr, data);
-    return data;
-
-}
-
-
-/**
-* A convenience routine to access the EDT LCR_DEMOD registers.  Passed the Block
-* and offset for a 32-bit word.
-*
-* @param edt_p pointer to edt device structure returned by #edt_open or
-* #edt_open_channel
-* @param block     integer register block selector
-* @param offset    integer block offset
-* @param data      32-bit value to set register with.
-*
-* \Example
-* @code
-* u_int reg24 = 0xb01d_bee;
-* edt_lcr_demod_write(edt_p, 2, 1, reg24);
-* @endcode
-*
-* @see edt_demod_read, edt_reg_write.
-*/
-
-void
-edt_lcr_demod_write(EdtDev * edt_p, u_int block, u_int offset, u_int data)
-{
-
-    //u_int   regAddr = ((block & 0x0f) << 23) | (offset & 0x007fffff);
-    u_int   regAddr = ((block & 0x0f) << 25) | (offset & 0x01ffffff);
-
-
-    //regAddr <<= 2;
-
-    //printf("edt_lcr_demod_write:  addr %08x\n", regAddr);
-
-
-//    if (edt_p->mapaddr == 0)
-
-//	edt_p->mapaddr = ( caddr_t)edt_mapmem(edt_p, 0x10000, edt_get_mappable_size(edt_p, 1)) ;
-
-
-    //printf("edt_lcr_demod_write:  addr %08x data %08x\n", regAddr, data);
-
-    //*((unsigned int *)((u_char *)edt_p->mapaddr + 0xE0004)) = regAddr;
-    edt_bar1_write(edt_p, 0xE0004, regAddr);
-
-    //*((unsigned int *)((u_char *)edt_p->mapaddr + 0xE0008)) = data;
-    edt_bar1_write(edt_p, 0xE0008, data);
-
-}
-
-/**
-* A convenience routine to access the EDT MZDEMOD registers.  Passed the Block
-* and offset for a 32-bit word.
-*
-* @param edt_p pointer to edt device structure returned by #edt_open or
-* #edt_open_channel
-* @param block     integer register block selector
-* @param offset    integer block offset
-*
-* @return The value of the 32-bit register.
-*
-* \Example
-* u_int reg24 = edt_mzdemod_read(edt_p, 2, 1);
-*
-* @see edt_mzdemod_write, edt_reg_read.
-*/
-// SAVE:  regVal = edt_reg_read(edt_p, EDT_MZDEMOD_REGISTER | ((block & 0x0f) << 23) | (offset & 0x007fffff));
-
-
-
-u_int
-edt_mzdemod_read(EdtDev * edt_p, u_int block, u_int offset)
-{
-
-    int i;
-    int count       = 0;
-    u_int   regAddr = ((block & 0x0f) << 25) | (offset & 0x01ffffff);
-    u_int   tmpVal  = 0;
-    u_int   regVal  = 0;
-
-
-    // Clear interface enable bit
-    edt_intfc_write(edt_p, 0x4c, 0x00);
-
-
-    /* 27-bit address */
-    edt_reg_write(edt_p, PCD_CMD | 0x04000000 | 0x44, regAddr);
-
-
-    // Set interface enable and direction bits
-    edt_intfc_write(edt_p, 0x4c, 0x01);
-
-
-    // Wait for register data valid, but not too long
-    while ((edt_intfc_read(edt_p, 0x4c) & 0x04) == 0)
-	if (++count == 10)
-	    break;
-
-
-    /* 32-bit data */
-    for (i = 0; i < 4; ++i)
-    {
-
-	tmpVal <<= 8;
-
-	tmpVal |= edt_intfc_read(edt_p, 0x48 + (3 - i));
-
-    }
-
-
-    regVal = tmpVal;
-
-
-    // Leave interface enable bit cleared
-    edt_intfc_write(edt_p, 0x4c, 0x00);
-
-
-    return regVal;
-
-}
-
-
-
-/**
-* A convenience routine to access the EDT MZDEMOD registers.  Passed the Block
-* and offset for a 32-bit word.
-*
-* @param edt_p pointer to edt device structure returned by #edt_open or
-* #edt_open_channel
-* @param block     integer register block selector
-* @param offset    integer block offset
-* @param data      32-bit value to set register with.
-*
-* \Example
-* @code
-* u_int reg24 = 0xb01d_bee;
-* edt_mzdemod_write(edt_p, 2, 1, reg24);
-* @endcode
-*
-* @see edt_demod_read, edt_reg_write.
-*/
-// SAVE:    edt_reg_write(edt_p, EDT_MZDEMOD_REGISTER | ((block & 0x0f) << 23) | (offset & 0x007fffff), data);
-
-void
-edt_mzdemod_write(EdtDev * edt_p, u_int block, u_int offset, u_int data)
-{
- 
-
-    int i;
-    u_int   regAddr = ((block & 0x0f) << 25) | (offset & 0x01ffffff);
-
-
-    // Clear interface enable bit
-    edt_intfc_write(edt_p, 0x4c, 0x00);
-
-
-    /* 27-bit address */
-    edt_reg_write(edt_p, PCD_CMD | 0x04000000 | 0x44, regAddr);
-
-
-
-    /* 32-bit data */
-    for (i = 0; i < 4; ++i)
-    {
-
-	edt_intfc_write(edt_p, 0x48 + i, data & 0xff);
-	data >>= 8;
-
-    }
-
-
-    // Set interface enable and direction bits
-    edt_intfc_write(edt_p, 0x4c, 0x03);
-    edt_intfc_write(edt_p, 0x4c, 0x00);
-
-}
-
-
 volatile int throwaway_int;
 volatile char *throwaway_charp;
 
@@ -291,7 +69,7 @@ static int kbhitedt()
 {
     int numchars;
 	/* int n, ch ; */
-    ioctl(0, FIONREAD, &numchars) ;
+    ioctl(0, FIONREAD, (int)&numchars) ;
 
     /* for (n=0; n<numchars; n++)  ch=getchar() ;*/
     return(numchars);
@@ -459,7 +237,7 @@ static volatile caddr_t mapaddr1 = 0 ;
 void
 mmap_setup(EdtDev *edt_p)
 {
-    mapaddr = (caddr_t)edt_mapmem(edt_p, 0, edt_get_mappable_size(edt_p, 0)) ;
+    mapaddr = (volatile caddr_t)edt_mapmem(edt_p, 0, edt_get_mappable_size(edt_p, 0)) ;
     if (mapaddr == 0)
     {
 	printf("edt_mapmem failed\n") ;
@@ -467,7 +245,7 @@ mmap_setup(EdtDev *edt_p)
     }
     
 	if (edt_get_mappable_size(edt_p, 1) > 0)
-		mapaddr1 = ( caddr_t)edt_mapmem(edt_p, 0x10000, edt_get_mappable_size(edt_p, 1)) ;
+		mapaddr1 = (volatile caddr_t)edt_mapmem(edt_p, 0x10000, edt_get_mappable_size(edt_p, 1)) ;
 	else
 		mapaddr1 = 0;
 
@@ -596,12 +374,6 @@ gotit(int dmy)
 #endif
 
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument ;
@@ -814,10 +586,6 @@ puts("Commands to access the pci space:");
   puts("  wm016/032 addr data  Write 16/32 bits to mmap space 0");
   puts("  rm116/132 addr       Read 16/32 bits from mmap space 1");
   puts("  wm116/132 addr data  Write 16/32 bits to mmap space 1");
-  puts("");
-  puts("  rmzdemod blk off [count]       Read 32 bits from MZDEMOD block and offset");
-  puts("  wmzdemod blk off data [count]  Write 32 bits to MZDEMOD block and offset");
-  puts("");
   puts("  rp                   Read incoming command packet from fiber ");
   puts("  wp rb d d d          Write command packet out, routing byte of 20 first ");
   puts("  sniff16              same, but only sync word + 1st 60 bytes of each packet");
@@ -866,129 +634,6 @@ puts("Commands to access the pci space:");
 		addr += 1;
 	    }
 	    if (!(dbgflg & 0x02))   printf("\n");
-	}
-	else if (strcmp(tbuf, "rlcrdemod") == 0)	{
-	    u_int block, offset, data, n, cnt;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        data = edt_lcr_demod_read(edt_p, block, offset);
-	        if (!(dbgflg & 0x02)) {
-		    if (verbose_reg_read)
-			printf("%01x/%06x: %08x\n", block, offset, data);
-		    else
-			printf("%08x ", data);
-		}
-		offset += 1;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	}
-	else if (strcmp(tbuf, "wlcrdemod") == 0)	{
-	    u_int block, offset, data, n, cnt;
- 	    int first=1;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &data);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        edt_lcr_demod_write(edt_p, block, offset, data);
-		++ offset;
-		++ first;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	    if (first==1)  printf("  nothing written\n");
-	}
-	else if (strcmp(tbuf, "rmzdemod") == 0)	{
-	    u_int block, offset, data, n, cnt;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        data = edt_mzdemod_read(edt_p, block, offset);
-	        if (!(dbgflg & 0x02)) {
-		    if (verbose_reg_read)
-			printf("%01x/%06x: %08x\n", block, offset, data);
-		    else
-			printf("%08x ", data);
-		}
-		offset += 1;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	}
-	else if (strcmp(tbuf, "wmzdemod") == 0)	{
-	    u_int block, offset, data, n, cnt;
- 	    int first=1;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &data);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        edt_mzdemod_write(edt_p, block, offset, data);
-		++ offset;
-		++ first;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	    if (first==1)  printf("  nothing written\n");
-	}
-	else if (strcmp(tbuf, "rlcr") == 0)	{
-	    u_int block, offset, data, n, cnt;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        data = edt_lcr_read(edt_p, block, offset);
-	        if (!(dbgflg & 0x02)) {
-		    if (verbose_reg_read)
-			printf("%01x/%06x: %08x\n", block, offset, data);
-		    else
-			printf("%08x ", data);
-		}
-		offset += 1;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	}
-	else if (strcmp(tbuf, "wlcr") == 0)	{
-	    u_int block, offset, data, n, cnt;
- 	    int first=1;
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &block);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &offset);
-	    gettok(tbuf, &bufp);
-	    sscanf(tbuf,"%x", &data);
-	    gettok(tbuf, &bufp);
-	    n=sscanf(tbuf,"%x", &cnt);
-	    if (n!=1)  cnt=1;
-	    for (n=0; n<cnt; n++) {
-	        edt_lcr_write(edt_p, block, offset, data);
-		++ offset;
-		++ first;
-	    }
-	    if (!(dbgflg & 0x02))   printf("\n");
-	    if (first==1)  printf("  nothing written\n");
 	}
 
 	else if (strcmp(tbuf, "rv") == 0)	{

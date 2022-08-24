@@ -4,7 +4,7 @@
 #ifndef DataArray_H
 #define DataArray_H
 //=============================================================================
-//#include "ArrayWindow.h"
+#include "ArrayWindow.h"
 
 #define Max_Trials 100
 
@@ -19,7 +19,7 @@ private:
 	short ***raw_diode_data;
 	Data *array_data;
 	Data *fp_data;
-	Data *array_data_ROI[50];			// adding index enabled TraceWindow to retrieve each AveROI independently
+	Data *array_data_ROI[100];			// adding index enabled TraceWindow to retrieve each AveROI independently
 
 	int numTrials;
 	int numPts;
@@ -99,9 +99,10 @@ public:
 	const short* getTrialMem(int trial, int diode);		//new
 	void assignTrialData(short *trial_data, int len, int trial, int diode);			//new
 	void loadTrialData(int trialNo);
-	void arrangeData(int trialNo, unsigned short * input);
 	void average();
 	void resetData();
+
+	void arrangeData(int,short*);
 
 	// RLI
 	void calRli();

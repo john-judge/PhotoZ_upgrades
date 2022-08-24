@@ -1,16 +1,4 @@
-## Notice
-This project is being abandoned, superseded by the [PhotoLib / pyPhoto21 project](https://github.com/john-judge/PhotoLib).
-However, the information accumulated [here](https://github.com/john-judge/PhotoZ_upgrades/issues?q=is%3Aissue) is useful to the ongoing project.
-
-## Installation (Building from Source in Debug Mode)
-Use VS Code 2017 or 2019 and see the [common install/compile issues](https://github.com/john-judge/PhotoZ_upgrades/issues/14)
-
-Most dependencies are locally installed to the solution and automatically come included with this repository
-
-Large dependencies from [this Drive folder](https://drive.google.com/drive/folders/1sUNvC4TwXBPeE7je68-wm7P-gSD8vRd3?usp=sharing) must be copied into `PhotoZ/` (I know, not ideal)
-
-
-## References
+## Referencess
 
 [DAP programming language documentation](http://www.mstarlabs.com/docs/manuals/DAPL3000.PDF)
 
@@ -54,23 +42,7 @@ new_take: has a new way to acquire images (FP diodes don't work though). Might b
 
 drag-select: started work on being able to select multiple diodes at once and group together for analysis. Requires extensive refactoring to make it work, however.
 
-simulation: disabled PDV calls to allow testing playground for NI-DAQmx with simulated NI-USB hardware
-
-PDV-multi: multithreaded acquisition for Little Dave
-
-visual: branch for reworking GUI to be more usable and less memory-hungry
-
-## Related Tools
-
-[PhotoZ_images.ipynb](https://colab.research.google.com/drive/1rVvRQeR6k0fvj9AQME0fRrZxCG_BQWxN#scrollTo=IYLcCMMeZp1z): Colab Notebook for plotting, debugging, and transforming image data
-
-[Cell Detection](https://github.com/ksscheuer/ROI_Identification) Kate's SNR clustering method for identifying ROIs
-
-[ZDA Explorer (Colab Notebook)](https://colab.research.google.com/drive/1DnxhbqRXvHm9yDWLLEMy0WumbNUCM3US?usp=sharing)
-
 ## Other Information
-
-PhotoZ/Source/fluid.exe is used to edit the GUI.
 
 Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) on the Joe computer
 
@@ -80,6 +52,4 @@ The documentation folder in this repo has the PhotoZ user manual and architectur
 
 
 
-
-
-
+Contact: peter.luick@gmail.com

@@ -349,4 +349,3 @@ bool PdvConfig::IsClink()
 {
     return is_clink;
 }
-

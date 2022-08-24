@@ -66,15 +66,6 @@ EdtDebugLevel dbg_states[] = {
 };
 
 
-void
-edt_dump_cache_state(EdtDev *edt_p)
-
-{
-	int i = 0;
-        edt_ioctl (edt_p, EDTS_TEST_STATUS, &i);
-
-}
-
     void
 edt_get_dbg_state (EdtDev * edt_p, EdtDebugLevel * states)
 {
@@ -132,7 +123,7 @@ edt_set_debug_mask (EdtDev * edt_p, unsigned int mask, int level)
     static void
 usage (char *err)
 {
-    fprintf(stderr, "%s", err);
+    fprintf(stderr, err);
     fprintf(stderr, "usage: setdebug \n");
     fprintf(stderr, "\t -u <unit>    - unit number\n");
     fprintf(stderr, "\t -c channel   - channel number\n");
@@ -174,7 +165,7 @@ int checkintarg(int argc, char *arg, char option)
     char errmsg[256];
     if ((argc < 1) || (arg[0] < '0') || (arg[0] > '9'))
     {
-        sprintf(errmsg, "Error: option %c requires a numeric argument\n", option);
+        sprintf(errmsg, "Error: option %s requires a numeric argument\n", option);
         usage(errmsg);
         exit(1);
     }
@@ -213,12 +204,6 @@ edt_get_dbg_mask_from_names (char *names)
 
 }
 
-/*
- * Main module. NO_MAIN is typically only defined when compiling for vxworks; if you
- * want to use this code outside of a main module in any other OS, just copy the code
- * and modify it to work as a standalone subroutine, including adding parameters in
- * place of the command line arguments
- */
 #ifdef NO_MAIN
 #include "opt_util.h"
 char *argument;
@@ -274,7 +259,6 @@ main (int argc, char **argv)
     u_int trace_state = 0;
     u_int trace_regs_enable = 0;
     int enable_intr = -1;
-    int check_cache = 0;
 
 
 
@@ -435,11 +419,6 @@ main (int argc, char **argv)
                 wait_trace = 1;
                 break;
 
-	    case 'M':
-		check_cache = 1;
-		break;
-
-
             case 'e':
                 ++argv;
                 --argc;
@@ -558,9 +537,6 @@ main (int argc, char **argv)
         perror (str);
         exit (1);
     }
-
-    if (check_cache)
-	edt_dump_cache_state(edt_p);
 
     if (trace_regs_enable)
     {
@@ -769,11 +745,6 @@ main (int argc, char **argv)
         u_int todo_virtual;
         u_int first_sg;
         u_int *ptr;
-        u_int **ptrptr;
-        u_int *tptr;
-        u_int lsize;
-        u_int pagesize = 0x1000;
-        u_int sg;
         u_int ii;
 
         sg_args.desc = EDT_SGLIST_SIZE;
@@ -840,32 +811,6 @@ main (int argc, char **argv)
             printf ("return to read sg list: %x at %p", sg_size, sg_list);
             getchar ();
             edt_ioctl (edt_p, EDTG_SGLIST, &sg_getargs);
-#ifdef __APPLE_
-            edt_ioctl (edt_p, EDTG_SGTODO, todo_list);
-            for (sg=0; sg<todo_size; sg++);
-            {
-                ptrptr = sg_list;
-                ptr = ptrptr[sg];
-                tptr = todo_list;
-                
-                lsize = *(tptr + 2);                
-
-                if (edt_little_endian())
-                    for (ii = 0; ii < lsize / 8; ii++)
-                    {
-                        printf ("%08x %08x\n", *ptr, *(ptr + 1));
-                        ptr += 2;
-                    }
-                else
-                    for (ii = 0; ii < lsize / 8; ii++)
-                    {
-                        printf ("%08x %08x\n", edt_swab32 (*ptr),
-                               edt_swab32 (*(ptr + 1)));
-                        ptr += 2;
-                    }
-                tptr += 2; 
-            }
-#else
             ptr = sg_list;
             printf ("sg list:\n");
             if (edt_little_endian ())
@@ -881,7 +826,6 @@ main (int argc, char **argv)
                             edt_swab32 (*(ptr + 1)));
                     ptr += 2;
                 }
-#endif
         }
         if (set_sglist)
         {

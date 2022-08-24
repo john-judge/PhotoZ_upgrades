@@ -47,7 +47,7 @@ got_trigint(void *p)
     ++ntrigints;
     edt_dtime();
     edt_ref_tmstamp(pdv_p,0xdead);
-    printf("\n%8.4f %d got trigger interrupt p = %p\n", edt_timestamp(), 
+    printf("\n%8.4f %d got trigger interrupt p = %x\n", edt_timestamp(), 
     ntrigints,
     p);
 

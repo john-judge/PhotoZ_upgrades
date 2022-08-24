@@ -79,7 +79,7 @@ void UserInterface::init()
 	latencyStartTxt->value("100");
 	thresholdTxt->value("1.0");
 
-	rliScalarTxt->value("3200.0");
+//	rliScalarTxt->value("3200.0");
 
 	//=====================================
 	// Baseline

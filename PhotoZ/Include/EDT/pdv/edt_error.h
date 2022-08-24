@@ -80,7 +80,7 @@ extern "C" {
   * @param level The message level associated with with the message.
   * @param message The message which can be output by the function.
   */
-typedef int (*EdtMsgFunction)(void *target, int level, const char *message);
+typedef int (*EdtMsgFunction)(void *target, int level, char *message);
 
 /**
  * Structure used by the \ref msg "Message Handler Library" to control 
@@ -126,15 +126,15 @@ EDTAPI void edt_msg_set_file(EdtMsgHandler *msg_p, FILE *f);
 EDTAPI void edt_msg_set_target(EdtMsgHandler *msg_p, void *t);
 
 /* Sets the file to that named in the argument f */
-EDTAPI void edt_msg_set_name(EdtMsgHandler *msg_p, const char *f);
+EDTAPI void edt_msg_set_name(EdtMsgHandler *msg_p, char *f);
 
-EDTAPI int edt_msg(int level, const char *format, ...);
-EDTAPI int edt_msg_output(EdtMsgHandler *msg_p, int level, const char *format, ...);
+EDTAPI int edt_msg(int level, char *format, ...);
+EDTAPI int edt_msg_output(EdtMsgHandler *msg_p, int level, char *format, ...);
 
 EDTAPI int edt_msg_perror(int level, const char *msg);
-EDTAPI int edt_msg_output_perror(EdtMsgHandler *msg_p, int level, const char *message);
-EDTAPI int edt_msg_printf_perror(int level, const char *format, ...);
-EDTAPI int edt_msg_output_printf_perror(EdtMsgHandler *msg_p,  int level, const char *format, ...);
+EDTAPI int edt_msg_output_perror(EdtMsgHandler *msg_p, int level, char *message);
+EDTAPI int edt_msg_printf_perror(int level, char *format, ...);
+EDTAPI int edt_msg_output_printf_perror(EdtMsgHandler *msg_p,  int level, char *format, ...);
 
 
 EDTAPI EdtMsgHandler *edt_msg_default_handle(void);

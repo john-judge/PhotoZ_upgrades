@@ -22,7 +22,7 @@
 #include "Definitions.h"
 
 using namespace std;
-//HDAP dap820Put;
+HDAP dap820Put;
 LiveFeed::LiveFeed()
 {
     cam = nullptr;
@@ -59,10 +59,8 @@ void continue_livefeed(void *arg)
 //=============================================================================
 void LiveFeed::update_image()
 {
-	for (int i = 0; i < 4; i++) {
-		unsigned char* im = cam->single_image(0);
-		memcpy(image + imagesize * i / 4, im, sizeof(short)*imagesize/4);
-	}
+    unsigned char* im = cam->single_image();
+    memcpy(image, im, sizeof(short)*imagesize);
 }
 
 //=============================================================================
@@ -112,7 +110,6 @@ void LiveFeed::drawBackground()
 //=============================================================================
 bool LiveFeed::begin_livefeed()
 {
-	/*
 	dap820Put = DapHandleOpen("\\\\.\\Dap0\\$SysIn", DAPOPEN_WRITE);
 	if (!dap820Put) {
 		char buf[64];
@@ -129,12 +126,12 @@ bool LiveFeed::begin_livefeed()
 		char buf[64];
 		DapLastErrorTextGet(buf, 64);
 		printf("DAP ERROR: %s\n", buf);
-	}*/
+	}
 	Sleep(100);		// wait .5 second for dap file to reach dap	 ?? needed
 
-	//DapLinePut(dap820Put, "START Send_Pipe_Output, Start_Output");
+	DapLinePut(dap820Put, "START Send_Pipe_Output, Start_Output");
     cam = new Camera();
-    if (cam->open_channel(0))
+    if (cam->open_channel())
     {
         cam = nullptr;
         fl_alert("The camera is already in use!\n");
@@ -183,9 +180,9 @@ bool LiveFeed::begin_livefeed()
 //=============================================================================
 void LiveFeed::stop_livefeed()
 {
-	//DapConfig(dap820Put, "\\PhotoZ\\Stop v5.dap");
-	//DapLinePut(dap820Put, "reset");
-	//DapHandleClose(dap820Put);
+	DapConfig(dap820Put, "\\PhotoZ\\Stop v5.dap");
+	DapLinePut(dap820Put, "reset");
+	DapHandleClose(dap820Put);
 	delete cam;
 	cam = nullptr;
 	delete[] image;

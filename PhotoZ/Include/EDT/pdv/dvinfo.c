@@ -1,13 +1,10 @@
 /*
  * dvinfo
  * 
- * Dianostic application that uses various EDT digital imaging applications to provide
- * system / device snapshot that can be used by users and EDT engineers to diagnose
- * problems with EDT imaging devices
+ * C program that runs various EDT PCI DV applications and sends the
+ * results to a file for use by EDT engineers in diagnosing the problem.
  *
- * run dvinfo --help for usage
- *
- * (C) 1997-2015 Engineering Design Team, Inc.
+ * (C) 1997-2009 Engineering Design Team, Inc.
  */
 #include "edtinc.h"
 
@@ -24,17 +21,16 @@
 #define OUTFILE "dvinfo.out"
 #define TMPFILE "dvinfo.tmp"
 
-#define CL_PCLOCK_RUNNING     0
-#define CL_PCLOCK_NOTRUNNING  1
-#define CL_PCLOCK_UNKNOWN     2
-#define CL_PCLOCK_NA          3
+#define CL_PCLOCK_RUNNING	0
+#define CL_PCLOCK_NOTRUNNING	1
+#define CL_PCLOCK_NA		2
 
-static void usage(char *progname, char *msg);
+static void usage(char *progname);
 static char   *grepit(char *buf, char *pat);
 
 int get_cfgfname(char *setupfile, char *cfgfname);
 int get_bdid(int unit);
-int invoke(char *cmd, char *fname);
+void invoke(char *cmd, char *fname);
 void echoit(char *str, char *fname);
 int is_simulator(int unit);
 void do_simulator(int unit, int channel);
@@ -49,7 +45,6 @@ main(int argc, char **argv)
     int     unit = 0, channel = 0;
     char   *progname = argv[0];
     char    cmdstr[128];
-    char    errmsg[128];
 
     /*
      * process command line arguments
@@ -60,49 +55,49 @@ main(int argc, char **argv)
     {
         switch (argv[0][1])
         {
-            case 'u':      /* device unit number */
+            case 'u':		/* device unit number */
                 ++argv;
                 --argc;
                 if ((argc > 0) && (argv[0][0] >= '0') && (argv[0][0] <= '9'))
                     unit = atoi(argv[0]);
                 else
                 {
-                    sprintf(errmsg, "error: '-u' option requires a numeric argument\n");
-                    usage(progname, errmsg);
+                    fprintf(stderr, "error: '-u' option requires a numeric argument\n", argv[0]);
+                    usage(progname);
                     exit(1);
                 }
                 break;
 
-            case 'c':
+            case 'c':	
                 ++argv;
                 --argc;
                 if ((argc > 0) && (argv[0][0] >= '0') && (argv[0][0] <= '9'))
                     channel = atoi(argv[0]);
                 else
                 {
-                    sprintf(errmsg, "error: '-c' option requires a numeric argument\n");
-                    usage(progname, errmsg);
+                    fprintf(stderr, "error: '-c' option requires a numeric argument\n", argv[0]);
+                    usage(progname);
                     exit(1);
                 }
                 break;
 
 
             case '-':
-                if ((strcmp(argv[0], "--help") == 0) || (strcmp(argv[0], "-h") == 0)) {
-                    usage(progname, NULL);
+                if (strcmp(argv[0], "--help") == 0) {
+                    usage(progname);
                     exit(0);
                 } else {
-                    sprintf(errmsg, "unknown option: %s\n", argv[0]);
-                    usage(progname, errmsg);
+                    fprintf(stderr, "unknown option: %s\n", argv[0]);
+                    usage(progname);
                     exit(1);
                 }
                 break;
 
             default:
-                sprintf(errmsg, "unknown flag -'%c'\n", argv[0][1]);
+                fprintf(stderr, "unknown flag -'%c'\n", argv[0][1]);
             case '?':
             case 'h':
-                usage(progname, errmsg);
+                usage(progname);
                 exit(0);
         }
         argc--;
@@ -110,7 +105,9 @@ main(int argc, char **argv)
     }
 
     /* first just echo to the file to overwrite or create it */
-    sprintf(cmdstr, "echo \"dvinfo output\" > %s", OUTFILE);
+    sprintf(cmdstr, "echo OFF", OUTFILE);
+    system(cmdstr);
+    sprintf(cmdstr, "echo dvinfo output > %s", OUTFILE);
     system(cmdstr);
 
     if (is_simulator(unit))
@@ -118,12 +115,12 @@ main(int argc, char **argv)
     else do_framegrabber(unit, channel);
     do_systemstuff();
 
-    printf("\nDone. Please include / attach the file %s in any technical support\n", OUTFILE);
+    printf("\nDone. Please include the file %s in any technical support\n", OUTFILE);
     printf("correspondence with EDT.\n\n");
 }
 
 
-    void
+void
 do_systemstuff()
 {
     char    cmdstr[128];
@@ -134,7 +131,6 @@ do_systemstuff()
     invoke("./win_sysinfo", OUTFILE);
 #else
     invoke("uname -a", OUTFILE);
-    invoke("lsb_release -a", OUTFILE);
     invoke("dmesg |tail -30", OUTFILE);
 #endif
 
@@ -146,61 +142,50 @@ do_systemstuff()
     invoke("prtconf -v -D", OUTFILE);
     invoke("isainfo -kv", OUTFILE);
 #elif __linux__
-    if (system("lspci >/dev/null 2>&1") == 0)
-        invoke("lspci -v", OUTFILE);
-    else if (system("/bin/lspci >/dev/null 2>&1") == 0)
-        invoke("/bin/lspci -v", OUTFILE);
-    else if (system("/sbin/lspci >/dev/null 2>&1") == 0)
-        invoke("/sbin/lspci -v", OUTFILE);
-
+    invoke("lspci -v", OUTFILE);
     sprintf(cmdstr, "%s /proc/cpuinfo", CAT);
     invoke(cmdstr, OUTFILE);
     sprintf(cmdstr, "%s /proc/meminfo", CAT);
     invoke(cmdstr, OUTFILE);
 #endif
 
+#ifdef _NT_
     sprintf(cmdstr, "%s ./%s", CAT, "install_pdv.log");
     invoke(cmdstr, OUTFILE);
+#endif
 
 }
 
-    void
+void
 do_simulator(int unit, int channel)
 {
     char    cmdstr[128];
 
-    printf("\npdv unit %d is configured as a SIMULATOR.\n", unit);
-    printf("\ndvinfo will run diagnostics on the board and write the output into dvinfo.out.\n");
+    printf("\npdv unit %d is configured as a SIMULATOR.\n");
+    printf("\ndvinfo will run diagnostics on the board and dump the output into dvinfo.out.\n");
     if (unit == 0)
     {
-        printf("If there are multiple EDT imaging boards in the system, you can run on\n");
-        printf("a different board by using the '-u' <unit> option. For other options, see\n");
-        printf("the users guide or run dvinfo --help.\n");
+        printf(" If there are multiple PDV boards in the\n");
+        printf("system, you can run on a different board by using the '-u' <unit> option. For\n");
+        printf("other options, see the users guide or run dvinfo --help.\n");
 
     }
     printf("\nMake sure that no other EDT DV simulator applications (e.g. edtsim) are\n");
     printf("running on this board, then press ENTER > "); fflush(stdout);
     getchar();
 
-    sprintf(cmdstr, "./setdebug -v -u %d", unit); 
+    sprintf(cmdstr, "./setdebug -v -u %d -c %d", unit, channel); 
     invoke(cmdstr, OUTFILE);
 
     invoke("./pciload", OUTFILE);
-
-    sprintf(cmdstr, "./pciload -u %d -c", unit); 
-    invoke(cmdstr, OUTFILE);
-
-    sprintf(cmdstr, "./pciediag -u %d -c %d", unit, channel); 
-    invoke(cmdstr, OUTFILE);
 
     sprintf(cmdstr, "./clsiminit -u %d -c %d -C -s -f camera_config/generic24cl.cfg", unit, channel);
     invoke(cmdstr, OUTFILE);
 }
 
-    void
+void
 do_framegrabber(int unit, int channel)
 {
-    int    ret;
     int    depth = 8;
     int    initialized = 0;
     int    cl_status = CL_PCLOCK_NA;
@@ -211,19 +196,18 @@ do_framegrabber(int unit, int channel)
     char    *countbits;
     PdvDev *pdv_p;
 
-    printf("\ndvinfo will run diagnostics on channel %d of pdv unit %d framegrabber, and\n", channel, unit);
-    printf("write the output into the file dvinfo.out. ");
+    printf("\ndvinfo will run diagnostics on pdv unit %d framegrabber, and dump the\n", unit);
+    printf("output into the file dvinfo.out.\n");
     if (unit == 0)
     {
-        printf("If there are multiple EDT imaging boards\n");
-        printf("in the system, you can run on a different board by using the -u <unit>\n");
-        printf("option. For other options, see the users guide or run dvinfo --help.\n");
+        printf(" If there are multiple PDV boards in the\n");
+        printf("system, you can run on a different board by using the '-u' <unit> option. For\n");
+        printf("other options, see the users guide or run dvinfo --help.");
 
     }
-    else printf("\n");
-    printf("\nMake sure your camera is connected and turned ON, the board has been\n");
-    printf("initialized (via initcam, pdvshow, vlviewer, etc.) and that no other EDT pdv\n");
-    printf("applications are running (e.g. pdvshow, vlviewer). Then press ENTER > "); fflush(stdout);
+    printf("\nMake sure that your camera is connected and turned ON, the board has been\n");
+    printf("initialized via initcam, camconfig or pdvshow, and that no other EDT DV\n");
+    printf("applications are running (e.g. pdvshow). Then press ENTER > "); fflush(stdout);
     getchar();
 
     sprintf(cmdstr, "./setdebug -v -u %d", unit); 
@@ -231,25 +215,10 @@ do_framegrabber(int unit, int channel)
 
     invoke("./pciload", OUTFILE);
 
-    sprintf(cmdstr, "./pciload -u %d -c", unit); 
-    invoke(cmdstr, OUTFILE);
-
-    sprintf(cmdstr, "./pciload -u %d -c | grep -i -q \"ID are the same\"", unit); 
-    ret = invoke(cmdstr, OUTFILE);
-    if (ret)
-    {
-        printf(" >> CHECK: Board firmware doesn't match the most recent file for this board,\n");
-        printf(" >>        look at CHANGELOG_PDV.txt for recommended updates\n");
-        echoit("CHECK: board firmware is not up-to-date, or non-standard", OUTFILE);
-    }
-
-    sprintf(cmdstr, "./pciediag -u %d -c %d", unit, channel); 
-    invoke(cmdstr, OUTFILE);
-
 #ifdef _NT_
     sprintf(setupfile, "./camsetup%d_0.bat", unit);
 #else
-    sprintf(setupfile, "./camsetup%d_0.sh", unit);
+    sprintf(setupfile, "./pdvload");
 #endif
 
     if (pdv_access(setupfile, 0) == 0)
@@ -259,7 +228,7 @@ do_framegrabber(int unit, int channel)
 
         if (get_cfgfname(setupfile, cfgfname) == 0)
         {
-            sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d -c %d", TMPFILE, cfgfname, unit, channel);
+            sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d", TMPFILE, cfgfname, unit);
             invoke(cmdstr, OUTFILE);
             initialized = 1;
 
@@ -302,10 +271,7 @@ do_framegrabber(int unit, int channel)
         cameralink = 1;
         if (pdv_cl_camera_connected(pdv_p))
             cl_status = CL_PCLOCK_RUNNING;
-        else if (pdv_p->devid >= PE1DVVL_ID) /* pclock reg should be implemented for all new boards */
-            cl_status = CL_PCLOCK_NOTRUNNING;
-        else
-            cl_status = CL_PCLOCK_UNKNOWN;
+        else cl_status = CL_PCLOCK_NOTRUNNING;
     }
 
     pdv_close(pdv_p);
@@ -317,7 +283,7 @@ do_framegrabber(int unit, int channel)
 
         else
         {
-            sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d -c %d", TMPFILE, cfgfname, unit, channel);
+            sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d", TMPFILE, cfgfname, unit);
             invoke(cmdstr, OUTFILE);
             initialized = 1;
 
@@ -339,14 +305,9 @@ do_framegrabber(int unit, int channel)
                 break;
 
             case CL_PCLOCK_NOTRUNNING:
-                printf(" >> CHECK: Pixel clock not detected, make sure the camera is connected and ON.\n");
-                echoit("CHECK: Pixel clock not detected, make sure the camera is connected and ON", OUTFILE);
-                break;
-
-            case CL_PCLOCK_UNKNOWN:
-                printf(" >> CHECK: Pixel clock not detected, make sure the camera is connected and ON.\n");
-                printf(" >>        NOTE: pclock counter reg. is only implemented on newer EDT boards/FPGAs.)\n");
-                echoit("CHECK: No pixel clock OR older dev/firmware w/pixel clock register not implemented", OUTFILE);
+                printf("Pixel clock not detected, make sure the camera is connected and ON.\n");
+                printf("(NOTE: The pclock counter register is only implemented on some EDT boards/FPGAs.)\n");
+                echoit("No pixel clock OR pixel clock register not implemented", OUTFILE);
                 break;
 
             case CL_PCLOCK_RUNNING:
@@ -359,14 +320,14 @@ do_framegrabber(int unit, int channel)
         }
     }
 
-    if (depth == 8) countbits = "./countbits -o taketest.raw";
+    if (depth == 8)	  countbits = "./countbits -o taketest.raw";
     else if (depth == 24) countbits = "./countbits -c -o taketest.raw";
     else if (depth > 24)  countbits = "./countbits -i -o taketest.raw";
-    else           countbits = "./countbits -w -o taketest.raw";
+    else		  countbits = "./countbits -w -o taketest.raw";
 
 
     /* some takes; 1 buffer then 4 buffers */
-    sprintf(cmdstr, "./take -v -u %d -c %d", unit, channel);
+    sprintf(cmdstr, "./take -v -u %d", unit);
     invoke(cmdstr, OUTFILE);
 
 
@@ -374,29 +335,30 @@ do_framegrabber(int unit, int channel)
     invoke(cmdstr, OUTFILE);
 
     /* take 2 images with 2 buffers */
-    sprintf(cmdstr, "./take -v -u %d -c %d -N 2 -l 2", unit, channel); 
+    sprintf(cmdstr, "./take -v -u %d -N 2 -l 2", unit); 
     invoke(cmdstr, OUTFILE);
 
     /* take 5 images with 4 buffers */
-    sprintf(cmdstr, "./take -v -u %d -c %d -N 4 -l 5", unit, channel); 
+    sprintf(cmdstr, "./take -v -u %d -N 4 -l 5", unit); 
     invoke(cmdstr, OUTFILE);
 
     /* take to a file, default exposure, then countbits */
-    sprintf(cmdstr, "./take -N 1 -u %d -c %d -f taketest.raw", unit, channel); 
+    sprintf(cmdstr, "./take -N 1 -u %d -f taketest.raw", unit); 
     invoke(cmdstr, OUTFILE);
     invoke(countbits, OUTFILE);
 
     /* take to a file with exposure 10 then countbits */
-    sprintf(cmdstr, "./take -N 1 -e 10 -u %d -c %d -f taketest.raw", unit, channel); 
+    sprintf(cmdstr, "./take -N 1 -e 10 -u %d -f taketest.raw", unit); 
     invoke(cmdstr, OUTFILE);
     invoke(countbits, OUTFILE);
 
     /* take to a file with exposure 500 then countbits */
-    sprintf(cmdstr, "./take -N 1 -e 500 -u %d -c %d -f taketest.raw", unit, channel); 
+    sprintf(cmdstr, "./take -N 1 -e 500 -u %d -f taketest.raw", unit); 
     invoke(cmdstr, OUTFILE);
     invoke(countbits, OUTFILE);
 
-    sprintf(cmdstr, "./setdebug -d 0 -u %d -c %d", unit, channel); 
+
+    sprintf(cmdstr, "./setdebug -d 0 -u %d", unit); 
     invoke(cmdstr, OUTFILE);
 
 
@@ -420,13 +382,13 @@ do_framegrabber(int unit, int channel)
 
     if (*cfgfname)
     {
-        sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d -c %d", TMPFILE, cfgfname, unit, channel);
+        sprintf(cmdstr, "./initcam -V -O %s -f %s -u %d", TMPFILE, cfgfname, unit);
         invoke(cmdstr, OUTFILE);
     }
 
 }
 
-int
+void
 invoke(char *cmd, char *outfile)
 {
     char tmpcmd[256];
@@ -447,10 +409,10 @@ invoke(char *cmd, char *outfile)
 
     /* do the command */
     sprintf(cmdstr, "%s >> %s", tmpcmd, outfile);
-    return system(cmdstr);
+    system(cmdstr);
 }
 
-    void
+void
 echoit(char *str, char *outfile)
 {
     char cmdstr[256];
@@ -460,7 +422,7 @@ echoit(char *str, char *outfile)
 
 }
 
-    int
+int
 get_bdid(int unit)
 {
     int ret;
@@ -474,7 +436,7 @@ get_bdid(int unit)
 }
 
 
-    int
+int
 get_cfgfname(char *setupfile, char *cfgfname)
 {
     char s[256];
@@ -500,7 +462,7 @@ get_cfgfname(char *setupfile, char *cfgfname)
     return 1;
 }
 
-    int
+int
 is_simulator(int unit)
 {
     PdvDev *pdv_p;
@@ -524,7 +486,7 @@ is_simulator(int unit)
  * search for a pattern in a char buffer, return pointer to next char if
  * found, NULL if not
  */
-    char   *
+char   *
 grepit(char *buf, char *pat)
 {
     int     i;
@@ -540,17 +502,11 @@ grepit(char *buf, char *pat)
     return NULL;
 }
 
-    void
-usage(char *progname, char *msg)
+void
+usage(char *progname)
 {
     puts("");
-
-    if (msg)
-        fputs(msg, stderr);
-    else printf("%s - diagnostic application for EDT digital imaging devices\n", progname); 
-
-    printf("usage: %s [-u unit] [-c channel]\n", progname);
+    printf("usage: %s [-u unit]\n", progname);
     printf("  -u unit         %s unit number (default 0)\n", EDT_INTERFACE);
-    printf("  -c channel      %s channel number (default 0)\n", EDT_INTERFACE);
 }
 

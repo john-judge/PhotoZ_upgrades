@@ -333,7 +333,6 @@ void MainController::saveValues()
 		{
 			value = data->getHalfAmpLatency();
 		}
-		
 		else if (valueType == 'Q')
 		{
 			value = data->getMaxAmp() / data->getSD();
@@ -345,6 +344,18 @@ void MainController::saveValues()
 		else if (valueType == '8')
 		{
 			value = data->getMaxSlopeLatency();
+		}
+		else if (valueType=='J')
+		{
+			value = data->getHalfWidth();
+		}
+		else if (valueType == 'K')
+		{
+			value = data->getHalfRiseTime();
+		}
+		else if (valueType == 'k')
+		{
+			value = data->getHalfDecayTime();
 		}
 		file<<index+1<<'\t'<<value<<'\n';
 	}

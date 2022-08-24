@@ -8,12 +8,12 @@
 
 #include "stdio.h"
 #include "fcntl.h"
-#include "edtimage/EdtImage.h"
+#include "edtimage/edtimage.h"
 #include "Imagefiletiff.h"
 
 #include "tiffio.h"
 
-#include "dispatch/ErrorHandler.h"
+#include "edtimage/ErrorHandler.h"
 
 static void
 IpTiffErrorHandler(const char *s1, const char *s2,va_list ap)
@@ -104,38 +104,11 @@ bool TiffIpSave(EdtImage *pImage,TIFF *tif)
 	void **pTmpRow;
 
 	pTmpRow = pImage->GetPixelRows();
-    u_char *invRow = NULL;
-	int height = pImage->GetHeight();
-	int width = pImage->GetWidth();
-    int nType = pImage->GetType();
 
-	if (nType == TypeBGR)
-        invRow = (u_char *)edt_alloc(width * 3 * sizeof(u_char));
+	int height = pImage->GetHeight();
 
 	for (int row = 0;row<height;row++,pTmpRow++)
-    {
-		if (nType == TypeBGR)
-        {
-            int i;
-            u_char tmp;
-            u_char *dp, *sp = (u_char *)*pTmpRow;
-
-            // invert BGR -> RGB 
-            for (i = 0, dp = invRow; i < width; i++, sp +=3)
-            {
-                *dp++ = *(sp+2);
-                *dp++ = *(sp+1);
-                *dp++ = *sp;
-            }
-    		TIFFWriteScanline(tif,invRow,row,0);
-        }
-        else 
-        {
-    		TIFFWriteScanline(tif,*pTmpRow,row,0);
-        }
-    }
-
-    edt_free(invRow);
+		TIFFWriteScanline(tif,*pTmpRow,row,0);
 	
 	return TRUE;
 }
@@ -148,7 +121,6 @@ int CImageFileTiff::GetImageInfo(const char *szFileName,
 
 	FILE *f;
 	bool bIsPM = FALSE;
-    int ret = 0;
 
 	f = fopen(szFileName,"r");
 
@@ -162,8 +134,11 @@ int CImageFileTiff::GetImageInfo(const char *szFileName,
 	// don't mem map for right now (jsc 1-13-97) - fails for some reason
 
 	TIFF* tif = TIFFOpen(szFileName, "ru");
+	
 
 	if (tif) {
+    
+	
 
 		uint32 imagewidth, imageheight;
 		uint16 imagedepth, planes;
@@ -179,33 +154,25 @@ int CImageFileTiff::GetImageInfo(const char *szFileName,
 		
 		switch (planes)
 		{
-    		case 1:
-            {
-    			if (imagedepth == 8)
-    				nType = TypeBYTE;
-    			else if (imagedepth == 16)
-    				nType = TypeUSHORT;
-    			else if (imagedepth == 1)
-    				nType = TypeMONO;
-    			else ret = -1;
-            }
-            break;
+		case 1:
 
-            case 3:
-            {
-    			if (imagedepth == 8)
-    				nType = TypeBGR;
-                else ret = -1;
-            }
-            break;
-        }
+			if (imagedepth == 8)
+				nType = TypeBYTE;
+			else if (imagedepth == 16)
+				nType = TypeUSHORT;
+			else if (imagedepth == 1)
+				nType = TypeMONO;
+			else
+				return -1;
+		}
  
 		TIFFClose(tif);
+
 	}
 
  	fclose(f);
 
-	return ret;
+	return 0;
 
 }
 
@@ -260,13 +227,7 @@ int CImageFileTiff::LoadEdtImage(const char *szFileName,
 					m_nType = TypeMONO;
 
 				pImage->Create(m_nType, m_nWidth, m_nHeight);
-				rc = !TiffIpLoad(pImage,tif);
-
-            case 3:
-				if (imagedepth == 8)
-					m_nType = TypeBGR;
-
-				pImage->Create(m_nType, m_nWidth, m_nHeight);
+				
 				rc = !TiffIpLoad(pImage,tif);
 				
 			break;
@@ -305,30 +266,17 @@ int CImageFileTiff::SaveImage(const char *szFileName,
 {
 
 	int rc = -1;
-    uint16 planes, depth;
-	TIFF* tif;
 
 	if (CanSave(szFileName, pImage))
 	{
+
 		SetImageValues(pImage);
 
 		switch (m_nType) {
 
 		case TypeBYTE:
 		case TypeUSHORT:
-    		tif = TIFFOpen(szFileName, "w");
-    		TIFFSetField( tif,TIFFTAG_PHOTOMETRIC,PHOTOMETRIC_MINISBLACK );
-    		TIFFSetField( tif,TIFFTAG_BITSPERSAMPLE, pImage->GetDepth() );
-    		TIFFSetField( tif,TIFFTAG_SAMPLESPERPIXEL, 1 );
 
-            break;
-
-		case TypeBGR:
-		case TypeRGB:
-    		tif = TIFFOpen(szFileName, "w");
-    		TIFFSetField( tif,TIFFTAG_PHOTOMETRIC,PHOTOMETRIC_RGB );
-    		TIFFSetField( tif,TIFFTAG_BITSPERSAMPLE, 8 );
-    		TIFFSetField( tif,TIFFTAG_SAMPLESPERPIXEL, 3 );
 			break;
 
 		default:
@@ -336,8 +284,12 @@ int CImageFileTiff::SaveImage(const char *szFileName,
 
 		}
 
+		TIFF* tif = TIFFOpen(szFileName, "w");
+
+		// fill in header
 		TIFFSetField( tif,TIFFTAG_IMAGEWIDTH,	pImage->GetWidth());
 		TIFFSetField( tif,TIFFTAG_IMAGELENGTH,	pImage->GetHeight() );
+		TIFFSetField( tif,TIFFTAG_BITSPERSAMPLE,	(int) (pImage->GetDepth()) );
 		TIFFSetField( tif,TIFFTAG_ORIENTATION,ORIENTATION_TOPLEFT );
 
 #ifdef USE_COMPRESSION
@@ -352,7 +304,10 @@ int CImageFileTiff::SaveImage(const char *szFileName,
 			}
 #endif
 			
+		TIFFSetField( tif,TIFFTAG_PHOTOMETRIC,PHOTOMETRIC_MINISBLACK );
+
 		TIFFSetField( tif,TIFFTAG_DOCUMENTNAME,szFileName );
+		TIFFSetField( tif,TIFFTAG_SAMPLESPERPIXEL,1 );
 		TIFFSetField( tif,TIFFTAG_ROWSPERSTRIP, pImage->GetHeight() );
 	//	TIFFSetField( tif,TIFFTAG_STRIPBYTECOUNTS,1 );
 		TIFFSetField( tif,TIFFTAG_PLANARCONFIG,PLANARCONFIG_CONTIG );
@@ -360,6 +315,7 @@ int CImageFileTiff::SaveImage(const char *szFileName,
 		rc = !TiffIpSave(pImage,tif);
 
 		TIFFClose(tif);
+
 
 	}
 	
@@ -375,11 +331,7 @@ int CImageFileTiff::CanSave(const char *szFileName,
 	ASSERT(szFileName);
 	ASSERT(pImage);
 
-	if ( pImage->IsAllocated() &&
-        ((pImage->GetType() == TypeUSHORT) ||
-         (pImage->GetType() == TypeBYTE) ||
-         (pImage->GetType() == TypeRGB) ||
-         (pImage->GetType() == TypeBGR))) 
+	if (pImage->IsAllocated())
 
 		return 1;
 	else

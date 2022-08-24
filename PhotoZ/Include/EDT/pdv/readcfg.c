@@ -27,7 +27,6 @@ int is_method(char *method_type, char *name);
 void strip_ctrlm(char *s);
 void strip_extra_whitespace(char *s);
 int resolve_cameratype(Dependent *dd_p);
-void add_serial_init_node(Edtinfo *ei_p, enum serial_tag tag, char *serial_init);
 
 
 /* utility routine for embedded (nofs) config file arrays -- copies and changes '\"' to '"'*/
@@ -89,8 +88,6 @@ pdv_dep_set_default(PdvDependent * dd_p)
     dd_p->default_aperture = NOT_SET;
     dd_p->binx = 1;
     dd_p->biny = 1;
-    dd_p->swinterlace = 0;
-    dd_p->interlace_module[0] = '\0';
     dd_p->byteswap = NOT_SET;
     dd_p->serial_timeout = 1000;
     dd_p->serial_response[0] = '\r';
@@ -127,8 +124,6 @@ pdv_dep_set_default(PdvDependent * dd_p)
     dd_p->startup_delay = 0;
 
     dd_p->irig_offset = 2;
-
-    dd_p->cls.pixel_clock = 20.0;
 
     /*
      * xregwrite registers can be 0-ff. We need a way to flag the
@@ -177,7 +172,8 @@ readcfg(const char *cfgfile, Dependent * dd_p, Edtinfo * ei_p, int nofs_cfg)
     ei_p->startdma = NOT_SET;
     ei_p->enddma = NOT_SET;
     ei_p->flushdma = NOT_SET;
-    ei_p->serial_init = NULL;
+    ei_p->serial_init[0] = '\0';
+    ei_p->serial_binit = NULL;
     ei_p->serial_init_delay = NOT_SET;
     ei_p->cl_mgtspeed = NOT_SET;
 
@@ -310,12 +306,14 @@ readcfg(const char *cfgfile, Dependent * dd_p, Edtinfo * ei_p, int nofs_cfg)
  * camera.
  *
  * @param cfgfile  path name of configuration file to read
- * @param dd_p     device and camera dependent information structure to fill in, defined in camera.h (user-allocated -- see #pdv_alloc_dependent) -- persistent (stored in the driver)
- * @param ei_p     structure holding non-persistent initialization strings and variables (information not in dd_p). Defined in initcam.h.
+ * @param dd_p     device and camera dependent information structure to
+ * fill in, defined in camera.h (user-allocated -- see #pdv_alloc_dependent)
+ * @param ei_p     structure with miscellaneous driver flags to fill in
+ * (information not in dd_p). Defined in initcam.h.
  *
  * @return 0 on success, -1 on failure
  *
- * @see pdv_initcam, initcam.c and initcam.h utility application source code
+ * @see initcam.c source code
  * @ingroup init
  */
     int
@@ -441,10 +439,6 @@ translate_method_arg(char *method_arg, int *method_number)
         *method_number = PDV_ILLUNIS_BGGR;
     else if (COMPARE(method_arg, "QUADRANT_INTLV"))
         *method_number = PDV_QUADRANT_INTLV;
-    else if (COMPARE(method_arg, "QUADRANT2_INTLV"))
-        *method_number = PDV_QUADRANT2_INTLV;
-    else if (COMPARE(method_arg, "QUADRANT3_INTLV"))
-        *method_number = PDV_QUADRANT3_INTLV;
     else if (COMPARE(method_arg, "DALSA_2CH_INTLV"))
         *method_number = PDV_DALSA_2CH_INTLV;
     else if (COMPARE(method_arg, "INVERT_RIGHT_INTLV_24_12"))
@@ -469,10 +463,6 @@ translate_method_arg(char *method_arg, int *method_number)
         *method_number = PDV_INTLV_10BIT_8TAP_PACKED;
     else if (COMPARE(method_arg, "INTLV_10BIT_8TAP_TO_8BIT"))
         *method_number = PDV_INTLV_10BIT_8TAP_TO_8BIT;
-    else if (COMPARE(method_arg, "INTLV_20BAND"))
-        *method_number = PDV_INTLV_20BAND;
-    else if (COMPARE(method_arg, "INTLV_21BAND"))
-        *method_number = PDV_INTLV_21BAND;
     else if (COMPARE(method_arg, "BGGR_DUAL"))
         *method_number = PDV_BGGR_DUAL;
     else if (COMPARE(method_arg, "BGGR_WORD"))
@@ -1252,10 +1242,7 @@ check_other_param(char *s, Dependent * dd_p, Edtinfo *ei_p, const char *cfgfile)
     if ((ret = check_int_method(s, "start_delay", &dd_p->start_delay, cfgfile)))
         return ret;
     if ((ret = check_int_method(s, "pclock_speed", &dd_p->pclock_speed, cfgfile)))
-    {
-        dd_p->cls.pixel_clock = (float)dd_p->pclock_speed;
         return ret;
-    }
     if ((ret = check_int_method(s, "frame_period", &dd_p->frame_period, cfgfile)))
         return ret;
 
@@ -1372,56 +1359,55 @@ check_other_param(char *s, Dependent * dd_p, Edtinfo *ei_p, const char *cfgfile)
      */
     if ((ret = check_serial_init_method(s, "serial_init", tmpserial, cfgfile)))
     {
-        if (strlen(tmpserial) >= MAXINIT) /* can concat multiple instances of this directive */
+        if (strlen(tmpserial) + strlen(ei_p->serial_init) >= MAXINIT) /* can concat multiple instances of this directive */
         {
-            edt_msg(DEBUG0, "Error in parsing %s.\nSerial init exceeds max of %s chars\n", s, MAXINIT-1);
+            edt_msg(DEBUG2, "Error in parsing %s.\nSerial initialization exceeds max of %s chars\n", s, MAXINIT-1);
+            ei_p->serial_init[0] = 0;
             return 0;
         }
 
-        add_serial_init_node(ei_p, serial_tag_ascii, tmpserial);
+        /* concatenate multiple instances */
+        if (ei_p->serial_init[0])
+            strcat(ei_p->serial_init, ":");
+        strcat(ei_p->serial_init, tmpserial);
         return ret;
     }
 
-    /* serial_init_hex and serial_binit are the same */
-    if ((ret = check_str_method(s, "serial_binit", tmpserial, MAXINIT+1, cfgfile)))
+    /* old label, now using serial_init_hex */
+    if (((ret = check_str_method(s, "serial_binit", tmpserial, MAXINIT, cfgfile)))
+     || ((ret = check_str_method(s, "serial_init_hex", tmpserial, MAXINIT, cfgfile))))
     {
-        if (strlen(tmpserial) >= MAXINIT) /* can concat multiple instances of this directive */
+        if (strlen(tmpserial) + strlen(ei_p->serial_init) >= MAXINIT) /* can concat multiple instances of this directive */
         {
-            edt_msg(DEBUG0, "Error in parsing %s.\nSerial init exceeds max of %s chars\n", s, MAXINIT-1);
+            edt_msg(DEBUG2, "Error in parsing %s.\nSerial initialization exceeds max of %s chars\n", s, MAXINIT-1);
+            ei_p->serial_init[0] = 0;
             return 0;
         }
 
-        add_serial_init_node(ei_p, serial_tag_binary, tmpserial);
-        return ret;
-    }
+        /* concatenate multiple instances */
+        if (ei_p->serial_init[0])
+            strcat(ei_p->serial_init, " ");
+        strcat(ei_p->serial_init, tmpserial);
 
-    if ((ret = check_str_method(s, "serial_init_baslerf", tmpserial, MAXINIT+1, cfgfile)))
-    {
-        if (strlen(tmpserial) >= MAXINIT) /* can concat multiple instances of this directive */
-        {
-            edt_msg(DEBUG0, "Error in parsing %s.\nSerial init exceeds max of %s chars\n", s, MAXINIT-1);
-            return 0;
-        }
-
-        add_serial_init_node(ei_p, serial_tag_baslerf, tmpserial);
-        return ret;
-    }
-
-    if ((ret = check_str_method(s, "serial_init_duncanf", tmpserial, MAXINIT+1, cfgfile)))
-    {
-        if (strlen(tmpserial) >= MAXINIT) /* can concat multiple instances of this directive */
-        {
-            edt_msg(DEBUG0, "Error in parsing %s.\nSerial init exceeds max of %s chars\n", s, MAXINIT-1);
-            return 0;
-        }
-
-        add_serial_init_node(ei_p, serial_tag_duncanf, tmpserial);
+        ei_p->serial_binit = ei_p->serial_init;
+        dd_p->serial_format = SERIAL_BINARY;
         return ret;
     }
 
     if ((ret = check_serial_init_method(s, "xilinx_init", dd_p->xilinx_init, cfgfile)))
         return ret;
 
+    if ((ret = check_str_method(s, "serial_init_baslerf", ei_p->serial_init, MAXINIT, cfgfile)))
+    {
+        dd_p->serial_format = SERIAL_BASLER_FRAMING;
+        return ret;
+    }
+
+    if ((ret = check_str_method(s, "serial_init_duncanf", ei_p->serial_init, MAXINIT, cfgfile)))
+    {
+        dd_p->serial_format = SERIAL_DUNCAN_FRAMING;
+        return ret;
+    }
     if ((ret = check_str_method(s, "cameratype", dd_p->cameratype, CAMNAMELEN, cfgfile)))
         return ret;
     if ((ret = check_str_method(s, "camera_class", dd_p->camera_class, CAMCLASSLEN, cfgfile)))
@@ -1613,10 +1599,7 @@ check_cls_param(char *s, PdvDependent *dd_p, const char *cfgfile)
         return ret;
 
     if ((ret = check_float_method(s, "cls_pixel_clock", &dd_p->cls.pixel_clock, cfgfile)))
-    {
-        dd_p->pclock_speed = (int)(dd_p->cls.pixel_clock + 0.5);
         return ret;
-    }
 
 
     return 0;
@@ -1632,15 +1615,12 @@ check_xilinx_param(char *s, Dependent * dd_p, const char *cfgfile)
 
     if (strncmp(s, "xregwrite_", 10) == 0)
     {
-        if (sscanf(s, "xregwrite_0x%x: %s", &reg, hexstr) != 2)
+        if (sscanf(s, "xregwrite_%d: %s", &reg, hexstr) != 2)
         {
-            if (sscanf(s, "xregwrite_%d: %s", &reg, hexstr) != 2)
-            {
-                edt_msg(DEBUG2,
-                        "Error in parsing %s.  Expected:\n\n\txregwrite_<decimal_reg>: <hex_parameter> or xregwrite_0x<hex_reg>: <hex_parameter>\n", cfgfile);
-                edt_msg(DEBUG2, "\nGot:\n\n\t%s\n", s);
-                return 0;
-            }
+            edt_msg(DEBUG2,
+                    "Error in parsing %s.  Expected:\n\n\txregwrite_<reg>: <hex_parameter>\n", cfgfile);
+            edt_msg(DEBUG2, "\nGot:\n\n\t%s\n", s);
+            return 0;
         }
 
         if (reg > 0xfe)
@@ -1856,26 +1836,3 @@ resolve_cameratype(Dependent *dd_p)
         return 1;
     return 0;
 }
-
-void
-add_serial_init_node(Edtinfo *ei_p, enum serial_tag tag, char *serial_init)
-{
-    SerialInitNode *newp = (SerialInitNode *)malloc(sizeof(SerialInitNode));
-    SerialInitNode *nextp = ei_p->serial_init;
-
-    if (ei_p->serial_init == NULL)
-        ei_p->serial_init = newp;
-
-    else
-    {
-        while (nextp->next)
-            nextp = nextp->next;
-        nextp->next = newp;
-    }
-
-    newp->next = NULL;
-    newp->tag = tag;
-    newp->data = (char *)malloc(strlen(serial_init) + 2); /* add 2 for parse ':' (+ 1 more for good measure) */
-    strcpy(newp->data, serial_init);
-}
-

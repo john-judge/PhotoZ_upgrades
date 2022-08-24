@@ -1,5 +1,5 @@
 //
-// "$Id$"
+// "$Id: glu.h 8864 2011-07-19 04:49:30Z greg.ercolano $"
 //
 // GLu header file for the Fast Light Tool Kit (FLTK).
 //
@@ -47,5 +47,5 @@
 #endif // !FL_glu_H
 
 //
-// End of "$Id$".
+// End of "$Id: glu.h 8864 2011-07-19 04:49:30Z greg.ercolano $".
 //

@@ -49,30 +49,17 @@ void Diode::draw()
 }
 
 //=============================================================================
-bool Diode::drawTrace(double *proData)
+void Diode::drawTrace(double *proData)
 {
-	int xCenter = x();
-	int yCenter = y() - h() / 2;
-
-	// For efficiency, don't draw if this diode is outside the drawing area 12/12/2020 JMJ
-	if (xCenter > aw->w() || 
-		xCenter < -aw->w() || 
-		yCenter > aw->h() || 
-		yCenter < -aw->h()) {
-		//cout << "not drawing diode at (" << xCenter << ", " << yCenter << \
-			") is outside array window of size " << aw->w() << " x " << aw->h() << "\n";
-		return false;
-	}
-
-	int numPts = dc->getNumPts();
-	double intPts = double(w()) / numPts;
+	int numPts=dc->getNumPts();
+	double intPts=double(w())/numPts;
 
 	// Draw fewer points as the drawing space gets smaller
-	int step = numPts / (max(1, w() * 4));
+	int step = numPts / (w() * 4);
 	step = max(1, step);
 
 	// Clip the drawing area
-	fl_push_clip(xCenter, yCenter, max(1, w() - 1), 2 * h());	//	Changed to allow denser display in array window
+	fl_clip(x(),y()-h()/2,w()-1,2*h());
 	{
 		// Push The Current Matrix
 		fl_push_matrix();
@@ -80,7 +67,7 @@ bool Diode::drawTrace(double *proData)
 			//-----------------------
 			// Translation & Scaling
 			//-----------------------
-			fl_translate(xCenter, y() + 0.7 * h());
+			fl_translate(x(),y()+0.7*h());
 
 			if(!fpFlag)
 			{
@@ -92,7 +79,6 @@ bool Diode::drawTrace(double *proData)
 			}
 
 			fl_translate(aw->getXShift(),0);
-
 
 			//-----------------------
 			// Set Color
@@ -139,7 +125,6 @@ bool Diode::drawTrace(double *proData)
 		fl_pop_matrix();
 	}
 	fl_pop_clip();
-	return true;
 }
 
 //=============================================================================
@@ -182,24 +167,8 @@ int Diode::handle(int event)
 	{
 		//case FL_KEYUP:
 			//if(event_key)
-		case FL_RELEASE:
-			if (Fl::event_button() == 1) {
 
-				if (!aw->get_drag_active()) return Fl_Widget::handle(event);
-
-				aw->release_drag();
-				//clearSelected(); // if just finished dragging, probably didn't want to select
-
-				return Fl_Widget::handle(event);
-			}
-		case FL_DRAG:
-			if (Fl::event_button() == 1) {
-				aw->set_drag_active();
-				return Fl_Widget::handle(event);
-			}
 		case FL_PUSH:
-			if (Fl::event_state(FL_CTRL)) return Fl_Widget::handle(event);
-
 			if (aw->getContinuous()) {
 				//if (mouseButton == 1)	// Left Button is Down
 				//{
@@ -220,7 +189,7 @@ int Diode::handle(int event)
 				//==============
 				// Ignornance
 				//==============
-				if (Fl::event_state(FL_SHIFT))	// Shift or Ctrl key is down.
+				if (Fl::event_state(FL_SHIFT))	// Shift key is down.
 				{
 					if (mouseButton == 1)			// Left Button is Down
 					{
@@ -232,7 +201,7 @@ int Diode::handle(int event)
 				//==============
 				// Selection
 				//==============
-				else 
+				else
 				{
 					if (mouseButton == 1)	// Left Button is Down
 					{
