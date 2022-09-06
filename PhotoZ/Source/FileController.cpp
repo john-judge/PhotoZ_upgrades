@@ -81,16 +81,19 @@ int FileController::openNPFile()
 int FileController::openFileByName(const char *name)
 {
 	strcpy_s(fileName, 64, name);
+	cout << "opening: " << name << "\n";
 
 	// Load data
 	if(loadWholeFile())
 	{
+		cout << "File loaded successfully\n";
 		recControl->setTrialNo(char(0));
 		dataArray->average();
 		return 1;
 	}
 	else
 	{
+		cout << "File could not be loaded.\n";
 		return 0;
 	}
 }
@@ -147,8 +150,7 @@ int FileController::loadRecControl(fstream &file)
 		fl_alert("File Format is not correct! - Hexagonal data (use older version)\n");
 		return 0;
 	} else if(chBuf != 5) {
-		fl_alert("File Format is not correct!\n");
-		return 0;
+		cout << "File Format is not correct! But I will allow it anyway because this PhotoZ version is hacked.\n";
 	}
 
 	// Slice Number
@@ -251,8 +253,8 @@ int FileController::loadRecControl(fstream &file)
 	// depth set at a constant 2 bytes (hopefully) otherwise there is trouble
 	file.read((char*)&nBuf, nSize);
 	// divide and round up
-	if ((nBuf + (8-1)) / 8 != 2)
-		return 0;
+	//if ((nBuf + (8-1)) / 8 != 2) // Hacked -- assume 2-byte depth is there.
+	//	return 0;
 //	else
 //		int test = dataArray->depth();
 	return 1;
