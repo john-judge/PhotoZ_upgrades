@@ -27,23 +27,16 @@ void MainController::takeRli()
 {
 	int i, j;		// i is array index; j = time index
 
-	Camera cam;
 
-	// Now that channel(s) are open, and set camera dimensions
-	cam.setCamProgram(dc->getCameraProgram());
-	cam.init_cam();
-	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
+	//cam->program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
 	int array_diodes = dataArray->num_raw_array_diodes();
 	int num_RLI_pts = 480;
 	
-	//-------------------------------------------
-	// validate image quadrant size match expected
-	if (!cam.isValidPlannedState(array_diodes)) return;
 
 	//-------------------------------------------
 	// Allocate image memory 
-	unsigned short* memory = cam.allocateImageMemory(array_diodes, num_RLI_pts+1);
+	unsigned short* memory = dc->cam->allocateImageMemory(array_diodes, num_RLI_pts+1);
 
 	//-------------------------------------------
 	// Allocate trace data
@@ -52,11 +45,9 @@ void MainController::takeRli()
 		traceData[i] = new short[num_RLI_pts];
 	}
 
-	cam.get_image_info(0);
-
 	dapControl->setDAPs();			//conveted to DAQmx
 
-	if (dapControl->takeRli(memory, cam, num_RLI_pts))
+	if (dapControl->takeRli(memory, num_RLI_pts))
 		fl_alert(" Main Controller::takeRli Timeouts ocurred! Check camera and connections.");
 	dapControl->releaseDAPs();
 
@@ -140,26 +131,9 @@ void MainController::acquiOneRecord()
 	int num_diodes = dataArray->num_raw_diodes();
 	// Note: previously, OG PhotoZ had a feature for number of "skipped trials"
 
-	Camera cam;
-	cam.setCamProgram(dc->getCameraProgram());	
-	//-------------------------------------------
-	// Attempt channel open before allocating memory
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		if (cam.open_channel(ipdv)) {
-			fl_alert("Main Cont Acq acquiOneRecord Failed to open the channel!\n");
-			return;
-		}
-	}
-	// Now that channel(s) are open, read .cfg files and set camera dimensions
-	cam.init_cam();
-
-	//-------------------------------------------
-	// validate image quadrant size match expected, informs user of issues
-	if (!cam.isValidPlannedState(num_diodes, dataArray->num_diodes_fp())) return;
-
 	//-------------------------------------------
 	// Allocate Memory
-	unsigned short* memory = cam.allocateImageMemory(num_diodes, numPts);
+	unsigned short* memory = cam->allocateImageMemory(num_diodes, numPts);
 
 	//-------------------------------------------
 	// Trial Acquisition Loop
@@ -209,9 +183,6 @@ void MainController::acquiOneRecord()
 		dapControl->setDAPs();
 		dapControl->resetDAPs();
 		dapControl->createAcquiDapFile();
-
-		cam.program(dc->getCameraProgram());
-
 
 		// Send "Dap" File to the "DAP" board (the NI-DAQ)
 		int status = dapControl->sendFile2Dap("Record-820 v5.dap");

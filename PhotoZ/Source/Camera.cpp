@@ -209,12 +209,12 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	Sleep(20);
 
 	/*
-	cam.serial_write("@AAM?\r");
-	cam.serial_read(buf, bufsize);
+	cam->serial_write("@AAM?\r");
+	cam->serial_read(buf, bufsize);
 	printf("%s\n", buf);
 
-	cam.serial_write("@REP?\r");
-	cam.serial_read(buf, bufsize);
+	cam->serial_write("@REP?\r");
+	cam->serial_read(buf, bufsize);
 	printf("%s\n", buf);
 	*/
 
@@ -546,7 +546,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 // Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
 
-	// NOTE: cam.height and cam.width are the RAW QUADRANT sizes
+	// NOTE: cam->height and cam->width are the RAW QUADRANT sizes
 	// i.e. the size of a quadrant BEFORE CDS subtraction
 	
 	int channelOrders[16] = { 2, 3, 1, 0,
