@@ -64,6 +64,8 @@ public:
 	DapChannel* sti1;
 	DapChannel* sti2;
 
+	Camera* cam;
+
 	void NiErrorDump();
 
 	// Set DAP and release DAP
