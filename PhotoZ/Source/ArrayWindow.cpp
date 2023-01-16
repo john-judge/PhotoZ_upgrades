@@ -37,7 +37,6 @@ ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
 :Fl_Double_Window(X,Y,W,H)
 {
 	image = new Image();
-
 	bg_image = new Fl_OpenCV(0, 0, 1, 1);
 
 	// indexes of the FP diodes will be negative

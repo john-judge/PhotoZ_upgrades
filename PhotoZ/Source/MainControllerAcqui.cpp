@@ -36,7 +36,8 @@ void MainController::takeRli()
 
 	//-------------------------------------------
 	// Allocate image memory 
-	unsigned short* memory = dc->cam->allocateImageMemory(array_diodes, num_RLI_pts+1);
+	Camera cam;
+	unsigned short* memory = cam.allocateImageMemory(array_diodes, num_RLI_pts+1);
 
 	//-------------------------------------------
 	// Allocate trace data
@@ -45,11 +46,8 @@ void MainController::takeRli()
 		traceData[i] = new short[num_RLI_pts];
 	}
 
-	dapControl->setDAPs();			//conveted to DAQmx
-
-	if (dapControl->takeRli(memory, num_RLI_pts))
+	if (dapControl->takeRli(memory))
 		fl_alert(" Main Controller::takeRli Timeouts ocurred! Check camera and connections.");
-	dapControl->releaseDAPs();
 
 	// Arrange Data from Memory to traceData
 
@@ -133,7 +131,9 @@ void MainController::acquiOneRecord()
 
 	//-------------------------------------------
 	// Allocate Memory
-	unsigned short* memory = cam->allocateImageMemory(num_diodes, numPts);
+	Camera cam;
+	unsigned short* memory = cam.allocateImageMemory(num_diodes, numPts);
+	int16 *fp_memory = new(std::nothrow) int16[(size_t)((numPts + 1) * NUM_PDV_CHANNELS)];
 
 	//-------------------------------------------
 	// Trial Acquisition Loop
@@ -178,22 +178,8 @@ void MainController::acquiOneRecord()
 
 		if (dapControl->getStopFlag()) break;
 
-		//-------------------------------------------
-		// Recording
-		dapControl->setDAPs();
-		dapControl->resetDAPs();
-		dapControl->createAcquiDapFile();
-
-		// Send "Dap" File to the "DAP" board (the NI-DAQ)
-		int status = dapControl->sendFile2Dap("Record-820 v5.dap");
-
-		if (status == 0) {// Failed to Send Dap File
-			fl_alert("MCA acquiOneRecord Failed to Send \"DAP\" files to NI-USB!\n");
-			goto error;
-		}
-
 		fr_st = clock();
-		int timeouts = dapControl->acqui(memory, cam);
+		int timeouts = dapControl->acqui(memory, fp_memory);
 		fr_end = clock();
 
 		double runtime = (double)(fr_end - fr_st) / CLOCKS_PER_SEC;
@@ -230,7 +216,7 @@ void MainController::acquiOneRecord()
 			dapControl->pseudoAcqui();
 		}*/
 
-		dapControl->releaseDAPs();
+		// dapControl->releaseDAPs();
 	}
 
 	// Release Memory
@@ -252,7 +238,7 @@ void MainController::acquiOneRecord()
 
 error:
 	delete[] memory;
-	dapControl->releaseDAPs();
+	// dapControl->releaseDAPs();
 	return;
 }
 

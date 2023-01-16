@@ -124,19 +124,7 @@ Camera::Camera() {
 }
 
 Camera::~Camera() {
-	int retry = 0;
-	for (int i = 0; i < NUM_PDV_CHANNELS; i++) {
-		if (pdv_pt[i]) {
-			while (pdv_close(pdv_pt[i]) < 0 && retry != 1) {
-				retry = fl_choice("Failed to close PDV channel. Retry or restart the camera manually.", "Retry", "Exit", "Debugging Info");
-				if (retry == 2) {
-					cout << "Current state of pdv_pt[]\n";
-					for (int j = 0; j < 4; j++)  cout << "pdv_pt[" << j << "]: " << pdv_pt[j] << "\n";
-				}
-				if (retry != 1) cout << "Reattempting to close channel " << i << "...\n";
-			}
-		}
-	}
+	close_channels();
 }
 
 int Camera::open_channel(int ipdv) {
@@ -158,6 +146,23 @@ int Camera::open_channel(int ipdv) {
 
 	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
+}
+
+int Camera::close_channels() {
+	int retries = 2;
+	for (int i = 0; i < NUM_PDV_CHANNELS; i++) {
+		if (pdv_pt[i]) {
+			while (pdv_close(pdv_pt[i]) < 0 && retries != 1) {
+				if (retries > 0) {
+					cout << "Current state of pdv_pt[]\n";
+					for (int j = 0; j < 4; j++)  cout << "pdv_pt[" << j << "]: " << pdv_pt[j] << "\n";
+				}
+				if (retries > 0) cout << "Reattempting to close channel " << i << "...\n";
+				retries--;
+			}
+		}
+	}
+	return (retries == 2) ? 1 : 0;
 }
 
 unsigned char* Camera::single_image(int ipdv)			//used by LiveFeed.cpp

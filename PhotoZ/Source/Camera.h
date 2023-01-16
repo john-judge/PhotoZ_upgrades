@@ -77,6 +77,7 @@ public:
 	~Camera();
 
 	int open_channel(int ipdv);
+	int close_channels();
 
 	unsigned char* single_image(int ipdv);
 	void start_images(int ipdv, int count);

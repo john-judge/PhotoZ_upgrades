@@ -28,7 +28,8 @@ using namespace std;
  * was found
  */
 #define CAM_INPUT_OFFSET 10
-#define DAQmxErrChk(functionCall)  if( DAQmxFailed(error=(functionCall)) ) NiErrorDump(); else
+#define NUM_BNC_CHANNELS 4
+#define DAQmxErrChk(functionCall)  if( DAQmxFailed(error=(functionCall)) ) NiErrorDump(error); else
 
  //=============================================================================
 DapController::DapController()
@@ -47,8 +48,7 @@ DapController::DapController()
 	program = 7;
 	numPts = 2000;
 
-	cam = new Camera();
-	intPts = 1000.0 / cam->FREQ[program];
+	intPts = 1000.0 / Camera::FREQ[program];
 
 	// Flags
 	stopFlag = 0;
@@ -71,12 +71,14 @@ DapController::DapController()
 
 	// Set Duration
 	setDuration();
-
-	cam->init_cam();
 	
 	// Default RLI settings
 	darkPts = 200;
 	lightPts = 280;
+
+	// Live Feed Frame
+	liveFeedFrame = NULL;
+	liveFeedCam = NULL;
 
 }
 
@@ -88,13 +90,32 @@ DapController::~DapController()
 	delete shutter;
 	delete sti1;
 	delete sti2;
-	releaseDAPs();
+	stop();
 }
 
-void DapController::NiErrorDump() {
+void NiErrorDump(int32 error) {
+	char    errBuff[2048] = { '\0' };
 	if (DAQmxFailed(error))
 		DAQmxGetExtendedErrorInfo(errBuff, 2048);
 	cout << errBuff;
+}
+
+
+int32 CVICALLBACK DoneCallback(TaskHandle taskHandle, int32 status, void* callbackData)
+{
+	int32   error = 0;
+	char    errBuff[2048] = { '\0' };
+
+	// Check to see if an error stopped the task.
+	//DAQmxErrChk(status);
+
+Error:
+	if (DAQmxFailed(error)) {
+		DAQmxGetExtendedErrorInfo(errBuff, 2048);
+		DAQmxClearTask(taskHandle);
+		fprintf(stdout, "DAQmx Error: %s\n", errBuff);
+	}
+	return 0;
 }
 
 //=============================================================================
@@ -166,17 +187,9 @@ double DapController::getIntPts()
 //=============================================================================
 int DapController::acqui(unsigned short *memory, int16* fp_memory)
 {
-	cam->prepare_acqui();
-	int superframe_factor = cam->get_superframe_factor();
-
-	// Start image for cam FIRST, THEN start NI tasks
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-
-		int loops = getNumPts() / superframe_factor; // superframing 
-
-		// Start all images
-		cam->start_images(ipdv, loops);
-	}
+	Camera cam;
+	cam.setCamProgram(getCameraProgram());
+	cam.init_cam();
 
 	//-------------------------------------------
 	// Initialize NI tasks
@@ -187,9 +200,11 @@ int DapController::acqui(unsigned short *memory, int16* fp_memory)
 
 	//-------------------------------------------
 	// Initialize variables for camera data management
-	int width = cam->width();
-	int height = cam->height();
+	int width = cam.width();
+	int height = cam.height();
 	int quadrantSize = width * height;
+
+	int superframe_factor = cam.get_superframe_factor();
 
 	int32 defaultSuccess = -1;
 	int32* successfulSamples = &defaultSuccess;
@@ -262,11 +277,14 @@ int DapController::acqui(unsigned short *memory, int16* fp_memory)
 		unsigned char* image;
 		int loops = getNumPts() / superframe_factor; // superframing 
 
+		// Start all images
+		cam.start_images(ipdv, loops);
+
 		unsigned short* privateMem = memory + (ipdv * quadrantSize * getNumPts()); // pointer to this thread's section of MEMORY	
 		for (int i = 0; i < loops; i++)
 		{
 			// acquire data for this image from the IPDVth channel	
-			image = cam->wait_image(ipdv);
+			image = cam.wait_image(ipdv);
 
 			// Save the image(s) to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short) * superframe_factor);
@@ -288,7 +306,7 @@ int DapController::acqui(unsigned short *memory, int16* fp_memory)
 				total_read += read;
 			}
 		}
-		cam->end_images(ipdv);
+		cam.end_images(ipdv);
 	}
 	//NI_openShutter(0);
 	cout << "Total read: " << total_read << "\n";
@@ -302,7 +320,7 @@ int DapController::acqui(unsigned short *memory, int16* fp_memory)
 
 	//=============================================================================	
 	// Image reassembly	
-	cam->reassembleImages(memory, numPts);
+	cam.reassembleImages(memory, numPts);
 
 	//=============================================================================	
 	// FP reassembly
@@ -320,61 +338,18 @@ int DapController::acqui(unsigned short *memory, int16* fp_memory)
 
 	//delete[] tmp_fp_memory;
 
-	cam->set_freerun_mode();
 
 	return 0;
-}
-
-//=============================================================================
-void DapController::resetDAPs()
-{
-	// just ensure stopped
-	DAQmxErrChk(DAQmxStopTask(taskHandleAcquiAI));
-	DAQmxErrChk(DAQmxStopTask(taskHandleAcquiDO));
-	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
-}
-
-void DapController::resetCamera()
-{
-	int	sure = fl_ask("Are you sure you want to reset camera?");
-	if (sure == 1) {
-		for (int ipdv = 0; ipdv < 4; ipdv++) {
-			cam->end_images(ipdv);
-		}
-		char command1[80];
-		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");	//	command sequence from Chun B 4/22/2020
-		system(command1);
-		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_0 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-		system(command1);
-		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv0_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-		system(command1);
-		sprintf(command1, "c:\\EDT\\pdv\\initcam -u pdv1_1 -f c:\\EDT\\pdv\\camera_config\\DM2K_1024x20.cfg");
-		system(command1);
-		cout << " DapC resetCamera reset camera " << endl;
-	}
-	for (int ipdv = 0; ipdv < 4; ipdv++) {
-		try {
-			if (cam->open_channel(ipdv)) {
-				fl_alert("DapC resetCamera Failed to open the channel!\n");
-			}
-		}
-		catch (exception& e) {
-			cout << e.what() << '\n';
-		}
-	}
 }
 
 //=============================================================================
 int DapController::stop()
 {
 	stopFlag = 1;
-	//resetDAPs();
-	DAQmxErrChk(DAQmxStopTask(taskHandleAcquiAI));
-	DAQmxErrChk(DAQmxStopTask(taskHandleAcquiDO));
-	DAQmxErrChk(DAQmxStopTask(taskHandleRLI));
+	NI_stopTasks();
+	NI_clearTasks();
 	return  0;
 }
-
 
 //=============================================================================
 void DapController::setDuration()
@@ -427,16 +402,20 @@ char DapController::getStopFlag()
 }
 
 //=============================================================================
-int Controller::takeRli(unsigned short* memory) {
+int DapController::takeRli(unsigned short* memory) {
 
-	cam->prepare_acqui();
+	Camera cam;
+
+	cam.setCamProgram(getCameraProgram());
+	cam.init_cam();
+
 	int rliPts = darkPts + lightPts;
 
-	int width = cam->width();
-	int height = cam->height();
+	int width = cam.width();
+	int height = cam.height();
 	int quadrantSize = width * height;
 
-	int superframe_factor = cam->get_superframe_factor();
+	int superframe_factor = cam.get_superframe_factor();
 
 	omp_set_num_threads(NUM_PDV_CHANNELS);
 	// acquire dark frames with LED off	
@@ -446,13 +425,13 @@ int Controller::takeRli(unsigned short* memory) {
 		int loops = darkPts / superframe_factor; // superframing 
 
 		// Start all images
-		cam->start_images(ipdv, loops);
+		cam.start_images(ipdv, loops);
 
 		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts); // pointer to this thread's section of MEMORY	
 		for (int i = 0; i < loops; i++)
 		{
 			// acquire data for this image from the IPDVth channel	
-			image = cam->wait_image(ipdv);
+			image = cam.wait_image(ipdv);
 
 			// Save the image(s) to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short) * superframe_factor);
@@ -469,7 +448,7 @@ int Controller::takeRli(unsigned short* memory) {
 		unsigned char* image;
 		int loops = lightPts / superframe_factor; // superframing 
 
-		cam->start_images(ipdv, loops);
+		cam.start_images(ipdv, loops);
 
 		unsigned short* privateMem = memory + (ipdv * quadrantSize * rliPts) // pointer to this thread's section of MEMORY	
 			+ (quadrantSize * darkPts); // offset of where we left off	
@@ -477,14 +456,14 @@ int Controller::takeRli(unsigned short* memory) {
 		for (int i = 0; i < loops; i++) 		// acquire rest of frames with LED on	
 		{
 			// acquire data for this image from the IPDVth channel	
-			image = cam->wait_image(ipdv);
+			image = cam.wait_image(ipdv);
 
 			// Save the image(s) to process later	
 			memcpy(privateMem, image, quadrantSize * sizeof(short) * superframe_factor);
 			privateMem += quadrantSize * superframe_factor; // stride to the next destination for this channel's memory	
 
 		}
-		cam->end_images(ipdv);
+		cam.end_images(ipdv);
 	}
 	NI_openShutter(0); // light off	
 	NI_stopTasks();
@@ -492,7 +471,7 @@ int Controller::takeRli(unsigned short* memory) {
 
 	//=============================================================================	
 	// Image reassembly	
-	cam->reassembleImages(memory, rliPts); // deinterleaves, CDS subtracts, and arranges data
+	cam.reassembleImages(memory, rliPts); // deinterleaves, CDS subtracts, and arranges data
 
 	// Debug: print reassembled images out
 	/*
@@ -506,14 +485,14 @@ int Controller::takeRli(unsigned short* memory) {
 		(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
 	*/
 
-	cam->set_freerun_mode();
+	cam.set_freerun_mode();
 
 	return 0;
 }
 
 
 //=============================================================================
-void Controller::NI_fillOutputs()
+void DapController::NI_fillOutputs()
 {
 
 	float start, end;
@@ -591,17 +570,17 @@ void Controller::NI_fillOutputs()
 
 //=============================================================================
 //============================  Live Feed  ====================================
-void Controller::startLiveFeed(unsigned short* frame, bool* flags) {
+void DapController::startLiveFeed(unsigned short* frame, bool* flags) {
 	liveFeedFrame = frame;
 	liveFeedFlags = flags;
 }
 
 // This is launched by Python application as a separate thread (sep from GUI and plotter daemons)
-void Controller::continueLiveFeed() {
+void DapController::continueLiveFeed() {
 	// populate liveFeedFrame with the next image.
-	if (!cam) return;
-	int width = cam->width();
-	int height = cam->height();
+	if (!liveFeedCam) return;
+	int width = liveFeedCam->width();
+	int height = liveFeedCam->height();
 	int quadrantSize = width * height;
 
 	// Temporary memory for storing last image
@@ -610,12 +589,12 @@ void Controller::continueLiveFeed() {
 	NI_openShutter(1);
 
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		cam->start_images(ipdv, 0); // start free run
+		liveFeedCam->start_images(ipdv, 0); // start free run
 	}
 	unsigned char* images[NUM_PDV_CHANNELS];
 	// Gather first image just for reset rows.
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		images[ipdv] = cam->wait_image(ipdv);
+		images[ipdv] = liveFeedCam->wait_image(ipdv);
 		memcpy(tmp + quadrantSize * ipdv, images[ipdv], quadrantSize * sizeof(short));
 	}
 
@@ -628,19 +607,19 @@ void Controller::continueLiveFeed() {
 
 		// Gather second image to display. Keep in channel-major order
 		for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-			images[ipdv] = cam->wait_image(ipdv);
+			images[ipdv] = liveFeedCam->wait_image(ipdv);
 			memcpy(liveFeedFrame + (quadrantSize * (ipdv * 2 + 1)), images[ipdv], quadrantSize * sizeof(short));
 			memcpy(tmp + quadrantSize * ipdv, images[ipdv], quadrantSize * sizeof(short)); // and for next image also
 		}
 
-		cam->reassembleImages(liveFeedFrame, 2);
+		liveFeedCam->reassembleImages(liveFeedFrame, 2);
 
 		//memcpy(liveFeedFrame, liveFeedFrame + quadrantSize * NUM_PDV_CHANNELS / 2, quadrantSize * NUM_PDV_CHANNELS * sizeof(short) / 2);
 		liveFeedFlags[0] = true;
 
 		// Debug -- output to file
 		//std::string filename = "full-out1.txt";
-		//cam->printFinishedImage(liveFeedFrame, filename.c_str(), true);
+		//liveFeedCam->printFinishedImage(liveFeedFrame, filename.c_str(), true);
 
 		while (liveFeedFlags[0] and !liveFeedFlags[1]) { // wait for plotter to be ready for next image
 			Sleep(10);
@@ -650,34 +629,36 @@ void Controller::continueLiveFeed() {
 	cout << "Acqui daemon has read stop-loop flag, stopping.\n";
 
 	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		cam->start_images(ipdv, 1); // end free run
-		cam->end_images(ipdv);
+		liveFeedCam->start_images(ipdv, 1); // end free run
+		liveFeedCam->end_images(ipdv);
 	}
 
 	stopLiveFeed(); // prepare for later hardware use
-
 }
 
-void Controller::stopLiveFeed() {
+void DapController::stopLiveFeed() {
 	NI_openShutter(0);
 	NI_stopTasks();
 	NI_clearTasks();
+	if (liveFeedCam) {
+		delete liveFeedCam;
+	}
+	liveFeedCam = NULL;
+	liveFeedFrame = NULL; 
 
-	liveFeedFrame = NULL; // This will be freed by Python side
-
-	// let plotter daemon know it's ok to cleanup up flags and mark hardware ready:
 	liveFeedFlags[1] = false;
 }
 //=============================================================================
 
-void Controller::resetCamera()
+void DapController::resetCamera()
 {
+	Camera cam;
 	for (int ipdv = 0; ipdv < 4; ipdv++) {
-		cam->end_images(ipdv);
+		cam.end_images(ipdv);
 	}
-	cam->close_channels();
+	cam.close_channels();
 
-	cam->init_cam();
+	cam.init_cam();
 }
 
 //=============================================================================
@@ -748,21 +729,12 @@ char DapController::getScheduleRliFlag() {
 	return scheduleRliFlag;
 }
 
-//=============================================================================
-int DapController::setDAPs(float64 SamplingRate)
-{
-	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandleGet));
-	DAQmxErrChk(DAQmxCreateTask("  ", &taskHandlePut));
-	//int32 DAQmxCreateDOChan (TaskHandle taskHandle, const char lines[], const char nameToAssignToLines[], int32 lineGrouping);
-		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreatedochan/
-		//Channel names: http://zone.ni.com/reference/en-XX/help/370466AH-01/mxcncpts/physchannames/
-//	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line0:1", "", DAQmx_Val_ChanForAllLines));	//			this one did not work and was changed to the line below
-	DAQmxErrChk(DAQmxCreateDOChan(taskHandlePut, "Dev1/port0/line1", "ledOutP0L0", DAQmx_Val_ChanForAllLines));
-	//Set timing.
-	//int32 DAQmxCfgSampClkTiming (TaskHandle taskHandle, const char source[], float64 rate, int32 activeEdge, int32 sampleMode, uInt64 sampsPerChanToAcquire);
-		//http://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcfgsampclktiming/
-	DAQmxErrChk(DAQmxCfgSampClkTiming(taskHandlePut, NULL, SamplingRate, DAQmx_Val_Rising, DAQmx_Val_FiniteSamps, 348));
-	return 0;
+void DapController::setShutterOnset(float v) {
+	shutter->setOnset(v);
+}
+
+float DapController::getShutterOnset() {
+	return shutter->getOnset();
 }
 
 //=============================================================================
@@ -791,21 +763,21 @@ Error:
 }
 
 //=============================================================================
-void Controller::NI_stopTasks()
+void DapController::NI_stopTasks()
 {
-	if (taskHandle_in) DAQmxErrChk(DAQmxStopTask(taskHandle_in));
-	if (taskHandle_out) DAQmxErrChk(DAQmxStopTask(taskHandle_out));
-	if (taskHandle_clk) DAQmxErrChk(DAQmxStopTask(taskHandle_clk));
-	if (taskHandle_led) DAQmxErrChk(DAQmxStopTask(taskHandle_led));
+	if (taskHandle_in) DAQmxStopTask(taskHandle_in);
+	if (taskHandle_out) DAQmxStopTask(taskHandle_out);
+	if (taskHandle_clk) DAQmxStopTask(taskHandle_clk);
+	if (taskHandle_led) DAQmxStopTask(taskHandle_led);
 }
 
 //=============================================================================
-void Controller::NI_clearTasks()
+void DapController::NI_clearTasks()
 {
-	if (taskHandle_in) DAQmxErrChk(DAQmxClearTask(taskHandle_in));
-	if (taskHandle_out) DAQmxErrChk(DAQmxClearTask(taskHandle_out));
-	if (taskHandle_clk) DAQmxErrChk(DAQmxClearTask(taskHandle_clk));
-	if (taskHandle_led) DAQmxErrChk(DAQmxClearTask(taskHandle_led));
+	if (taskHandle_in) DAQmxClearTask(taskHandle_in);
+	if (taskHandle_out) DAQmxClearTask(taskHandle_out);
+	if (taskHandle_clk) DAQmxClearTask(taskHandle_clk);
+	if (taskHandle_led) DAQmxClearTask(taskHandle_led);
 
 	taskHandle_led = NULL;
 	taskHandle_clk = NULL;
@@ -813,12 +785,9 @@ void Controller::NI_clearTasks()
 	taskHandle_out = NULL;
 }
 
-//=============================================================================
-void DapController::releaseDAPs()
-{
-	DAQmxClearTask(taskHandleAcquiAI); 
-	DAQmxClearTask(taskHandleAcquiDO);
-	DAQmxClearTask(taskHandleRLI);
+size_t DapController::get_digital_output_size() {
+	return numPts;
+	//return (size_t)duration + 10;
 }
 
 //=============================================================================
