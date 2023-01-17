@@ -77,12 +77,16 @@ public:
 	~Camera();
 
 	int open_channel(int ipdv);
+	int close_channels();
 
 	unsigned char* single_image(int ipdv);
 	void start_images(int ipdv, int count);
 	void end_images(int ipdv);
 	void load_cfg();
 	void init_cam();
+
+	void prepare_acqui();
+	void set_freerun_mode();
 
 	void setCamProgram(int p);
 	unsigned char* wait_image(int ipdv);

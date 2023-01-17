@@ -27,22 +27,16 @@ void MainController::takeRli()
 {
 	int i, j;		// i is array index; j = time index
 
-	Camera cam;
 
-	// Now that channel(s) are open, and set camera dimensions
-	cam.setCamProgram(dc->getCameraProgram());
-	cam.init_cam();
-	//cam.program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
+	//cam->program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
 	int array_diodes = dataArray->num_raw_array_diodes();
-	int num_RLI_pts = 480;
+	int num_RLI_pts = 475;
 	
-	//-------------------------------------------
-	// validate image quadrant size match expected
-	if (!cam.isValidPlannedState(array_diodes)) return;
 
 	//-------------------------------------------
 	// Allocate image memory 
+	Camera cam;
 	unsigned short* memory = cam.allocateImageMemory(array_diodes, num_RLI_pts+1);
 
 	//-------------------------------------------
@@ -52,19 +46,16 @@ void MainController::takeRli()
 		traceData[i] = new short[num_RLI_pts];
 	}
 
-	cam.get_image_info(0);
-
-	dapControl->setDAPs();			//conveted to DAQmx
-
-	if (dapControl->takeRli(memory, cam, num_RLI_pts))
+	if (dapControl->takeRli(memory))
 		fl_alert(" Main Controller::takeRli Timeouts ocurred! Check camera and connections.");
-	dapControl->releaseDAPs();
 
 	// Arrange Data from Memory to traceData
 
 	for (i = 0; i < array_diodes; i++) {
 		for (j = 0; j < num_RLI_pts; j++) {
 			traceData[i][j] = memory[i + j * array_diodes];
+			//if(memory[i + j * array_diodes] != 2048) 
+			//	cout << "j=" << j << "\t Value:" << memory[i + j * array_diodes] << "\n";
 		}
 	}
 	// Release memory
@@ -97,7 +88,7 @@ void MainController::takeRli()
 		dataArray->setRliLow(i, (short)low);
 		dataArray->setRliHigh(i, (short)high);
 		dataArray->setRliMax(i, max);
-		//	if (i%500==1) cout << " MainContrAcqui line 113 diode " << i << "low " << low <<" high " << high << endl; //test showed that low is a dark frame for subtraction
+		if (i%500==1) cout << " MainContrAcqui line 113 diode " << i << "low " << low <<" high " << high << endl; //test showed that low is a dark frame for subtraction
 	}
 
 	// Release Memory
@@ -140,26 +131,11 @@ void MainController::acquiOneRecord()
 	int num_diodes = dataArray->num_raw_diodes();
 	// Note: previously, OG PhotoZ had a feature for number of "skipped trials"
 
-	Camera cam;
-	cam.setCamProgram(dc->getCameraProgram());	
-	//-------------------------------------------
-	// Attempt channel open before allocating memory
-	for (int ipdv = 0; ipdv < NUM_PDV_CHANNELS; ipdv++) {
-		if (cam.open_channel(ipdv)) {
-			fl_alert("Main Cont Acq acquiOneRecord Failed to open the channel!\n");
-			return;
-		}
-	}
-	// Now that channel(s) are open, read .cfg files and set camera dimensions
-	cam.init_cam();
-
-	//-------------------------------------------
-	// validate image quadrant size match expected, informs user of issues
-	if (!cam.isValidPlannedState(num_diodes, dataArray->num_diodes_fp())) return;
-
 	//-------------------------------------------
 	// Allocate Memory
+	Camera cam;
 	unsigned short* memory = cam.allocateImageMemory(num_diodes, numPts);
+	int16 *fp_memory = new(std::nothrow) int16[(size_t)((numPts + 1) * NUM_PDV_CHANNELS)];
 
 	//-------------------------------------------
 	// Trial Acquisition Loop
@@ -204,25 +180,8 @@ void MainController::acquiOneRecord()
 
 		if (dapControl->getStopFlag()) break;
 
-		//-------------------------------------------
-		// Recording
-		dapControl->setDAPs();
-		dapControl->resetDAPs();
-		dapControl->createAcquiDapFile();
-
-		cam.program(dc->getCameraProgram());
-
-
-		// Send "Dap" File to the "DAP" board (the NI-DAQ)
-		int status = dapControl->sendFile2Dap("Record-820 v5.dap");
-
-		if (status == 0) {// Failed to Send Dap File
-			fl_alert("MCA acquiOneRecord Failed to Send \"DAP\" files to NI-USB!\n");
-			goto error;
-		}
-
 		fr_st = clock();
-		int timeouts = dapControl->acqui(memory, cam);
+		int timeouts = dapControl->acqui(memory, fp_memory);
 		fr_end = clock();
 
 		double runtime = (double)(fr_end - fr_st) / CLOCKS_PER_SEC;
@@ -259,7 +218,7 @@ void MainController::acquiOneRecord()
 			dapControl->pseudoAcqui();
 		}*/
 
-		dapControl->releaseDAPs();
+		// dapControl->releaseDAPs();
 	}
 
 	// Release Memory
@@ -281,7 +240,7 @@ void MainController::acquiOneRecord()
 
 error:
 	delete[] memory;
-	dapControl->releaseDAPs();
+	// dapControl->releaseDAPs();
 	return;
 }
 
@@ -304,24 +263,52 @@ void MainController::record()
 {
 	int i;
 
-	if (!dc->getScheduleFlag())	// When Schedule is not checked
-	{
-		acquiOneRecord();
-	}
-	else	// When Schedule is checked
-	{
-		int interval = recControl->getIntRecords() * 1000;	// sec -> m sec
-		int numRecords = recControl->getNumRecords();
-		int num = 0;
-		clock_t start;
-		clock_t now;
+	int interval = recControl->getIntRecords() * 1000;	// sec -> m sec
+	int numRecords = recControl->getNumRecords();
+	int num = 0;
+	clock_t start;
+	clock_t now;
 
-		dc->setStopFlag(0);
+	dc->setStopFlag(0);
+	increaseNo(RECORD);
+
+	// Do the first recording
+	
+	start = clock();
+	acquiOneRecord();
+
+	if (dc->getScheduleRliFlag())
+	{
+		takeRli();
+	}
+
+	saveData2File();
+
+
+	// Do the rest recordings
+	for (i = 1; i < numRecords; i++)
+	{
+		now = clock();
+
+		while ((now - start) < (interval * i))
+		{
+			now = clock();
+			Fl::check();
+
+			if (!dc->getScheduleFlag() || dc->getStopFlag())
+			{
+				return;
+			}
+		}
+
+		if (!dc->getScheduleFlag() || dc->getStopFlag())
+		{
+			return;
+		}
+
 		increaseNo(RECORD);
 
-		// Do the first recording
 		{
-			start = clock();
 			acquiOneRecord();
 
 			if (dc->getScheduleRliFlag())
@@ -331,42 +318,8 @@ void MainController::record()
 
 			saveData2File();
 		}
-
-		// Do the rest recordings
-		for (i = 1; i < numRecords; i++)
-		{
-			now = clock();
-
-			while ((now - start) < (interval * i))
-			{
-				now = clock();
-				Fl::check();
-
-				if (!dc->getScheduleFlag() || dc->getStopFlag())
-				{
-					return;
-				}
-			}
-
-			if (!dc->getScheduleFlag() || dc->getStopFlag())
-			{
-				return;
-			}
-
-			increaseNo(RECORD);
-
-			{
-				acquiOneRecord();
-
-				if (dc->getScheduleRliFlag())
-				{
-					takeRli();
-				}
-
-				saveData2File();
-			}
-		}
 	}
+	
 }
 
 //=============================================================================

@@ -119,24 +119,12 @@ Camera::Camera() {
 	m_depth = -1;
 	overruns = 0;
 	recovering_timeout = false;
-	m_program = 0;                // default camera program: 200 Hz
+	m_program = 4;                
 
 }
 
 Camera::~Camera() {
-	int retry = 0;
-	for (int i = 0; i < NUM_PDV_CHANNELS; i++) {
-		if (pdv_pt[i]) {
-			while (pdv_close(pdv_pt[i]) < 0 && retry != 1) {
-				retry = fl_choice("Failed to close PDV channel. Retry or restart the camera manually.", "Retry", "Exit", "Debugging Info");
-				if (retry == 2) {
-					cout << "Current state of pdv_pt[]\n";
-					for (int j = 0; j < 4; j++)  cout << "pdv_pt[" << j << "]: " << pdv_pt[j] << "\n";
-				}
-				if (retry != 1) cout << "Reattempting to close channel " << i << "...\n";
-			}
-		}
-	}
+	close_channels();
 }
 
 int Camera::open_channel(int ipdv) {
@@ -158,6 +146,23 @@ int Camera::open_channel(int ipdv) {
 
 	cout << " Camera open_channel size " << pdv_get_allocated_size(pdv_pt[ipdv]) << "\n";
 	return 0;
+}
+
+int Camera::close_channels() {
+	int retries = 2;
+	for (int i = 0; i < NUM_PDV_CHANNELS; i++) {
+		if (pdv_pt[i]) {
+			while (pdv_close(pdv_pt[i]) < 0 && retries != 1) {
+				if (retries > 0) {
+					cout << "Current state of pdv_pt[]\n";
+					for (int j = 0; j < 4; j++)  cout << "pdv_pt[" << j << "]: " << pdv_pt[j] << "\n";
+				}
+				if (retries > 0) cout << "Reattempting to close channel " << i << "...\n";
+				retries--;
+			}
+		}
+	}
+	return (retries == 2) ? 1 : 0;
 }
 
 unsigned char* Camera::single_image(int ipdv)			//used by LiveFeed.cpp
@@ -209,12 +214,12 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	Sleep(20);
 
 	/*
-	cam.serial_write("@AAM?\r");
-	cam.serial_read(buf, bufsize);
+	cam->serial_write("@AAM?\r");
+	cam->serial_read(buf, bufsize);
 	printf("%s\n", buf);
 
-	cam.serial_write("@REP?\r");
-	cam.serial_read(buf, bufsize);
+	cam->serial_write("@REP?\r");
+	cam->serial_read(buf, bufsize);
 	printf("%s\n", buf);
 	*/
 
@@ -256,12 +261,24 @@ void Camera::init_cam()				// entire module based on code from Chun - sm_init_ca
 	system(command);
 
 	Sleep(50);
+	// @TXC 1 -- external control from DO.0 (line 0 -- black sync). This is needed if you want p-clamp to trigger camera
+	// @TXC 0 -- camera will start from software and then trigger all other writing/acquisition on clock PFI0. Simple, seems to work well.
 	sprintf(command, "@TXC 0");
 	serial_write(command);
 	sprintf(command, "@SEQ 1"); // start 
 	serial_write(command);
+}
 
+void Camera::prepare_acqui() {
+	char command[80];
+	sprintf(command, "@TXC 1");
+	serial_write(command);
+}
 
+void Camera::set_freerun_mode() {
+	char command[80];
+	sprintf(command, "@TXC 0");
+	serial_write(command);
 }
 
 // Starts image acquisition for one channel
@@ -532,7 +549,7 @@ bool Camera::acquireImages(unsigned short* memory, int numPts) {
 // Apply CDS subtraction, deinterleave, and quadrant remapping to a list of raw images.
 void Camera::reassembleImages(unsigned short* images, int nImages) {
 
-	// NOTE: cam.height and cam.width are the RAW QUADRANT sizes
+	// NOTE: cam->height and cam->width are the RAW QUADRANT sizes
 	// i.e. the size of a quadrant BEFORE CDS subtraction
 	
 	int channelOrders[16] = { 2, 3, 1, 0,

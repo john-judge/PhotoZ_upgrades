@@ -16,14 +16,10 @@ class Camera;
 class DapController
 {
 private:
-	TaskHandle taskHandleGet = 0;
-	TaskHandle taskHandlePut = 0;
-	HDAP dap820Put;
-	HDAP dap820Get;
-
-	TaskHandle taskHandleRLI;
-	TaskHandle taskHandleAcquiDO;
-	TaskHandle taskHandleAcquiAI;
+	TaskHandle taskHandle_out; // Digital Output
+	TaskHandle taskHandle_in; // Analog Input
+	TaskHandle taskHandle_clk; // Chun: "M series don't have internal clock for output." -- X series though?
+	TaskHandle taskHandle_led;
 
 	int numPts;
 
@@ -42,7 +38,13 @@ private:
 	int numBursts1;
 	int intBursts1;
 
-	// Ch1
+
+	// Live Feed 
+	unsigned short* liveFeedFrame;
+	Camera* liveFeedCam;
+	bool* liveFeedFlags;
+
+	// Ch2
 	int numPulses2;
 	int intPulses2;
 
@@ -64,13 +66,11 @@ public:
 	DapChannel* sti1;
 	DapChannel* sti2;
 
-	void NiErrorDump();
-
-	// Set DAP and release DAP
-	int setDAPs(float64 SamplingRate = 2000);//setting default for testing purposes.
+	// NI-DAQmx
 	int NI_openShutter(uInt8);
-	void releaseDAPs();
 
+	void NI_stopTasks();
+	void NI_clearTasks();
 
 	// Flags
 	void setStopFlag(char);
@@ -82,20 +82,18 @@ public:
 	char getScheduleRliFlag();
 
 	// Buffers for digital output
-	uint8_t *outputs;
-	//uint8_t *pseudoOutputs;
+	uInt32* outputs;
 
 	// RLI
-	int takeRli(unsigned short*, Camera&, int);
+	int darkPts;
+	int lightPts;
+	int takeRli(unsigned short*);
 
-	// Create DAP File for Acquisition
-	void createAcquiDapFile();
-	void fillPDOut(uint8_t *outputs, char realFlag);
+	// NI Digital Output: create stimulation patterns
+	void NI_fillOutputs();
 
 	// Acquisition Control
-	int sendFile2Dap(const char*);
-	int acqui(unsigned short*, Camera&);
-	void pseudoAcqui();
+	int acqui(unsigned short*, int16* fp_memory);
 	int stop();
 	void resetDAPs();
 	void resetCamera();
@@ -104,14 +102,32 @@ public:
 	void setAcquiOnset(float);
 	float getAcquiOnset();
 	float getAcquiDuration();
+	size_t get_digital_output_size();
 
 	void setNumPts(int);
 	int getNumPts();
 
-	void setCameraProgram(int);
 	int getCameraProgram();
+	void setCameraProgram(int p);
+
 	void setIntPts(double);
 	double getIntPts();
+
+	void setNumDarkRLI(int);
+	int getNumDarkRLI();
+	void setNumLightRLI(int);
+	int getNumLightRLI();
+
+	int getDisplayWidth();
+	int getDisplayHeight();
+
+	void setStimOnset(int ch, float v);
+	void setShutterOnset(float v);
+	float getShutterOnset();
+	void setStimDuration(int ch, float v);
+	float getStimOnset(int ch);
+	float getStimDuration(int ch);
+
 
 	// Duration of the whole Process
 	void setDuration();
@@ -127,6 +143,12 @@ public:
 	int getNumBursts(int ch);
 	void setIntBursts(int ch, int num);
 	int getIntBursts(int ch);
+
+	// Live Feed
+	void stopLiveFeed();
+	void startLiveFeed(unsigned short* frame, bool* flags);
+	void continueLiveFeed();
+
 };
 
 //=============================================================================

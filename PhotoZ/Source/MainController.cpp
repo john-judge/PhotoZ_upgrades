@@ -188,7 +188,6 @@ void MainController::setLiveFeed(char input)
 	try {
 		if (input)
 		{
-			dapControl->releaseDAPs();
 			if (!lf->begin_livefeed())
 				ui->lfRun->value(0);
 		}
