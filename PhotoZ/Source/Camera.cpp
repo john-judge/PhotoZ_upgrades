@@ -119,7 +119,7 @@ Camera::Camera() {
 	m_depth = -1;
 	overruns = 0;
 	recovering_timeout = false;
-	m_program = 0;                // default camera program: 200 Hz
+	m_program = 4;                
 
 }
 
@@ -389,8 +389,6 @@ void Camera::program(int p) {
 			//} 
 		}
 	}
-
-	init_cam();
 }
 
 int Camera::get_superframe_factor() {

@@ -31,7 +31,7 @@ void MainController::takeRli()
 	//cam->program(dc->getCameraProgram()); // instead of setCamProgram, this can change PDV dim settings by calling pdv_setsize.
 
 	int array_diodes = dataArray->num_raw_array_diodes();
-	int num_RLI_pts = 480;
+	int num_RLI_pts = 475;
 	
 
 	//-------------------------------------------
@@ -54,6 +54,8 @@ void MainController::takeRli()
 	for (i = 0; i < array_diodes; i++) {
 		for (j = 0; j < num_RLI_pts; j++) {
 			traceData[i][j] = memory[i + j * array_diodes];
+			//if(memory[i + j * array_diodes] != 2048) 
+			//	cout << "j=" << j << "\t Value:" << memory[i + j * array_diodes] << "\n";
 		}
 	}
 	// Release memory
@@ -86,7 +88,7 @@ void MainController::takeRli()
 		dataArray->setRliLow(i, (short)low);
 		dataArray->setRliHigh(i, (short)high);
 		dataArray->setRliMax(i, max);
-		//	if (i%500==1) cout << " MainContrAcqui line 113 diode " << i << "low " << low <<" high " << high << endl; //test showed that low is a dark frame for subtraction
+		if (i%500==1) cout << " MainContrAcqui line 113 diode " << i << "low " << low <<" high " << high << endl; //test showed that low is a dark frame for subtraction
 	}
 
 	// Release Memory
@@ -261,24 +263,52 @@ void MainController::record()
 {
 	int i;
 
-	if (!dc->getScheduleFlag())	// When Schedule is not checked
-	{
-		acquiOneRecord();
-	}
-	else	// When Schedule is checked
-	{
-		int interval = recControl->getIntRecords() * 1000;	// sec -> m sec
-		int numRecords = recControl->getNumRecords();
-		int num = 0;
-		clock_t start;
-		clock_t now;
+	int interval = recControl->getIntRecords() * 1000;	// sec -> m sec
+	int numRecords = recControl->getNumRecords();
+	int num = 0;
+	clock_t start;
+	clock_t now;
 
-		dc->setStopFlag(0);
+	dc->setStopFlag(0);
+	increaseNo(RECORD);
+
+	// Do the first recording
+	
+	start = clock();
+	acquiOneRecord();
+
+	if (dc->getScheduleRliFlag())
+	{
+		takeRli();
+	}
+
+	saveData2File();
+
+
+	// Do the rest recordings
+	for (i = 1; i < numRecords; i++)
+	{
+		now = clock();
+
+		while ((now - start) < (interval * i))
+		{
+			now = clock();
+			Fl::check();
+
+			if (!dc->getScheduleFlag() || dc->getStopFlag())
+			{
+				return;
+			}
+		}
+
+		if (!dc->getScheduleFlag() || dc->getStopFlag())
+		{
+			return;
+		}
+
 		increaseNo(RECORD);
 
-		// Do the first recording
 		{
-			start = clock();
 			acquiOneRecord();
 
 			if (dc->getScheduleRliFlag())
@@ -288,42 +318,8 @@ void MainController::record()
 
 			saveData2File();
 		}
-
-		// Do the rest recordings
-		for (i = 1; i < numRecords; i++)
-		{
-			now = clock();
-
-			while ((now - start) < (interval * i))
-			{
-				now = clock();
-				Fl::check();
-
-				if (!dc->getScheduleFlag() || dc->getStopFlag())
-				{
-					return;
-				}
-			}
-
-			if (!dc->getScheduleFlag() || dc->getStopFlag())
-			{
-				return;
-			}
-
-			increaseNo(RECORD);
-
-			{
-				acquiOneRecord();
-
-				if (dc->getScheduleRliFlag())
-				{
-					takeRli();
-				}
-
-				saveData2File();
-			}
-		}
 	}
+	
 }
 
 //=============================================================================

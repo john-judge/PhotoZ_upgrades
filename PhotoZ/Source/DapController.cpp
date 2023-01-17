@@ -480,7 +480,7 @@ int DapController::takeRli(unsigned short* memory) {
 
 
 	std::string filename = "full-out355.txt";
-	cam->printFinishedImage(img, filename.c_str(), true);
+	cam.printFinishedImage(img, filename.c_str(), true);
 	cout << "\t This full image was located in MEMORY at offset " <<
 		(img - (unsigned short*)memory) / quadrantSize << " quadrant-sizes\n";
 	*/
