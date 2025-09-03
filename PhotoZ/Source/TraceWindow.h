@@ -114,7 +114,7 @@ public:
 	void setShowSlope(char);
 	
 	void setShowRef(char);
-	char getShowRef();
+//	char getShowRef();
 
 	void setShowSavedTraces(char);
 	char getShowSavedTraces();

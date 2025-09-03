@@ -211,7 +211,7 @@ int ArrayWindow::handle(int event)
 			//==============
 			// Ignornance
 			//==============
-			if(Fl::event_state(FL_SHIFT))	// Shift Key is Down
+			if(Fl::event_state(FL_SHIFT) || Fl::event_state(FL_CTRL))	// Shift Key is Down
 			{
 				if(mouseButton==1)		// Ignore
 				{
@@ -446,18 +446,17 @@ void ArrayWindow::drawRli()
 {
 	int i;
 	double ratio;
-
+	dataArray->setRli2DataFeature();
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
 		ratio=dataArray->getRliRatio(i);
-
 		if(ratio<0 || ratio>1)
 		{
 			fl_color(char(155),0,0);
 		}
 		else
 		{
-			colorControl->setGrayScale(ratio);
+			colorControl->setGrayScale(dataArray->getDataFeature(i));
 		}
 
 		get_diode(i)->drawBackground();
@@ -711,19 +710,20 @@ Diode* ArrayWindow::get_diode(int diodeNo)			//new ; mostly new until final save
 
 //=============================================================================
 void ArrayWindow::addToSelectedList(int index, int average)	// index is the diode #; average is a flag 0 or 1 to indicate average is performed 
-{												
+{
 	if (!average) {
 		selectedDiodes.push_back(index);
 		tw->redraw();
 	}
 	else {
 	if(currentRegionIndex<0) currentRegionIndex=0;			// with some sequences currentRegionsIndex was -1 and that caused crashes due to vector overflow
-//		cout << "aw line 698 currentRegionIndex " << currentRegionIndex << endl;
-		if (selectedDiodesAverage[currentRegionIndex].size() == 0)
+//	cout << "aw line 720 index " << index << " CurrRegIndex " << currentRegionIndex << "size "<< selectedDiodesAverage[currentRegionIndex].size() << endl;
+	if (selectedDiodesAverage[currentRegionIndex].size() == 0)
 		{
 			int cI = colorControl->getColorIndex();
 			get_diode(index)->setColorIndex(cI);
 			selectedDiodesAverage[currentRegionIndex].push_back(cI);
+//			get_diode(index)->setColorIndex(cI);
 /*			char regionStr[14];
 			sprintf(regionStr , "Region %d", currentRegionIndex);
 			Fl_Output(1051, 950 + numRegions * 30, 50, 65, regionStr);
@@ -731,9 +731,10 @@ void ArrayWindow::addToSelectedList(int index, int average)	// index is the diod
 				if (numRegions < 100)	this->numRegions += 1;
 				else	fl_alert(">100 ROIs not allowed!\n");
 		}
-		else {
-				get_diode(index)->setColorIndex(selectedDiodesAverage[currentRegionIndex][0]);
-			}
+		else
+		{
+			get_diode(index)->setColorIndex(selectedDiodesAverage[currentRegionIndex][0]);
+		}
 		selectedDiodesAverage[currentRegionIndex].push_back(index);
 		tw->redraw();
 	redraw();
@@ -754,17 +755,15 @@ void ArrayWindow::setContinuous(int continuous)			// "new region" button in GUI 
 {
 	if (continuous) 
 		{
-//		cout << "line 737 continuous " << continuous << " currentRegionIndex " << currentRegionIndex << endl;
 		selectedDiodesAverage.push_back(std::vector<int> {});
 		currentRegionIndex++;	
 		}
 	else 
 		{
-//		cout << "line 744 continuous " << continuous << " currentRegionIndex " << currentRegionIndex << endl;
 		if (currentRegionIndex < 0) currentRegionIndex = 0;		// might crash with negative value see line 697
 		if (selectedDiodesAverage[currentRegionIndex].size() == 0) 
 			{
-			//possibly add numRegions which keep tracks of number of Regions and update currentRegion for true purpose like name suggests
+			//possibly add numRegions which keeps track of number of Regions and update currentRegion for true purpose like name suggests
 			selectedDiodesAverage.erase(selectedDiodesAverage.begin() + currentRegionIndex);
 			currentRegionIndex--;
 			}
@@ -779,9 +778,7 @@ int ArrayWindow::getContinuous() {
 //=============================================================================
 int ArrayWindow::deleteFromSelectedList(int index, int average)
 {
-//	cout << "line 763"  << endl;
 	if (!average) {
-//		cout << "line 765" << endl;
 		int i;
 		for (i = 0; i < (int)selectedDiodes.size(); i++)
 		{
@@ -794,14 +791,17 @@ int ArrayWindow::deleteFromSelectedList(int index, int average)
 		}
 	}
 	else {
+//		cI = colorControl->getColorIndex();
+//	cout << " deleteFromSelected line 800 " << index << " average " << average << " cI " << cI << endl;
 		int i;
-//		cout << "line 780" << endl;
-		for (i = 1; i < (int)selectedDiodesAverage[currentRegionIndex].size(); i++)
-		{
+		int ii = selectedDiodesAverage[currentRegionIndex].size();
+		for (i = 1; i < ii; i++)
+		{	
 			if (index == selectedDiodesAverage[currentRegionIndex][i])
 			{
 				selectedDiodesAverage[currentRegionIndex].erase(selectedDiodesAverage[currentRegionIndex].begin() + i);
-				if (selectedDiodesAverage[currentRegionIndex].size() == 1) {
+				if (selectedDiodesAverage[currentRegionIndex].size() == 1)
+				{
 					selectedDiodesAverage[currentRegionIndex].erase(selectedDiodesAverage[currentRegionIndex].begin(), selectedDiodesAverage[currentRegionIndex].end());	
 					this->numRegions -= 1;
 				}
@@ -816,39 +816,40 @@ int ArrayWindow::deleteFromSelectedList(int index, int average)
 //=============================================================================
 void ArrayWindow::clearSelected(int selection)
 {
-	int i;	
+	int i;
+	if (continuous == 0)
+	{
 		if (selection == 0)
 		{
-//			cout << "aw line 823 " << selectedDiodes.size()<< endl;
-		for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
+			for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
 			{
 				get_diode(i)->clearSelected();
 			}
-		selectedDiodes.clear();
-		colorControl->resetUsed();
-//		cout << "aw line 828 " << selectedDiodes.size() << endl;
-		/*while(numRegions!=0){
-	selectedDiodesAverage[numRegions - 1].erase(selectedDiodesAverage[numRegions - 1].begin(), selectedDiodesAverage[numRegions - 1].end());
-		this->numRegions -= 1;
-		if (selectedDiodesAverage[currentRegionIndex].size() == 0) {
-			//possibly add numRegions which keep tracks of number of Regions and update currentRegion for true purpose like name suggests
-			selectedDiodesAverage.erase(selectedDiodesAverage.begin() + currentRegionIndex);
-		currentRegionIndex--;
-		} //blocking the above out and replacing with for loop below elliminated crashes after clearing with right click
-		}
-		cout << " line 819 numReg " << numRegions << " currentRegInd " << currentRegionIndex<< " contin " << continuous << endl;*/
-		
-		for (i = 0; i < numRegions; i++)
+			selectedDiodes.clear();
+			colorControl->resetUsed();
+			//		cout << "aw line 828 " << selectedDiodes.size() << endl;
+					/*while(numRegions!=0){
+				selectedDiodesAverage[numRegions - 1].erase(selectedDiodesAverage[numRegions - 1].begin(), selectedDiodesAverage[numRegions - 1].end());
+					this->numRegions -= 1;
+					if (selectedDiodesAverage[currentRegionIndex].size() == 0) {
+						//possibly add numRegions which keep tracks of number of Regions and update currentRegion for true purpose like name suggests
+						selectedDiodesAverage.erase(selectedDiodesAverage.begin() + currentRegionIndex);
+					currentRegionIndex--;
+					} //blocking the above out and replacing with for loop below elliminated crashes after clearing with right click
+					}
+					cout << " line 819 numReg " << numRegions << " currentRegInd " << currentRegionIndex<< " contin " << continuous << endl;*/
+
+			for (i = 0; i < numRegions; i++)
 			{
 				selectedDiodesAverage[i].clear();
 			}
 			currentRegionIndex = -1;
 			numRegions = 0;
 		}
-		else if (selection == 1&&numRegions>0)					// when selection=1 just current ROI is cleared and user sent back to lower region number
+		else if (selection == 1 && numRegions > 0)					// when selection=1 just current ROI is cleared and user sent back to lower region number
 		{
-			int* ROIList = aw->getSelectedDiodesAverage(numRegions-1);	
-			int RegionSize = aw->getNumSelectedDiodesAverage(numRegions-1);
+			int* ROIList = aw->getSelectedDiodesAverage(numRegions - 1);
+			int RegionSize = aw->getNumSelectedDiodesAverage(numRegions - 1);
 			for (i = RegionSize - 1; i > 0; i--)
 			{
 				get_diode(ROIList[i])->setColorIndex(-1);		// reset colors to unselected
@@ -856,7 +857,36 @@ void ArrayWindow::clearSelected(int selection)
 			selectedDiodesAverage[numRegions - 1].clear();
 			currentRegionIndex--;
 			numRegions--;
-		}	
+		}
+	}
+	else
+	{
+		if (numRegions > 0)  
+			{
+			if (selection == 1)
+				{
+					int* ROIList = aw->getSelectedDiodesAverage(numRegions - 1);
+					int RegionSize = aw->getNumSelectedDiodesAverage(numRegions - 1);
+					for (i = RegionSize - 1; i > 0; i--)
+					{
+						get_diode(ROIList[i])->setColorIndex(-1);		// reset colors to unselected
+					}
+					selectedDiodesAverage[numRegions - 1].clear();
+					currentRegionIndex--;
+					numRegions--;
+				}
+			else if (selection == 0) {									//added 6/20/2025 to stop crashes resulting from binning change when ROIs selected
+				selectedDiodes.clear();
+				colorControl->resetUsed();
+				for (i = 0; i < numRegions; i++)
+				{
+					selectedDiodesAverage[i].clear();
+				}
+				currentRegionIndex = -1;
+				numRegions = 0;
+			}
+		}
+	}
 }
 
 //=============================================================================
@@ -978,6 +1008,11 @@ void ArrayWindow::saveBGData()
 {
 	//==================================================
 	// Get file name
+	if ((background!=BG_Max_Amplitude)&&(background!=BG_Rli)&&(background!=BG_SIGNAL_TO_NOISE))
+	{
+		fl_alert("Output of this parameter not supported \n");
+		return;
+	}
 	char *fileName=fl_file_chooser("Save background data (all pixels) to a file",
 		"*.dat","Data.dat");
 
@@ -991,20 +1026,27 @@ void ArrayWindow::saveBGData()
 	std::fstream file;
 	file.open(fileName,std::ios::out);
 
-	//
 	int i;
 
 	if(background==BG_Max_Amplitude)
 	{
 		dataArray->setMaxAmp2DataFeature();
 	}
-	else if(background==BG_Spike_Amp)
-	{
-		dataArray->setSpikeAmp2DataFeature();
+/*	else if(background==BG_Spike_Amp)		these seem pointless but easy to add back, don't forget to add to line 985
+	{														 probably used for Payne's 2006 J Physiol paper
+		dataArray->setSpikeAmp2DataFeature();		
 	}
-	else if(background==BG_Half_Amp_Latency)
+	else if(background==BG_Half_Amp_Latency)		
 	{
 		dataArray->setHalfAmpLatency2DataFeature();
+	}*/
+	else if (background == BG_SIGNAL_TO_NOISE)
+	{
+		dataArray->setSignalToNoise2DataFeature();
+	}
+	else if (background = BG_Rli)
+	{
+		dataArray->setRli2DataFeature();
 	}
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)

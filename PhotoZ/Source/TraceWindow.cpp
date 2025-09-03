@@ -770,11 +770,12 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 	else if(timeCourseType=='A')		// Amplitude
 	{
 		timeCourse=data->getAmpArray();
+	//	cout << " line 777 dataindex " << regionIndex << " value " << d2txt(*timeCourse) << endl;
 	}
 	else if(timeCourseType=='M')
 	{
 		timeCourse=data->getMaxAmpArray();
-//		cout << " line 791 dataindex " << regionIndex << " value " << d2txt(*timeCourse) << endl;
+	
 	}
 	else if(timeCourseType=='L')	// 30 msec -> 1 mV
 	{
@@ -849,9 +850,10 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 		//==========================================================
 		// Draw the trace
 		fl_begin_line();
-		for (i = 0; i < numRecord; i++)
+		for (i = 0; i < numRecord-1; i++)
 		{
-			fl_vertex(i*pixPts, timeCourse[i] * scale);
+//			cout << " line 854   "  << "timeCourse[i] " << timeCourse[i] << endl;
+		 	if(dataIndex>=0) fl_vertex(i*pixPts, timeCourse[i]*scale);	// if condition added to prevent crashing with FP selected
 		}
 		fl_end_line();
 
@@ -861,8 +863,11 @@ void TraceWindow::drawTimeCourse(int dataIndex, int regionIndex)
 			for (i = 0; i < numRecord; i++)
 			{
 				fl_begin_line();
-				fl_vertex(i*pixPts, timeCourse[i] * scale + barLength);
-				fl_vertex(i*pixPts, timeCourse[i] * scale - barLength);
+				if(dataIndex>=0)		// added to prevent crashing with FP selected
+				{
+					fl_vertex(i*pixPts, timeCourse[i] * scale + barLength);
+					fl_vertex(i*pixPts, timeCourse[i] * scale - barLength);
+				}
 				fl_end_line();
 			}
 		}
@@ -1185,9 +1190,9 @@ void TraceWindow::drawValue(int numRegions)
 		}
 
 		// Max Slope latency
-		else if (valueType == '8')
+		else if (valueType == '9')
 		{
-			txtBuf = d2txt(data->getMaxSlopeLatency());
+			txtBuf = d2txt(data->getMaxSlope());
 		}
 
 		//Max Slope Latency
@@ -1773,6 +1778,7 @@ int TraceWindow::handle(int event)
 			{
 				if(Fl::event_key(FL_Shift_L))
 				{
+					cout << "TW 1780 " << endl;
 					if(handleType=='o')		// Optical signal
 					{
 						xScale=1;

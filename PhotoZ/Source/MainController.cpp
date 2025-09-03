@@ -191,7 +191,7 @@ void MainController::setLiveFeed(char input)
 	catch (...) {
 		std::cout << "Some exception \n";
 		std::exception_ptr p = std::current_exception();
-		std::cout << (p._Current_exception) << std::endl;
+		//std::cout << (p._Current_exception) << std::endl;
 	}
 }
 
