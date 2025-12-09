@@ -4,7 +4,7 @@ Use VS Code 2017 or 2019 and see the [common install/compile issues](https://git
 
 Most dependencies are locally installed to the solution and automatically come included with this repository
 
-Large dependencies from [this Drive folder](https://drive.google.com/drive/folders/1sUNvC4TwXBPeE7je68-wm7P-gSD8vRd3?usp=sharing) must be copied into `PhotoZ/` (I know, not ideal)
+Large dependencies from [this Drive folder](https://drive.google.com/drive/folders/1sUNvC4TwXBPeE7je68-wm7P-gSD8vRd3?usp=sharing) must be copied into `PhotoZ/` 
 
 
 ## References
@@ -74,6 +74,7 @@ Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) o
 EDT/PDV API code with examples can be found at C:/EDT/pdv
 
 The documentation folder in this repo has the PhotoZ user manual and architecture docs, Camera datasheet, and a short test program
+
 
 
 
