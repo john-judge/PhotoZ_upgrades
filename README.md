@@ -1,6 +1,3 @@
-## Notice
-This project is being abandoned, superseded by the [PhotoLib / pyPhoto21 project](https://github.com/john-judge/PhotoLib).
-However, the information accumulated [here](https://github.com/john-judge/PhotoZ_upgrades/issues?q=is%3Aissue) is useful to the ongoing project.
 
 ## Installation (Building from Source in Debug Mode)
 Use VS Code 2017 or 2019 and see the [common install/compile issues](https://github.com/john-judge/PhotoZ_upgrades/issues/14)
@@ -77,6 +74,7 @@ Neuroplex IDL source code can be found in the C:/RSI/IDL56/np folder (I think) o
 EDT/PDV API code with examples can be found at C:/EDT/pdv
 
 The documentation folder in this repo has the PhotoZ user manual and architecture docs, Camera datasheet, and a short test program
+
 
 
 
