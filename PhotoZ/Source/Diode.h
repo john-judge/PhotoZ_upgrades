@@ -6,6 +6,9 @@
 //=============================================================================
 #include <FL/Fl.h>
 #include <FL/Fl_Widget.h>
+#include <vector>
+
+struct Point { int x, y; };
 
 //=============================================================================
 class Diode:public Fl_Widget  
@@ -26,16 +29,19 @@ public:
 	int getIndex();
 	void clearSelected();
 	void setColorAsDiode();
-	void select(int altDown = 0, int shiftDown = 0);
+	void select(int altDown = 0, int shiftDown = 0, int crtlDown = 0, int tabDown = 0);
 
 	// Draw
 	void drawTrace(double *proData);
 	void drawRliValue(double);
 	void drawDiodeNum();
 
+	std::vector<Point> dragPolygonPoints;
+
 	// Background
 	void drawBackground();
 	void setColorIndex(int i);
+	bool pointInPolygon(int x, int y, const std::vector<std::pair<int, int>>& pts);
 };
 
 //=============================================================================

@@ -84,8 +84,6 @@ private:
 
 	void drawTxt(char *txtBuf,Fl_Color fg,Fl_Color bg,int x,int y);
 
-	// Helper methods
-	Diode *get_diode(int);
 
 	int numRegions = 0;
 	int continuous;
@@ -100,6 +98,9 @@ public:
 	int diodeW();
 	int diodeH();
 
+	// Helper methods
+	Diode* get_diode(int);
+	int is_dragging;
 	//-------------------------------------
 	// Array resizing
 	void changeNumDiodes();

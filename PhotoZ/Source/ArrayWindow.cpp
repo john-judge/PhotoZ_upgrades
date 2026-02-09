@@ -31,27 +31,28 @@ using namespace std;
 extern char txtBuf[];
 
 //=============================================================================
-ArrayWindow::ArrayWindow(int X,int Y,int W,int H)
-:Fl_Double_Window(X,Y,W,H)
+ArrayWindow::ArrayWindow(int X, int Y, int W, int H)
+	:Fl_Double_Window(X, Y, W, H)
 {
-	image=new Image();
+	image = new Image();
 
 	// indexes of the FP diodes will be negative
 	for (int i = 0; i < NUM_FP_DIODES; i++)
 		fp_diodes[i] = new Diode(0, 0, 1, 1, i - NUM_FP_DIODES);
 
-	fg=FL_WHITE;
-	bg=FL_BLACK;
-	background=BG_None;
-	showTrace=1;
-	showRliValue=0;
-	showDiodeNum=0;
+	fg = FL_WHITE;
+	bg = FL_BLACK;
+	background = BG_None;
+	showTrace = 1;
+	showRliValue = 0;
+	showDiodeNum = 0;
 
-	yScale  = pow((0.2*log2(1 + 1)),1); // pow means x to power of y; yScale and yScale2 = 100 in photoz 3.0
-	yScale2 = pow((0.2*log2(1 + 1)),1);
-	xScale=1;
-	xShift=0;
+	yScale = pow((0.2 * log2(1 + 1)), 1); // pow means x to power of y; yScale and yScale2 = 100 in photoz 3.0
+	yScale2 = pow((0.2 * log2(1 + 1)), 1);
+	xScale = 1;
+	xShift = 0;
 	continuous = 0;							//new
+	is_dragging = 0;
 }
 
 //=============================================================================
@@ -64,13 +65,13 @@ ArrayWindow::~ArrayWindow()
 	for (i = 0; i < NUM_FP_DIODES; i++)
 		delete fp_diodes[i];
 	for (auto it = diodes.begin(); it != diodes.end(); it++)
-		delete *it;
+		delete* it;
 }
 
 //=============================================================================
 void ArrayWindow::setShowTrace(char p)
 {
-	showTrace=p;
+	showTrace = p;
 }
 
 //=============================================================================
@@ -82,7 +83,7 @@ char ArrayWindow::getShowTrace()
 //=============================================================================
 void ArrayWindow::setShowRliValue(char p)
 {
-	showRliValue=p;
+	showRliValue = p;
 }
 
 //=============================================================================
@@ -94,7 +95,7 @@ char ArrayWindow::getShowRliValue()
 //=============================================================================
 void ArrayWindow::setShowDiodeNum(char p)
 {
-	showDiodeNum=p;
+	showDiodeNum = p;
 }
 
 //=============================================================================
@@ -104,40 +105,40 @@ char ArrayWindow::getShowDiodeNum()
 }
 
 //=============================================================================
-void ArrayWindow::setFgBgColor(Fl_Color c1,Fl_Color c2)
+void ArrayWindow::setFgBgColor(Fl_Color c1, Fl_Color c2)
 {
-	fg=c1;
-	bg=c2;
+	fg = c1;
+	bg = c2;
 }
 
 //=============================================================================
 void ArrayWindow::setYScale(double p)
 {
-	yScale=p;
+	yScale = p;
 }
 
 //=============================================================================
 double ArrayWindow::getYScale()
 {
-  return yScale;
+	return yScale;
 }
 
 //=============================================================================
 void ArrayWindow::setYScale2(double p)
 {
-  yScale2=p;
+	yScale2 = p;
 }
 
 //=============================================================================
 double ArrayWindow::getYScale2()
 {
-  return yScale2;
+	return yScale2;
 }
 
 //=============================================================================
 void ArrayWindow::setXScale(double p)
 {
-  xScale=p;
+	xScale = p;
 }
 
 //=============================================================================
@@ -149,7 +150,7 @@ double ArrayWindow::getXScale()
 //=============================================================================
 void ArrayWindow::setXShift(double p)
 {
-  xShift=p;
+	xShift = p;
 }
 
 //=============================================================================
@@ -167,14 +168,14 @@ int ArrayWindow::getBackground()
 //=============================================================================
 void ArrayWindow::setBackground(int p)
 {
-	background=p;
+	background = p;
 }
 
 //=============================================================================
 void ArrayWindow::changeNumDiodes()			// new ; for binning
 {
 	int num_bdiodes = dataArray->num_binned_diodes();
-	int change = num_bdiodes - (int) diodes.size();
+	int change = num_bdiodes - (int)diodes.size();
 
 	if (change > 0)							// increase the number of diodes in the ROI
 	{
@@ -202,70 +203,86 @@ void ArrayWindow::changeNumDiodes()			// new ; for binning
 //=============================================================================
 int ArrayWindow::handle(int event)
 {
-	int mouseButton;
-	switch(event)
+	cout << event << " " << FL_KEYUP << "\n";
+	int mouseButton, key;
+	switch (event)
 	{
-		case FL_PUSH:
-			mouseButton=Fl::event_button();
-//			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
-			//==============
-			// Ignornance
-			//==============
-			if(Fl::event_state(FL_SHIFT) || Fl::event_state(FL_CTRL))	// Shift Key is Down
+	case FL_KEYUP:
+		key = Fl::event_key();
+		if (key == 'r' || key == 'R') {
+			is_dragging = !is_dragging;     // toggle is_dragging
+			printf("Drag mode = %d\n", is_dragging);
+			return 1;                   // event handled
+		}
+		return 1;
+	case FL_PUSH:
+		mouseButton = Fl::event_button();
+		//			cout << " aw line 211 aw   "<< mouseButton << " event " << event << endl;	//test showed left = 1; middle = 2; right = 3; event always = 1
+					//==============
+					// Ignornance
+					//==============
+		if (Fl::event_state(FL_SHIFT))	// Shift Key is Down
+		{
+			if (mouseButton == 1)		// Ignore
 			{
-				if(mouseButton==1)		// Ignore
-				{
-					redraw();
-					tw->redraw();
-					if(ui->mapGroup->visible())
-					{
-						cw->redraw();
-					}
-					
-					return Fl_Double_Window::handle(event);
-				}
-				else if(mouseButton==3)	// Clear ignored list with shift right click
-				{
-					dataArray->clearIgnoredFlag();
-					dataArray->process();
-					redraw();
-					tw->redraw();
-					if(ui->mapGroup->visible())
-					{
-						cw->redraw();
-					}
-					return 1;
-				}				 
-			}
-			/*else if (Fl::event_state(FL_ALT))	// Alt Key is Down
-			{
-				while (Fl::event_state(FL_ALT)) {
-					redraw();
-				}
-				tw->redraw();
-					return Fl_Double_Window::handle(event);
-			}*/
-			//==============
-			// Selection
-			//==============
-			if(mouseButton==1)
-			{
-					redraw();
-					tw->redraw();
-					return Fl_Double_Window::handle(event);
-			}
-
-			else if(mouseButton==3)		// Clear selected
-			{
-				if(!Fl::event_state(FL_CTRL))	clearSelected(0);
-				if (Fl::event_state(FL_CTRL))	clearSelected(1);
 				redraw();
 				tw->redraw();
+				if (ui->mapGroup->visible())
+				{
+					cw->redraw();
+				}
+
+				return Fl_Double_Window::handle(event);
+			}
+			else if (mouseButton == 3)	// Clear ignored list with shift right click
+			{
+				dataArray->clearIgnoredFlag();
+				dataArray->process();
+				redraw();
+				tw->redraw();
+				if (ui->mapGroup->visible())
+				{
+					cw->redraw();
+				}
 				return 1;
 			}
+		}
+		/*else if (Fl::event_state(FL_ALT))	// Alt Key is Down
+		{
+			while (Fl::event_state(FL_ALT)) {
+				redraw();
+			}
+			tw->redraw();
+				return Fl_Double_Window::handle(event);
+		}*/
+		//==============
+		// Selection
+		//==============
+		if (mouseButton == 1)
+		{
+			redraw();
+			tw->redraw();
+			Fl_Double_Window::handle(event);
+			return 1;
+		}
+
+		else if (mouseButton == 3)		// Clear selected
+		{
+			if (!Fl::event_state(FL_CTRL))	clearSelected(0);
+			if (Fl::event_state(FL_CTRL))	clearSelected(1);
+			redraw();
+			tw->redraw();
+			return 1;
+		}
+		return Fl_Double_Window::handle(event);
+		case FL_ENTER:
+			if (is_dragging)
+			{
+
+			}
 			return Fl_Double_Window::handle(event);
-		default:
-			return Fl_Double_Window::handle(event);
+	default:
+		return Fl_Double_Window::handle(event);
 	}
 }
 
@@ -278,7 +295,7 @@ void ArrayWindow::resize(int X, int Y, int W, int H) {			// new to change diode 
 //=============================================================================
 // Image Management
 //=============================================================================
-void ArrayWindow::setImageFileFormat(const char *type)
+void ArrayWindow::setImageFileFormat(const char* type)
 {
 	image->setFileFormat(type);
 }
@@ -296,7 +313,7 @@ void ArrayWindow::loadImage()
 }
 
 //=============================================================================
-void ArrayWindow::openImageFile(const char *imageFileName)
+void ArrayWindow::openImageFile(const char* imageFileName)
 {
 	image->openImageFile(imageFileName);
 }
@@ -355,22 +372,22 @@ void ArrayWindow::draw()
 	clear();
 
 	drawBackground();
-	
-	if(showTrace)
+
+	if (showTrace)
 	{
 		drawTrace();
 	}
 
-	if(showRliValue)
+	if (showRliValue)
 	{
 		drawRliValue();
 	}
 
-	if(showDiodeNum)
+	if (showDiodeNum)
 	{
 		drawDiodeNum();
 	}
-	
+
 	drawScale();
 }
 
@@ -378,37 +395,37 @@ void ArrayWindow::draw()
 void ArrayWindow::clear()
 {
 	fl_color(bg);
-	fl_rectf(0,0,w(),h());
+	fl_rectf(0, 0, w(), h());
 }
 
 //=============================================================================
 void ArrayWindow::drawBackground()
 {
-	if(background==BG_None)
+	if (background == BG_None)
 	{
 		return;
 	}
-	else if(background==BG_Image)
+	else if (background == BG_Image)
 	{
 		image->draw();
 	}
-	else if(background==BG_Rli)
+	else if (background == BG_Rli)
 	{
 		drawRli();
 	}
-	else if(background==BG_Max_Amplitude)
+	else if (background == BG_Max_Amplitude)
 	{
 		drawMaxAmp();
 	}
-	else if(background==BG_Spike_Amp)
+	else if (background == BG_Spike_Amp)
 	{
 		drawSpikeAmp();
 	}
-	else if(background==BG_Max_Amp_Latency)
+	else if (background == BG_Max_Amp_Latency)
 	{
 		drawMaxAmpLatency();
 	}
-	else if(background==BG_Half_Amp_Latency)
+	else if (background == BG_Half_Amp_Latency)
 	{
 		drawHalfAmpLatency();
 	}
@@ -416,11 +433,11 @@ void ArrayWindow::drawBackground()
 	{
 		drawSignalToNoise();
 	}
-	else if(background==BG_EPSP_Latency)
+	else if (background == BG_EPSP_Latency)
 	{
 		drawEPSPLatency();
 	}
-	else if(background==BG_Live_Feed)
+	else if (background == BG_Live_Feed)
 	{
 		lf->drawBackground();
 	}
@@ -431,14 +448,14 @@ void ArrayWindow::drawDiodeNum()
 {
 	int i;
 
-	fl_font(FL_COURIER_BOLD,11);
+	fl_font(FL_COURIER_BOLD, 11);
 
 	for (i = -NUM_FP_DIODES; i < dataArray->num_binned_diodes(); i++)
 	{
 		get_diode(i)->drawDiodeNum();
 	}
 
-	fl_font(FL_HELVETICA,11);
+	fl_font(FL_HELVETICA, 11);
 }
 
 //=============================================================================
@@ -449,10 +466,10 @@ void ArrayWindow::drawRli()
 	dataArray->setRli2DataFeature();
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		ratio=dataArray->getRliRatio(i);
-		if(ratio<0 || ratio>1)
+		ratio = dataArray->getRliRatio(i);
+		if (ratio < 0 || ratio>1)
 		{
-			fl_color(char(155),0,0);
+			fl_color(char(155), 0, 0);
 		}
 		else
 		{
@@ -472,9 +489,9 @@ void ArrayWindow::drawMaxAmp()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			fl_color(50,50,50);
+			fl_color(50, 50, 50);
 		}
 		else
 		{
@@ -494,9 +511,9 @@ void ArrayWindow::drawSpikeAmp()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			fl_color(50,50,50);
+			fl_color(50, 50, 50);
 		}
 		else
 		{
@@ -538,9 +555,9 @@ void ArrayWindow::drawMaxAmpLatency()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			fl_color(50,50,50);
+			fl_color(50, 50, 50);
 		}
 		else
 		{
@@ -560,9 +577,9 @@ void ArrayWindow::drawHalfAmpLatency()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			fl_color(50,50,50);
+			fl_color(50, 50, 50);
 		}
 		else
 		{
@@ -582,9 +599,9 @@ void ArrayWindow::drawEPSPLatency()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			fl_color(50,50,50);
+			fl_color(50, 50, 50);
 		}
 		else
 		{
@@ -600,14 +617,14 @@ void ArrayWindow::drawRliValue()
 {
 	int i;
 
-	fl_font(FL_HELVETICA_BOLD,10);
+	fl_font(FL_HELVETICA_BOLD, 10);
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
 		get_diode(i)->drawRliValue(dataArray->getRli(i));
 	}
 
-	fl_font(FL_HELVETICA,11);
+	fl_font(FL_HELVETICA, 11);
 }
 
 //=============================================================================
@@ -616,36 +633,36 @@ void ArrayWindow::drawScale()
 	if (diodes.size() <= 0)
 		return;
 
-	double xScaleBarValue,yScaleBarValue;
-	int X=w()-100;
-	int Y=h()-30;;
-	int diodeW=diodes[0]->w();
-	int diodeH=diodes[0]->h();
+	double xScaleBarValue, yScaleBarValue;
+	int X = w() - 100;
+	int Y = h() - 30;;
+	int diodeW = diodes[0]->w();
+	int diodeH = diodes[0]->h();
 
 	// Draw Lines
 	fl_color(bg);
-	fl_rectf(X-1,Y-1,diodeW+3,3);				// Horizantal
-	fl_rectf(X-1+diodeW,Y-diodeH-1,3,diodeH+3);	// Vertical
+	fl_rectf(X - 1, Y - 1, diodeW + 3, 3);				// Horizantal
+	fl_rectf(X - 1 + diodeW, Y - diodeH - 1, 3, diodeH + 3);	// Vertical
 	fl_color(fg);
-	fl_line(X,Y,X+diodeW,Y);
-	fl_line(X+diodeW,Y,X+diodeW,Y-diodeH);
+	fl_line(X, Y, X + diodeW, Y);
+	fl_line(X + diodeW, Y, X + diodeW, Y - diodeH);
 
 	// Time axis
-	int numPts=dc->getNumPts();
-	double intPts=dc->getIntPts();
+	int numPts = dc->getNumPts();
+	double intPts = dc->getIntPts();
 
-	xScaleBarValue=numPts*intPts/xScale/1000.0;
+	xScaleBarValue = numPts * intPts / xScale / 1000.0;
 
 	_gcvt_s(txtBuf, 32, xScaleBarValue, 3);
-	strcat_s(txtBuf, 32," (sec)");
-	drawTxt(txtBuf,fg,bg,X,Y+20);
+	strcat_s(txtBuf, 32, " (sec)");
+	drawTxt(txtBuf, fg, bg, X, Y + 20);
 
 	// Amp axis
-	yScaleBarValue=diodeH/yScale;
+	yScaleBarValue = diodeH / yScale;
 
 	_gcvt_s(txtBuf, 32, yScaleBarValue, 3);
 
-	if(sp->getRliDivFlag())
+	if (sp->getRliDivFlag())
 	{
 		strcat_s(txtBuf, 32, " (mV/V)");
 	}
@@ -654,26 +671,26 @@ void ArrayWindow::drawScale()
 		strcat_s(txtBuf, 32, " (mV)");
 	}
 
-	drawTxt(txtBuf,fg,bg,X,Y-diodeH-5);
+	drawTxt(txtBuf, fg, bg, X, Y - diodeH - 5);
 
 	// Draw Pseudo Color Scale
 	int i;
-	for(i=-1;i<=101;i++)
+	for (i = -1; i <= 101; i++)
 	{
-		colorControl->setScaleColor(double(i)/100.0);
-		fl_line(10,h()-10-i,30,h()-10-i);
+		colorControl->setScaleColor(double(i) / 100.0);
+		fl_line(10, h() - 10 - i, 30, h() - 10 - i);
 	}
 
 	colorControl->setGrayScale(0.5);
-	fl_line(9,h()-10,35,h()-10);
-	fl_line(9,h()-60,35,h()-60);
-	fl_line(9,h()-110,35,h()-110);
+	fl_line(9, h() - 10, 35, h() - 10);
+	fl_line(9, h() - 60, 35, h() - 60);
+	fl_line(9, h() - 110, 35, h() - 110);
 
-	fl_line(9,h()-8,31,h()-8);
-	fl_line(9,h()-112,31,h()-112);
+	fl_line(9, h() - 8, 31, h() - 8);
+	fl_line(9, h() - 112, 31, h() - 112);
 
-	fl_line(9,h()-8,9,h()-112);
-	fl_line(31,h()-8,31,h()-112);
+	fl_line(9, h() - 8, 9, h() - 112);
+	fl_line(31, h() - 8, 31, h() - 112);
 }
 
 //=============================================================================
@@ -687,23 +704,23 @@ void ArrayWindow::drawTrace()
 }
 
 //=============================================================================
-void ArrayWindow::drawTxt(char *txtBuf,Fl_Color fg,Fl_Color bg,int x,int y)
+void ArrayWindow::drawTxt(char* txtBuf, Fl_Color fg, Fl_Color bg, int x, int y)
 {
-	fl_font(FL_HELVETICA,12);
+	fl_font(FL_HELVETICA, 12);
 
 	fl_color(bg);
-	fl_draw(txtBuf,x+1,y);
-	fl_draw(txtBuf,x-1,y);
-	fl_draw(txtBuf,x,y+1);
-	fl_draw(txtBuf,x,y-1);
+	fl_draw(txtBuf, x + 1, y);
+	fl_draw(txtBuf, x - 1, y);
+	fl_draw(txtBuf, x, y + 1);
+	fl_draw(txtBuf, x, y - 1);
 	fl_color(fg);
-	fl_draw(txtBuf,x,y);
+	fl_draw(txtBuf, x, y);
 }
 
 //=============================================================================
 Diode* ArrayWindow::get_diode(int diodeNo)			//new ; mostly new until final saveBGdata action
-{		
-	if (diodeNo < 0) 
+{
+	if (diodeNo < 0)
 		return fp_diodes[diodeNo + NUM_FP_DIODES];
 	return diodes[diodeNo];
 }
@@ -716,20 +733,20 @@ void ArrayWindow::addToSelectedList(int index, int average)	// index is the diod
 		tw->redraw();
 	}
 	else {
-	if(currentRegionIndex<0) currentRegionIndex=0;			// with some sequences currentRegionsIndex was -1 and that caused crashes due to vector overflow
-//	cout << "aw line 720 index " << index << " CurrRegIndex " << currentRegionIndex << "size "<< selectedDiodesAverage[currentRegionIndex].size() << endl;
-	if (selectedDiodesAverage[currentRegionIndex].size() == 0)
+		if (currentRegionIndex < 0) currentRegionIndex = 0;			// with some sequences currentRegionsIndex was -1 and that caused crashes due to vector overflow
+		//	cout << "aw line 720 index " << index << " CurrRegIndex " << currentRegionIndex << "size "<< selectedDiodesAverage[currentRegionIndex].size() << endl;
+		if (selectedDiodesAverage[currentRegionIndex].size() == 0)
 		{
 			int cI = colorControl->getColorIndex();
 			get_diode(index)->setColorIndex(cI);
 			selectedDiodesAverage[currentRegionIndex].push_back(cI);
-//			get_diode(index)->setColorIndex(cI);
-/*			char regionStr[14];
-			sprintf(regionStr , "Region %d", currentRegionIndex);
-			Fl_Output(1051, 950 + numRegions * 30, 50, 65, regionStr);
-			ui->allRegionsDisplay->add(newRegion);*/
-				if (numRegions < 100)	this->numRegions += 1;
-				else	fl_alert(">100 ROIs not allowed!\n");
+			//			get_diode(index)->setColorIndex(cI);
+			/*			char regionStr[14];
+						sprintf(regionStr , "Region %d", currentRegionIndex);
+						Fl_Output(1051, 950 + numRegions * 30, 50, 65, regionStr);
+						ui->allRegionsDisplay->add(newRegion);*/
+			if (numRegions < 100)	this->numRegions += 1;
+			else	fl_alert(">100 ROIs not allowed!\n");
 		}
 		else
 		{
@@ -737,7 +754,7 @@ void ArrayWindow::addToSelectedList(int index, int average)	// index is the diod
 		}
 		selectedDiodesAverage[currentRegionIndex].push_back(index);
 		tw->redraw();
-	redraw();
+		redraw();
 	}
 }
 
@@ -753,21 +770,21 @@ int ArrayWindow::getCurrentRegionIndex()
 
 void ArrayWindow::setContinuous(int continuous)			// "new region" button in GUI calls mc->setContinuous(o->value());
 {
-	if (continuous) 
-		{
+	if (continuous)
+	{
 		selectedDiodesAverage.push_back(std::vector<int> {});
-		currentRegionIndex++;	
-		}
-	else 
-		{
+		currentRegionIndex++;
+	}
+	else
+	{
 		if (currentRegionIndex < 0) currentRegionIndex = 0;		// might crash with negative value see line 697
-		if (selectedDiodesAverage[currentRegionIndex].size() == 0) 
-			{
+		if (selectedDiodesAverage[currentRegionIndex].size() == 0)
+		{
 			//possibly add numRegions which keeps track of number of Regions and update currentRegion for true purpose like name suggests
 			selectedDiodesAverage.erase(selectedDiodesAverage.begin() + currentRegionIndex);
 			currentRegionIndex--;
-			}
 		}
+	}
 	this->continuous = continuous;
 }
 
@@ -791,18 +808,18 @@ int ArrayWindow::deleteFromSelectedList(int index, int average)
 		}
 	}
 	else {
-//		cI = colorControl->getColorIndex();
-//	cout << " deleteFromSelected line 800 " << index << " average " << average << " cI " << cI << endl;
+		//		cI = colorControl->getColorIndex();
+		//	cout << " deleteFromSelected line 800 " << index << " average " << average << " cI " << cI << endl;
 		int i;
 		int ii = selectedDiodesAverage[currentRegionIndex].size();
 		for (i = 1; i < ii; i++)
-		{	
+		{
 			if (index == selectedDiodesAverage[currentRegionIndex][i])
 			{
 				selectedDiodesAverage[currentRegionIndex].erase(selectedDiodesAverage[currentRegionIndex].begin() + i);
 				if (selectedDiodesAverage[currentRegionIndex].size() == 1)
 				{
-					selectedDiodesAverage[currentRegionIndex].erase(selectedDiodesAverage[currentRegionIndex].begin(), selectedDiodesAverage[currentRegionIndex].end());	
+					selectedDiodesAverage[currentRegionIndex].erase(selectedDiodesAverage[currentRegionIndex].begin(), selectedDiodesAverage[currentRegionIndex].end());
 					this->numRegions -= 1;
 				}
 				tw->redraw();
@@ -861,23 +878,32 @@ void ArrayWindow::clearSelected(int selection)
 	}
 	else
 	{
-		if (numRegions > 0)  
-			{
+		if (numRegions > 0)
+		{
 			if (selection == 1)
+			{
+				int* ROIList = aw->getSelectedDiodesAverage(numRegions - 1);
+				int RegionSize = aw->getNumSelectedDiodesAverage(numRegions - 1);
+				for (i = RegionSize - 1; i > 0; i--)
 				{
-					int* ROIList = aw->getSelectedDiodesAverage(numRegions - 1);
-					int RegionSize = aw->getNumSelectedDiodesAverage(numRegions - 1);
+					get_diode(ROIList[i])->setColorIndex(-1);		// reset colors to unselected
+				}
+				selectedDiodesAverage[numRegions - 1].clear();
+				currentRegionIndex--;
+				numRegions--;
+			}
+			else if (selection == 0) {									//added 6/20/2025 to stop crashes resulting from binning change when ROIs selected
+				selectedDiodes.clear();
+				colorControl->resetUsed();
+
+				for (int j = 1; j < (numRegions + 1); j++) {
+					int* ROIList = aw->getSelectedDiodesAverage(numRegions - j);
+					int RegionSize = aw->getNumSelectedDiodesAverage(numRegions - j);
 					for (i = RegionSize - 1; i > 0; i--)
 					{
 						get_diode(ROIList[i])->setColorIndex(-1);		// reset colors to unselected
 					}
-					selectedDiodesAverage[numRegions - 1].clear();
-					currentRegionIndex--;
-					numRegions--;
 				}
-			else if (selection == 0) {									//added 6/20/2025 to stop crashes resulting from binning change when ROIs selected
-				selectedDiodes.clear();
-				colorControl->resetUsed();
 				for (i = 0; i < numRegions; i++)
 				{
 					selectedDiodesAverage[i].clear();
@@ -902,13 +928,13 @@ int ArrayWindow::getNumSelectedDiodesAverage(int idx)
 }
 
 //=============================================================================
-int *ArrayWindow::getSelectedDiodes()
+int* ArrayWindow::getSelectedDiodes()
 {
 	return selectedDiodes.data();
 }
 
 //=============================================================================
-int *ArrayWindow::getSelectedDiodesAverage(int idx)
+int* ArrayWindow::getSelectedDiodesAverage(int idx)
 {
 	return selectedDiodesAverage[idx].data();
 }
@@ -958,8 +984,8 @@ void ArrayWindow::resizeDiodes()
 	int diode_height = diode_width;
 
 	// Center the array
-	int array_xoffset = (w() - diode_width*array_width) / 2;
-	int array_yoffset = (h() - diode_height*array_height) / 2;
+	int array_xoffset = (w() - diode_width * array_width) / 2;
+	int array_yoffset = (h() - diode_height * array_height) / 2;
 	if (array_yoffset + array_height * diode_height > h())
 		array_yoffset = do_yoffset + do_height;
 
@@ -970,10 +996,10 @@ void ArrayWindow::resizeDiodes()
 		int y = array_yoffset + diode_height * (i / array_width);
 		diodes[i]->resize(x, y, diode_width, diode_height);
 	}
-//	cout << "aw line 945 " << endl;
+	//	cout << "aw line 945 " << endl;
 	for (i = 0; i < NUM_FP_DIODES; i++)
 	{
-		int x = (w()/2) - (NUM_FP_DIODES * do_width / 2) + (do_width * i);
+		int x = (w() / 2) - (NUM_FP_DIODES * do_width / 2) + (do_width * i);
 		int y = do_yoffset;
 		fp_diodes[i]->resize(x, y, do_width, do_height);
 	}
@@ -1008,15 +1034,15 @@ void ArrayWindow::saveBGData()
 {
 	//==================================================
 	// Get file name
-	if ((background!=BG_Max_Amplitude)&&(background!=BG_Rli)&&(background!=BG_SIGNAL_TO_NOISE))
+	if ((background != BG_Max_Amplitude) && (background != BG_Rli) && (background != BG_SIGNAL_TO_NOISE))
 	{
 		fl_alert("Output of this parameter not supported \n");
 		return;
 	}
-	char *fileName=fl_file_chooser("Save background data (all pixels) to a file",
-		"*.dat","Data.dat");
+	char* fileName = fl_file_chooser("Save background data (all pixels) to a file",
+		"*.dat", "Data.dat");
 
-	if(!fileName)
+	if (!fileName)
 	{
 		return;
 	}
@@ -1024,22 +1050,22 @@ void ArrayWindow::saveBGData()
 	//==================================================
 	// Open file
 	std::fstream file;
-	file.open(fileName,std::ios::out);
+	file.open(fileName, std::ios::out);
 
 	int i;
 
-	if(background==BG_Max_Amplitude)
+	if (background == BG_Max_Amplitude)
 	{
 		dataArray->setMaxAmp2DataFeature();
 	}
-/*	else if(background==BG_Spike_Amp)		these seem pointless but easy to add back, don't forget to add to line 985
-	{														 probably used for Payne's 2006 J Physiol paper
-		dataArray->setSpikeAmp2DataFeature();		
-	}
-	else if(background==BG_Half_Amp_Latency)		
-	{
-		dataArray->setHalfAmpLatency2DataFeature();
-	}*/
+	/*	else if(background==BG_Spike_Amp)		these seem pointless but easy to add back, don't forget to add to line 985
+		{														 probably used for Payne's 2006 J Physiol paper
+			dataArray->setSpikeAmp2DataFeature();
+		}
+		else if(background==BG_Half_Amp_Latency)
+		{
+			dataArray->setHalfAmpLatency2DataFeature();
+		}*/
 	else if (background == BG_SIGNAL_TO_NOISE)
 	{
 		dataArray->setSignalToNoise2DataFeature();
@@ -1051,15 +1077,15 @@ void ArrayWindow::saveBGData()
 
 	for (i = 0; i < dataArray->num_binned_diodes(); i++)
 	{
-		file<<i+1<<'\t';
+		file << i + 1 << '\t';
 
-		if(dataArray->getIgnoredFlag(i))
+		if (dataArray->getIgnoredFlag(i))
 		{
-			file<<-1<<'\n';
+			file << -1 << '\n';
 		}
 		else
 		{
-			file<<dataArray->getDataFeature(i)<<'\n';
+			file << dataArray->getDataFeature(i) << '\n';
 		}
 	}
 

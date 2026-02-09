@@ -2,6 +2,7 @@
 // Diode.cpp
 //=============================================================================
 #include <stdlib.h>		// _gcvt()
+#include <vector>
 
 #include <FL/Fl.h>
 #include <FL/fl_draw.H>
@@ -163,7 +164,7 @@ void Diode::drawTxt(char *txt,int X,int Y,Fl_Color color)
 //=============================================================================
 int Diode::handle(int event)
 {
-	int mouseButton;
+	int mouseButton, X, Y;
 	switch(event)
 	{
 		//case FL_KEYUP:
@@ -214,13 +215,56 @@ int Diode::handle(int event)
 				}
 			}
 			return 1;
+		case FL_DRAG:
+			
+			mouseButton = Fl::event_button();
+			
+			if (mouseButton == 1)	// Left Button is Down
+			{
+				X = Fl::event_x();
+				Y = Fl::event_y();
+				cout << "X = " << X << " Y = " << Y << "\n";
+				dragPolygonPoints.push_back({ X, Y });
+				}
+			else {
+			}
+			return 1;
+		case FL_RELEASE:
+			cout << "create roi from " << dragPolygonPoints.size() << "points\n";
+			// To do
+			dragPolygonPoints.clear();
+
+
+			return 1;
 		default:
 			return Fl_Widget::handle(event);
 	}
 }
 
+bool pointInPolygon(int x, int y, const std::vector<std::pair<int, int>>& pts)
+{
+	bool inside = false;
+	int n = pts.size();
+
+	for (int i = 0, j = n - 1; i < n; j = i++) {
+		int xi = pts[i].first;
+		int yi = pts[i].second;
+		int xj = pts[j].first;
+		int yj = pts[j].second;
+
+		bool intersect =
+			((yi > y) != (yj > y)) &&
+			(x < (double)(xj - xi) * (y - yi) / (double)(yj - yi) + xi);
+
+		if (intersect)
+			inside = !inside;
+	}
+
+	return inside;
+}
+
 //=============================================================================
-void Diode::select(int altDown, int shiftDown, int ctrlDown)
+void Diode::select(int altDown, int shiftDown, int ctrlDown, int tabDown)
 {
 	if (altDown)
 	{
